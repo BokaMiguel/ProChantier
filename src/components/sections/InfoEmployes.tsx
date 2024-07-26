@@ -1,12 +1,6 @@
 import React, { useState } from "react";
 import { FaTrash, FaUser, FaBriefcase, FaToolbox } from "react-icons/fa";
-
-interface User {
-    id: number;
-    nom: string;
-    fonction: string;
-    equipement: string;
-}
+import { User } from "../../models/JournalFormModel";
 
 const mockUsers = [
     "Alice Dupont",

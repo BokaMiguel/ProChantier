@@ -14,8 +14,8 @@ const Form: React.FC = () => {
 
     const [sections, setSections] = useState({
         infoProjet: true,
-        grilleActivites: true,
         infoEmployes: true,
+        grilleActivites: true,
         materiaux: true,
     });
 
@@ -41,25 +41,25 @@ const Form: React.FC = () => {
 
                 <section>
                     <SectionHeader
-                        title="2. GRILLE DES ACTIVITÉS"
-                        sectionKey="grilleActivites"
-                        isOpen={sections.grilleActivites}
-                        onToggle={toggleSection}
-                    />
-                    {sections.grilleActivites && (
-                        <ActiviteProjet users={users} />
-                    )}
-                </section>
-
-                <section>
-                    <SectionHeader
-                        title="3. INFORMATIONS DES EMPLOYÉS"
+                        title="2. INFORMATIONS DES EMPLOYÉS"
                         sectionKey="infoEmployes"
                         isOpen={sections.infoEmployes}
                         onToggle={toggleSection}
                     />
                     {sections.infoEmployes && (
                         <InfoEmployes users={users} setUsers={setUsers} />
+                    )}
+                </section>
+
+                <section>
+                    <SectionHeader
+                        title="3. GRILLE DES ACTIVITÉS"
+                        sectionKey="grilleActivites"
+                        isOpen={sections.grilleActivites}
+                        onToggle={toggleSection}
+                    />
+                    {sections.grilleActivites && (
+                        <ActiviteProjet users={users} />
                     )}
                 </section>
 
