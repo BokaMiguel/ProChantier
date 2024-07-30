@@ -6,6 +6,8 @@ interface StatsGridProps {
     id: number;
     nom: string;
   }[];
+  activiteCount: number;
+  nextStep: boolean;
 }
 
 interface UserStats {
@@ -24,7 +26,11 @@ const initialStats = (user: StatsGridProps["users"][0]): UserStats => ({
   td: 0,
 });
 
-const StatsGrid: React.FC<StatsGridProps> = ({ users }) => {
+const StatsGrid: React.FC<StatsGridProps> = ({
+  users,
+  activiteCount,
+  nextStep,
+}) => {
   const [userStats, setUserStats] = useState<UserStats[]>(
     users.map(initialStats)
   );
@@ -76,6 +82,7 @@ const StatsGrid: React.FC<StatsGridProps> = ({ users }) => {
   };
 
   const totals = calculateTotals();
+  const actIndexOffset = nextStep ? 5 : 0;
 
   return (
     <div className="p-4">
@@ -100,12 +107,14 @@ const StatsGrid: React.FC<StatsGridProps> = ({ users }) => {
           </tr>
           <tr>
             <th className="py-2 px-4 bg-gray-100 border-b border-r"></th>
-            {Array.from({ length: 5 }, (_, index) => (
+            {Array.from({ length: 5 }).map((_, index) => (
               <th
                 key={index}
-                className="py-2 px-4 bg-gray-100 border-b border-r"
+                className={`py-2 px-4 border-b border-r ${
+                  index >= activiteCount ? "text-gray-300" : "text-black"
+                }`}
               >
-                ACT {index + 1}
+                ACT {index + 1 + actIndexOffset}
               </th>
             ))}
             <th className="py-2 px-4 bg-gray-100 border-b border-r">TS</th>
@@ -133,7 +142,10 @@ const StatsGrid: React.FC<StatsGridProps> = ({ users }) => {
                           parseFloat(e.target.value) || 0
                         )
                       }
-                      className="border rounded px-2 py-1 w-full"
+                      className={`border rounded px-2 py-1 w-full ${
+                        index >= activiteCount ? "text-gray-300" : "text-black"
+                      }`}
+                      disabled={index >= activiteCount}
                     />
                   </td>
                 ))}

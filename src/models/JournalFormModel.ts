@@ -11,6 +11,7 @@ export interface Activite {
     lieu: string;
     localisation: string;
     quantite: number;
+    notes: string;
 }
 
 export interface Materiau {
@@ -33,10 +34,41 @@ export const initialActivite: Activite = {
     lieu: "",
     localisation: "",
     quantite: 0,
+    notes: "",
 };
 
 export const initialMateriau: Materiau = {
     id: 1,
     nom: "",
     quantite: 0,
+};
+
+export interface Journal {
+    id: number;
+    projetInfo: ProjectInfo;
+    entreprise: string;
+    localisation: string;
+    axe: string;
+    plageHoraire: string;
+    sign: string;
+    notes: string;
+    activites: Activite[];
+}
+
+export const initialJournal: Journal = {
+    id: 1,
+    projetInfo: {
+        type: '',
+        date: new Date(),
+        arrivee: '',
+        depart: '',
+        weather: '',
+    },
+    entreprise: '',
+    localisation: '',
+    axe: '',
+    plageHoraire: '',
+    sign: '',
+    notes: '',
+    activites: [initialActivite],
 };
