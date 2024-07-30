@@ -64,6 +64,8 @@ const ActiviteProjet: React.FC<{ users: User[] }> = ({ users }) => {
       quantite: 0,
       nom: "",
       notes: "",
+      startHour: "",
+      endHour: "",
     };
     setActivites((prevActivites) => [...prevActivites, newActivite]);
     setNextId(nextId + 1);

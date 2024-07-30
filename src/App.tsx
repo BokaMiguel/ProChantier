@@ -5,7 +5,7 @@ import Form from "./components/journalForm/Form";
 import Header from "./components/header/Header";
 import CalendarPage from "./components/calendrier/CalendarPage";
 import PlanningForm from "./components/calendrier/PlanningForm";
-import CreateActivity from "./components/calendrier/CreateActivity";
+import CreateActivityModal from "./components/calendrier/CreateActivityModal";
 
 function App() {
   return (
@@ -19,7 +19,6 @@ function App() {
             <Route path="/calendrier" element={<CalendarPage />} />
             <Route path="/planning" element={<PlanningForm />} />
             <Route path="/planning" element={<PlanningForm />} />
-            <Route path="/create-activity" element={<CreateActivity />} />
           </Routes>
         </div>
       </div>

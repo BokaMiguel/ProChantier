@@ -5,15 +5,23 @@ export interface User {
     equipement: string;
 }
 
+// models/JournalFormModel.ts
 export interface Activite {
     id: number;
     nom: string;
-    lieu: string;
-    localisation: string;
-    quantite: number;
-    notes: string;
-}
-
+    entreprise?: string;
+    localisation?: string;
+    axe?: string;
+    startHour: string;  // Ajoutez cette ligne
+    endHour: string;    // Ajoutez cette ligne
+    signalisation?: string;
+    notes?: string;
+    isLab?: boolean;
+    lieu?: string;
+    quantite?: number;
+  }
+  
+  
 export interface Materiau {
     id: number;
     nom: string;
@@ -35,6 +43,8 @@ export const initialActivite: Activite = {
     localisation: "",
     quantite: 0,
     notes: "",
+    startHour: "",
+    endHour: ""
 };
 
 export const initialMateriau: Materiau = {
