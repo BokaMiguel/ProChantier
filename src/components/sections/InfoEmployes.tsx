@@ -1,12 +1,6 @@
 import React, { useState } from "react";
-import {
-  FaTrash,
-  FaUser,
-  FaBriefcase,
-  FaToolbox,
-  FaTimes,
-} from "react-icons/fa";
-import { User } from "../../../models/JournalFormModel";
+import { FaUser, FaBriefcase, FaToolbox, FaTimes } from "react-icons/fa";
+import { User } from "../../models/JournalFormModel";
 
 const mockUsers = [
   "Alice Dupont",
@@ -29,6 +23,7 @@ const InfoEmployes: React.FC<{
       nom: "",
       fonction: "",
       equipement: "",
+      prenom: "",
     };
     setUsers((prevUsers: User[]) => [...prevUsers, newUser]);
   };

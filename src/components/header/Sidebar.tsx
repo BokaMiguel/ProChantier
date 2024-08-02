@@ -1,0 +1,104 @@
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  FaHome,
+  FaTasks,
+  FaClipboardList,
+  FaCog,
+  FaChartBar,
+  FaChevronRight,
+  FaChevronLeft,
+} from "react-icons/fa";
+
+const Sidebar: React.FC = () => {
+  const [isOpen, setIsOpen] = useState(true);
+
+  const toggleSidebar = () => {
+    setIsOpen(!isOpen);
+  };
+
+  return (
+    <div
+      className={`flex flex-col h-screen ${
+        isOpen ? "w-64" : "w-16"
+      } bg-blue-800 text-white transition-width duration-300 sticky top-0`}
+    >
+      <div className="flex flex-col flex-grow">
+        <div className="flex flex-col items-center p-4">
+          <div className="flex items-center flex-shrink-0">
+            <img
+              src={`${process.env.PUBLIC_URL}/images/bruneau.png`}
+              alt="Logo"
+              className={`transition-all duration-300 ${
+                isOpen ? "w-24 h-24" : "w-10 h-10"
+              }`}
+            />
+          </div>
+        </div>
+        <nav className="flex-1">
+          <ul className="flex flex-col mt-2">
+            <li>
+              <Link
+                to="/calendrier"
+                className="flex items-center p-4 text-gray-300 hover:bg-gray-700 hover:text-white"
+              >
+                <FaHome className="mr-3" />
+                {isOpen && "Accueil"}
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/journal-chantier"
+                className="flex items-center p-4 text-gray-300 hover:bg-gray-700 hover:text-white"
+              >
+                <FaTasks className="mr-3" />
+                {isOpen && "Journal de chantier"}
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/planning"
+                className="flex items-center p-4 text-gray-300 hover:bg-gray-700 hover:text-white"
+              >
+                <FaClipboardList className="mr-3" />
+                {isOpen && "Plannification"}
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/gestions"
+                className="flex items-center p-4 text-gray-300 hover:bg-gray-700 hover:text-white"
+              >
+                <FaCog className="mr-3" />
+                {isOpen && "Gestions"}
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/rapport"
+                className="flex items-center p-4 text-gray-300 hover:bg-gray-700 hover:text-white"
+              >
+                <FaChartBar className="mr-3" />
+                {isOpen && "Rapport"}
+              </Link>
+            </li>
+          </ul>
+        </nav>
+      </div>
+      <div className="flex justify-center p-4">
+        <button
+          onClick={toggleSidebar}
+          className="text-white focus:outline-none"
+        >
+          {isOpen ? (
+            <FaChevronLeft className="text-2xl" />
+          ) : (
+            <FaChevronRight className="text-2xl" />
+          )}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default Sidebar;

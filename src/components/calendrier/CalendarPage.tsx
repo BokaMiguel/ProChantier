@@ -36,6 +36,8 @@ const CalendarPage: React.FC = () => {
     null
   );
 
+  const [selectedProject, setSelectedProject] = useState<string>("2024-1232");
+
   const handleDateSelect = (selectInfo: any) => {
     let title = prompt("Please enter the name of the activity");
     let projectName = prompt("Please enter the name of the project");
@@ -71,9 +73,26 @@ const CalendarPage: React.FC = () => {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4 bg-blue-500 text-white p-3 rounded">
+      <h1 className="text-2xl font-bold mb-4 bg-blue-800 text-white p-3 rounded">
         Calendrier de Chantier
       </h1>
+
+      {/* Button for project selection */}
+      <div className="mb-4 flex items-center space-x-2">
+        <label htmlFor="project-select" className="text-gray-700 font-medium">
+          Projet :
+        </label>
+        <select
+          id="project-select"
+          value={selectedProject}
+          onChange={(e) => setSelectedProject(e.target.value)}
+          className="p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+        >
+          <option value="2024-1232">Projet Mock - 2024-1232</option>
+          {/* Add more options here as needed */}
+        </select>
+      </div>
+
       <FullCalendar
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
         initialView="dayGridMonth"

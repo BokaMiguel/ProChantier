@@ -81,6 +81,7 @@ const CreateActivityModal: React.FC<CreateActivityModalProps> = ({
         endHour,
         signalisation,
         notes,
+        isComplete: false,
       };
       onSave(newActivity);
     }

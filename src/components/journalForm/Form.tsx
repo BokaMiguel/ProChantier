@@ -1,19 +1,25 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { FaArrowRight, FaFilePdf } from "react-icons/fa";
-import InfoProjet from "./sections/InfoProjet";
-import InfoEmployes from "./sections/InfoEmployes";
-import ActiviteProjet from "./sections/ActiviteProjet/ActiviteProjet";
-import SousTraitantSection from "./sections/SousTraitantSection";
+import InfoProjet from "../sections/InfoProjet";
+import InfoEmployes from "../sections/InfoEmployes";
+import ActiviteProjet from "../sections/activiteProjet/ActiviteProjet";
+import SousTraitantSection from "../sections/SousTraitantSection";
 import { User } from "../../models/JournalFormModel";
-import SectionHeader from "./sections/SectionHeader/SectionHeader";
-import MateriauxInfo from "./sections/MeteriauxInfo";
+import SectionHeader from "../sections/sectionHeader/SectionHeader";
+import MateriauxInfo from "../sections/MeteriauxInfo";
 
 const Form: React.FC = () => {
   const { type } = useParams<{ type: string }>();
 
   const [users, setUsers] = useState<User[]>([
-    { id: 1, nom: "", fonction: "", equipement: "" },
+    {
+      id: 1,
+      nom: "",
+      fonction: "",
+      equipement: "",
+      prenom: "",
+    },
   ]);
 
   const [sections, setSections] = useState({

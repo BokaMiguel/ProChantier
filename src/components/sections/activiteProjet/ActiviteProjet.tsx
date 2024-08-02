@@ -9,12 +9,12 @@ import {
   FaUnlock,
 } from "react-icons/fa";
 import StatsGrid from "../StatsGrid";
-import LocalisationModal from "./LocalisationModal";
 import {
   User,
   Activite,
   initialActivite,
-} from "../../../../models/JournalFormModel";
+} from "../../../models/JournalFormModel";
+import LocalisationModal from "./LocalisationModal";
 
 const mockLieux = ["Site A", "Site B", "Site C", "Site D", "Site E"];
 
@@ -59,13 +59,14 @@ const ActiviteProjet: React.FC<{ users: User[] }> = ({ users }) => {
   const handleAddActivite = () => {
     const newActivite: Activite = {
       id: nextId,
-      lieu: "",
+      lieu: [],
       localisation: "",
       quantite: 0,
       nom: "",
       notes: "",
       startHour: "",
       endHour: "",
+      isComplete: false,
     };
     setActivites((prevActivites) => [...prevActivites, newActivite]);
     setNextId(nextId + 1);

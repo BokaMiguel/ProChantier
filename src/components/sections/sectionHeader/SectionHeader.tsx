@@ -28,7 +28,7 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
 }) => {
   return (
     <header
-      className="flex justify-between items-center bg-blue-900 text-white p-4 rounded cursor-pointer"
+      className="flex justify-between items-center bg-blue-800 text-white p-4 rounded cursor-pointer"
       onClick={() => onToggle(sectionKey)}
     >
       <h2 className="text-2xl font-bold">{title}</h2>
