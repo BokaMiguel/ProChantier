@@ -10,20 +10,43 @@ import {
   FaPlus,
   FaSearch,
   FaTimes,
-  FaUserTie,
 } from "react-icons/fa";
 import { Materiau, SousTraitant, User } from "../../../models/JournalFormModel";
 
 const mockMateriaux: Materiau[] = [
-  { id: 1, nom: "Béton", quantite: 100 },
-  { id: 2, nom: "Acier", quantite: 50 },
-  { id: 3, nom: "Bois", quantite: 200 },
+  {
+    id: 1,
+    nom: "Béton",
+    quantite: 0,
+  },
+  {
+    id: 2,
+    nom: "Acier",
+    quantite: 0,
+  },
+  {
+    id: 3,
+    nom: "Bois",
+    quantite: 0,
+  },
 ];
 
 const mockSousTraitants: SousTraitant[] = [
-  { id: 1, nom: "Entreprise A", quantite: 5 },
-  { id: 2, nom: "Entreprise B", quantite: 3 },
-  { id: 3, nom: "Entreprise C", quantite: 4 },
+  {
+    id: 1,
+    nom: "Entreprise A",
+    quantite: 0,
+  },
+  {
+    id: 2,
+    nom: "Entreprise B",
+    quantite: 0,
+  },
+  {
+    id: 3,
+    nom: "Entreprise C",
+    quantite: 0,
+  },
 ];
 
 const mockEmployes: User[] = [
@@ -54,7 +77,6 @@ const mockLocalisations: string[] = ["Site A", "Site B", "Site C"];
 const mockLieux: string[] = ["Lieu A", "Lieu B", "Lieu C"];
 const mockFonctions: string[] = ["Ingénieur", "Ouvrier", "Chef de projet"];
 const mockEquipements: string[] = ["Casque", "Gants", "Veste de sécurité"];
-const mockAxes: string[] = ["Axe A", "Axe B", "Axe C"];
 
 const Gestion: React.FC = () => {
   const [materiaux, setMateriaux] = useState<Materiau[]>(mockMateriaux);
@@ -66,7 +88,6 @@ const Gestion: React.FC = () => {
   const [lieux, setLieux] = useState<string[]>(mockLieux);
   const [fonctions, setFonctions] = useState<string[]>(mockFonctions);
   const [equipements, setEquipements] = useState<string[]>(mockEquipements);
-  const [axes, setAxes] = useState<string[]>(mockAxes);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentCategory, setCurrentCategory] = useState<string | null>(null);
@@ -110,7 +131,7 @@ const Gestion: React.FC = () => {
           title="Matériaux"
           icon={<FaBoxes />}
           items={materiaux}
-          columns={["Nom", "Quantité"]}
+          columns={["Nom"]}
           onAdd={() => handleAdd("materiaux")}
           onEdit={(item) => handleEdit("materiaux", item)}
           onDelete={(id) => handleDelete("materiaux", id)}
@@ -137,7 +158,7 @@ const Gestion: React.FC = () => {
           title="Sous-traitants"
           icon={<FaPeopleCarry />}
           items={sousTraitants}
-          columns={["Nom", "Quantité"]}
+          columns={["Nom"]}
           onAdd={() => handleAdd("sousTraitants")}
           onEdit={(item) => handleEdit("sousTraitants", item)}
           onDelete={(id) => handleDelete("sousTraitants", id)}
@@ -161,20 +182,13 @@ const Gestion: React.FC = () => {
           onDelete={(id) => handleDelete("fonctions", id)}
         />
         <ResourceTable
-          title="Axes"
-          icon={<FaBriefcase />}
-          items={axes.map((axe, id) => ({ id, nom: axe }))}
-          columns={["Nom"]}
-          onAdd={() => handleAdd("axes")}
-          onEdit={(item) => handleEdit("axes", item)}
-          onDelete={(id) => handleDelete("axes", id)}
-        />
-        <ResourceTable
           title="Employés"
-          icon={<FaUserTie />}
-          items={employes}
-          columns={["Nom", "Fonction"]}
-          onAdd={() => handleAdd("employes")}
+          icon={<FaBriefcase />}
+          items={employes.map((employe) => ({
+            ...employe,
+            nomComplet: `${employe.prenom} ${employe.nom}`,
+          }))}
+          columns={["Nom complet", "Fonction", "Équipement"]}
           onEdit={(item) => handleEdit("employes", item)}
           onDelete={(id) => handleDelete("employes", id)}
         />
@@ -184,6 +198,8 @@ const Gestion: React.FC = () => {
         <Modal
           category={currentCategory}
           item={currentItem}
+          fonctions={fonctions}
+          equipements={equipements}
           onClose={handleModalClose}
           onSubmit={handleModalSubmit}
         />
@@ -197,7 +213,7 @@ interface ResourceTableProps {
   icon: React.ReactNode;
   items: any[];
   columns: string[];
-  onAdd: () => void;
+  onAdd?: () => void;
   onEdit: (item: any) => void;
   onDelete: (id: number) => void;
 }
@@ -215,7 +231,7 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
 
   const filteredItems = items.filter((item) =>
     columns.some((column) =>
-      item[column.toLowerCase()]
+      item[column.replace(" ", "").toLowerCase()]
         ?.toString()
         .toLowerCase()
         .includes(searchTerm.toLowerCase())
@@ -229,12 +245,14 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
           {icon}
           <span>{title}</span>
         </h2>
-        <button
-          onClick={onAdd}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          <FaPlus />
-        </button>
+        {onAdd && (
+          <button
+            onClick={onAdd}
+            className="bg-blue-600 text-white px-4 py-2 rounded"
+          >
+            <FaPlus />
+          </button>
+        )}
       </div>
       <div className="flex mb-4">
         <FaSearch className="mr-2" />
@@ -249,8 +267,8 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
       <table className="min-w-full bg-white border rounded-lg shadow-md">
         <thead className="bg-gray-300 text-black">
           <tr>
-            {columns.map((column) => (
-              <th key={column} className="px-4 py-2 border">
+            {columns.map((column, index) => (
+              <th key={index} className="px-4 py-2 border">
                 {column}
               </th>
             ))}
@@ -258,15 +276,25 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
           </tr>
         </thead>
         <tbody>
-          {filteredItems.map((item) => (
-            <tr key={item.id}>
-              {columns.map((column) => (
-                <td key={column} className="px-4 py-2 border">
-                  {item[column.toLowerCase()]}
+          {filteredItems.map((item, index) => (
+            <tr
+              key={index}
+              className={`${index % 2 === 0 ? "bg-gray-100" : "bg-white"}`}
+            >
+              {columns.map((column, idx) => (
+                <td key={idx} className="px-4 py-2 border">
+                  {column === "Nom complet"
+                    ? item.nomComplet
+                    : column === "Équipement"
+                    ? item.equipement
+                    : item[column.replace(" ", "").toLowerCase()]}
                 </td>
               ))}
-              <td className="px-4 py-2 border flex justify-around">
-                <button onClick={() => onEdit(item)} className="text-blue-600">
+              <td className="px-4 py-2 border text-center">
+                <button
+                  onClick={() => onEdit(item)}
+                  className="text-blue-600 mr-2"
+                >
                   <FaEdit />
                 </button>
                 <button
@@ -287,14 +315,25 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
 interface ModalProps {
   category: string | null;
   item: any;
+  fonctions: string[];
+  equipements: string[];
   onClose: () => void;
   onSubmit: (item: any) => void;
 }
 
-const Modal: React.FC<ModalProps> = ({ category, item, onClose, onSubmit }) => {
+const Modal: React.FC<ModalProps> = ({
+  category,
+  item,
+  fonctions,
+  equipements,
+  onClose,
+  onSubmit,
+}) => {
   const [formState, setFormState] = useState<any>(item || {});
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
     setFormState((prevState: any) => ({ ...prevState, [name]: value }));
   };
@@ -309,30 +348,105 @@ const Modal: React.FC<ModalProps> = ({ category, item, onClose, onSubmit }) => {
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-lg">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">
-            {item ? "Modifier" : "Ajouter"} {category}
+            {item ? "Modifier" : `Ajouter ${category}`}
           </h2>
           <FaTimes className="cursor-pointer" onClick={onClose} />
         </div>
         <form onSubmit={handleSubmit}>
-          {Object.keys(formState).map((key) => (
-            <div className="mb-4" key={key}>
-              <label className="block mb-1">
-                {key.charAt(0).toUpperCase() + key.slice(1)}
-              </label>
-              <input
-                type="text"
-                name={key}
-                value={formState[key] || ""}
-                onChange={handleChange}
-                className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300"
-              />
-            </div>
-          ))}
+          {category === "materiaux" && (
+            <>
+              <div className="mb-4">
+                <label className="block mb-1">Nom</label>
+                <input
+                  type="text"
+                  name="nom"
+                  value={formState.nom || ""}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300"
+                />
+              </div>
+            </>
+          )}
+          {category === "sousTraitants" && (
+            <>
+              <div className="mb-4">
+                <label className="block mb-1">Nom</label>
+                <input
+                  type="text"
+                  name="nom"
+                  value={formState.nom || ""}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300"
+                />
+              </div>
+            </>
+          )}
+          {category === "employes" && (
+            <>
+              <div className="mb-4">
+                <label className="block mb-1">Nom complet</label>
+                <input
+                  type="text"
+                  name="nomComplet"
+                  value={`${formState.prenom || ""} ${formState.nom || ""}`}
+                  readOnly
+                  className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block mb-1">Fonction</label>
+                <select
+                  name="fonction"
+                  value={formState.fonction || ""}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300"
+                >
+                  {fonctions.map((fonction) => (
+                    <option key={fonction} value={fonction}>
+                      {fonction}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="mb-4">
+                <label className="block mb-1">Équipement</label>
+                <select
+                  name="equipement"
+                  value={formState.equipement || ""}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300"
+                >
+                  {equipements.map((equipement) => (
+                    <option key={equipement} value={equipement}>
+                      {equipement}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+
+          {["localisations", "lieux", "fonctions", "equipements"].includes(
+            category!
+          ) && (
+            <>
+              <div className="mb-4">
+                <label className="block mb-1">Nom</label>
+                <input
+                  type="text"
+                  name="nom"
+                  value={formState.nom || ""}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300"
+                />
+              </div>
+            </>
+          )}
           <button
             type="submit"
             className="bg-blue-600 text-white px-4 py-2 rounded"
           >
-            {item ? "Modifier" : "Ajouter"}
+            {item ? "Modifier" : `Ajouter ${category}`}
           </button>
         </form>
       </div>

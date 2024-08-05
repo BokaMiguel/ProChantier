@@ -28,7 +28,6 @@ const CreateActivityModal: React.FC<CreateActivityModalProps> = ({
   const [entreprise, setEntreprise] = useState<string>("");
   const [localisation, setLocalisation] = useState<string>("");
   const [signalisation, setSignalisation] = useState<string>("");
-  const [axe, setAxe] = useState<string>("");
   const [startHour, setStartHour] = useState<string>("");
   const [endHour, setEndHour] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
@@ -38,7 +37,6 @@ const CreateActivityModal: React.FC<CreateActivityModalProps> = ({
       setActivityName(activity.nom ?? "");
       setEntreprise(activity.entreprise ?? "");
       setLocalisation(activity.localisation ?? "");
-      setAxe(activity.axe ?? "");
       setStartHour(activity.startHour ?? "");
       setEndHour(activity.endHour ?? "");
       setSignalisation(activity.signalisation ?? "");
@@ -48,7 +46,6 @@ const CreateActivityModal: React.FC<CreateActivityModalProps> = ({
       setActivityName("Activité");
       setEntreprise("");
       setLocalisation("");
-      setAxe("");
       setStartHour("");
       setEndHour("");
       setSignalisation("");
@@ -64,7 +61,6 @@ const CreateActivityModal: React.FC<CreateActivityModalProps> = ({
         nom: activityName,
         entreprise,
         localisation,
-        axe,
         startHour,
         endHour,
         signalisation,
@@ -76,7 +72,6 @@ const CreateActivityModal: React.FC<CreateActivityModalProps> = ({
         nom: activityName,
         entreprise,
         localisation,
-        axe,
         startHour,
         endHour,
         signalisation,
@@ -145,22 +140,6 @@ const CreateActivityModal: React.FC<CreateActivityModalProps> = ({
                 {/* Ajoutez ici les options pour les localisations */}
                 <option value="Localisation1">Localisation1</option>
                 <option value="Localisation2">Localisation2</option>
-              </select>
-            </div>
-            <div className="flex flex-col">
-              <label className="block mb-2 font-bold">
-                <FaRoad className="inline mr-2" />
-                Axe
-              </label>
-              <select
-                value={axe}
-                onChange={(e) => setAxe(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300 bg-white"
-              >
-                <option value="">Sélectionner un axe</option>
-                {/* Ajoutez ici les options pour les axes */}
-                <option value="Axe1">Axe1</option>
-                <option value="Axe2">Axe2</option>
               </select>
             </div>
             <div className="flex flex-col">

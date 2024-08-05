@@ -13,7 +13,6 @@ export interface Activite {
   nom: string;
   entreprise?: string;
   localisation?: string;
-  axe?: string;
   startHour: string;
   endHour: string;
   signalisation?: string;
@@ -92,7 +91,6 @@ export interface Journal {
   projetInfo: ProjectInfo;
   entreprise: string;
   localisation: string;
-  axe: string;
   plageHoraire: string;
   notes: string;
   activites: Activite[];
@@ -138,7 +136,6 @@ export const initialJournal: Journal = {
   },
   entreprise: '',
   localisation: '',
-  axe: '',
   plageHoraire: '',
   notes: '',
   activites: [initialActivite],

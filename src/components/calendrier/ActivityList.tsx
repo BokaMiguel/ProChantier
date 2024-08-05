@@ -7,7 +7,6 @@ const mockActivities: Activite[] = [
     id: 1,
     nom: "Sciage du revêtement en béton",
     entreprise: "Entreprise A",
-    axe: "Axe A",
     startHour: "08:00",
     endHour: "12:00",
     signalisation: "Gauche",
@@ -17,7 +16,6 @@ const mockActivities: Activite[] = [
     id: 2,
     nom: "Forage pour modifications de massifs",
     entreprise: "Entreprise B",
-    axe: "Axe B",
     startHour: "13:00",
     endHour: "17:00",
     signalisation: "Droite",
@@ -83,10 +81,6 @@ const ActivityList: React.FC<ActivityListProps> = ({
               <div className="text-sm">
                 <span className="font-medium">Entreprise:</span>{" "}
                 {activity.entreprise || "N/A"}
-              </div>
-              <div className="text-sm">
-                <span className="font-medium">Axe:</span>{" "}
-                {activity.axe || "N/A"}
               </div>
               <div className="text-sm">
                 <span className="font-medium">Plage Horaire:</span>{" "}
