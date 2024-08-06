@@ -8,10 +8,13 @@ import {
   FaChartBar,
   FaChevronRight,
   FaChevronLeft,
+  FaUser,
 } from "react-icons/fa";
+import { useAuth } from "../../context/AuthContext"; // Importer useAuth pour accéder au contexte utilisateur
 
 const Sidebar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(true);
+  const { user, login, logout } = useAuth(); // Utiliser le contexte utilisateur
 
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
@@ -84,6 +87,23 @@ const Sidebar: React.FC = () => {
             </li>
           </ul>
         </nav>
+      </div>
+      <div className="flex flex-col items-center p-4">
+        {user ? (
+          <>
+            <div className="flex items-center mb-4">
+              {/* {isOpen && <span className="ml-2">{user.name}</span>} */}
+            </div>
+          </>
+        ) : (
+          <button
+            onClick={login}
+            className="flex items-center p-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+          >
+            <FaUser className="mr-2" />
+            {isOpen && "Connexion"}
+          </button>
+        )}
       </div>
       <div className="flex justify-center p-4">
         <button

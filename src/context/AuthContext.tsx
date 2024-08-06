@@ -6,11 +6,7 @@ import React, {
   ReactNode,
 } from "react";
 import { User } from "oidc-client";
-import {
-  getUser,
-  login,
-  logout,
-} from "../services/AuthService";
+import { getUser, login, logout } from "../services/AuthService";
 
 interface UserClaims {
   sub: string;
@@ -30,9 +26,16 @@ interface UserClaims {
   [key: string]: string;
 }
 
+interface Project {
+  id: number;
+  name: string;
+  // Ajoutez d'autres propriétés nécessaires pour votre projet
+}
+
 interface AuthContextProps {
   user: User | null;
   claims: UserClaims | null;
+  projects: Project[] | null;
   login: () => void;
   logout: () => void;
 }
@@ -44,6 +47,7 @@ interface AuthProviderProps {
 const AuthContext = createContext<AuthContextProps>({
   user: null,
   claims: null,
+  projects: null,
   login: () => {},
   logout: () => {},
 });
@@ -51,6 +55,7 @@ const AuthContext = createContext<AuthContextProps>({
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [claims, setClaims] = useState<UserClaims | null>(null);
+  const [projects, setProjects] = useState<Project[] | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -61,12 +66,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(user);
         const claims = user.profile as unknown as UserClaims;
         setClaims(claims);
+        fetchProjects(claims.sub);
       }
     })();
   }, []);
 
+  const fetchProjects = async (userId: string) => {
+    try {
+      console.log("userId", userId);
+      const response = await fetch(
+        `${process.env.REACT_APP_BRUNEAU_API}/Horizon/projets/GetAuthorizedProjects/${userId}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${user?.access_token}`,
+          },
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setProjects(data);
+      } else {
+        console.error("Failed to fetch projects");
+      }
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, claims, login, logout }}>
+    <AuthContext.Provider value={{ user, claims, projects, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

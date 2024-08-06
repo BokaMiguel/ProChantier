@@ -10,7 +10,7 @@ import {
 } from "react-icons/fa";
 import StatsGrid from "../StatsGrid";
 import {
-  User,
+  Employe,
   Activite,
   initialActivite,
 } from "../../../models/JournalFormModel";
@@ -18,7 +18,7 @@ import LocalisationModal from "./LocalisationModal";
 
 const mockLieux = ["Site A", "Site B", "Site C", "Site D", "Site E"];
 
-const ActiviteProjet: React.FC<{ users: User[] }> = ({ users }) => {
+const ActiviteProjet: React.FC<{ users: Employe[] }> = ({ users }) => {
   const [activites, setActivites] = useState<Activite[]>([initialActivite]);
   const [nextId, setNextId] = useState(2);
   const [showModal, setShowModal] = useState(false);

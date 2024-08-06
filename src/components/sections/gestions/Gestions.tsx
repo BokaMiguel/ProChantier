@@ -11,7 +11,11 @@ import {
   FaSearch,
   FaTimes,
 } from "react-icons/fa";
-import { Materiau, SousTraitant, User } from "../../../models/JournalFormModel";
+import {
+  Materiau,
+  SousTraitant,
+  Employe,
+} from "../../../models/JournalFormModel";
 
 const mockMateriaux: Materiau[] = [
   {
@@ -49,7 +53,7 @@ const mockSousTraitants: SousTraitant[] = [
   },
 ];
 
-const mockEmployes: User[] = [
+const mockEmployes: Employe[] = [
   {
     id: 1,
     nom: "Dupont",
@@ -82,7 +86,7 @@ const Gestion: React.FC = () => {
   const [materiaux, setMateriaux] = useState<Materiau[]>(mockMateriaux);
   const [sousTraitants, setSousTraitants] =
     useState<SousTraitant[]>(mockSousTraitants);
-  const [employes, setEmployes] = useState<User[]>(mockEmployes);
+  const [employes, setEmployes] = useState<Employe[]>(mockEmployes);
   const [localisations, setLocalisations] =
     useState<string[]>(mockLocalisations);
   const [lieux, setLieux] = useState<string[]>(mockLieux);
@@ -390,7 +394,7 @@ const Modal: React.FC<ModalProps> = ({
                   name="nomComplet"
                   value={`${formState.prenom || ""} ${formState.nom || ""}`}
                   readOnly
-                  className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300"
+                  className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300 bg-gray-300"
                 />
               </div>
               <div className="mb-4">
@@ -399,7 +403,7 @@ const Modal: React.FC<ModalProps> = ({
                   name="fonction"
                   value={formState.fonction || ""}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300"
+                  className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300 bg-gray-300"
                 >
                   {fonctions.map((fonction) => (
                     <option key={fonction} value={fonction}>
@@ -414,7 +418,7 @@ const Modal: React.FC<ModalProps> = ({
                   name="equipement"
                   value={formState.equipement || ""}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300"
+                  className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300 bg-gray-300"
                 >
                   {equipements.map((equipement) => (
                     <option key={equipement} value={equipement}>
@@ -437,7 +441,7 @@ const Modal: React.FC<ModalProps> = ({
                   name="nom"
                   value={formState.nom || ""}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300"
+                  className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300 bg-gray-300"
                 />
               </div>
             </>

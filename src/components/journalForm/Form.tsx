@@ -5,14 +5,14 @@ import InfoProjet from "../sections/InfoProjet";
 import InfoEmployes from "../sections/InfoEmployes";
 import ActiviteProjet from "../sections/activiteProjet/ActiviteProjet";
 import SousTraitantSection from "../sections/SousTraitantSection";
-import { User } from "../../models/JournalFormModel";
+import { Employe } from "../../models/JournalFormModel";
 import SectionHeader from "../sections/sectionHeader/SectionHeader";
 import MateriauxInfo from "../sections/MeteriauxInfo";
 
 const Form: React.FC = () => {
   const { type } = useParams<{ type: string }>();
 
-  const [users, setUsers] = useState<User[]>([
+  const [users, setUsers] = useState<Employe[]>([
     {
       id: 1,
       nom: "",

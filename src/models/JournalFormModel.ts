@@ -1,6 +1,6 @@
 // models/JournalFormModel.ts
 
-export interface User {
+export interface Employe {
   id: number;
   nom: string;
   prenom: string;
@@ -94,7 +94,7 @@ export interface Journal {
   plageHoraire: string;
   notes: string;
   activites: Activite[];
-  employes: User[];
+  employes: Employe[];
   materiaux: Materiau[];
   sousTraitants: SousTraitant[];
   statut: Statut;

@@ -5,6 +5,8 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import listPlugin from "@fullcalendar/list";
 import frLocale from "@fullcalendar/core/locales/fr";
+import { useAuth } from "../../context/AuthContext";
+import { Project } from "../../models/UserModels";
 
 interface CalendarEvent {
   id: string;
@@ -35,8 +37,8 @@ const CalendarPage: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
     null
   );
-
   const [selectedProject, setSelectedProject] = useState<string>("2024-1232");
+  const { user: currentUser } = useAuth(); // Utiliser useAuth pour accéder aux données du contexte
 
   const handleDateSelect = (selectInfo: any) => {
     let title = prompt("Please enter the name of the activity");
@@ -88,8 +90,13 @@ const CalendarPage: React.FC = () => {
           onChange={(e) => setSelectedProject(e.target.value)}
           className="p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
         >
-          <option value="2024-1232">Projet Mock - 2024-1232</option>
-          {/* Add more options here as needed */}
+          {/* {currentUser &&
+            currentUser.projects &&
+            currentUser.projects.map((project: Project) => (
+              <option key={project.ID} value={project.ID}>
+                {project.NumeroProjet}
+              </option>
+            ))} */}
         </select>
       </div>
 

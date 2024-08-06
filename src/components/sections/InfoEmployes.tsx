@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { FaUser, FaBriefcase, FaToolbox, FaTimes } from "react-icons/fa";
-import { User } from "../../models/JournalFormModel";
+import { Employe } from "../../models/JournalFormModel";
 
 const mockUsers = [
   "Alice Dupont",
@@ -11,24 +11,24 @@ const mockUsers = [
 ];
 
 const InfoEmployes: React.FC<{
-  users: User[];
-  setUsers: React.Dispatch<React.SetStateAction<User[]>>;
+  users: Employe[];
+  setUsers: React.Dispatch<React.SetStateAction<Employe[]>>;
 }> = ({ users, setUsers }) => {
   const [showModal, setShowModal] = useState(false);
   const [userIdToDelete, setUserIdToDelete] = useState<number | null>(null);
 
   const handleAddUser = () => {
-    const newUser: User = {
+    const newUser: Employe = {
       id: users.length + 1,
       nom: "",
       fonction: "",
       equipement: "",
       prenom: "",
     };
-    setUsers((prevUsers: User[]) => [...prevUsers, newUser]);
+    setUsers((prevUsers: Employe[]) => [...prevUsers, newUser]);
   };
 
-  const handleChange = (id: number, field: keyof User, value: string) => {
+  const handleChange = (id: number, field: keyof Employe, value: string) => {
     const updatedUsers = users.map((user) => {
       if (user.id === id) {
         return { ...user, [field]: value };
