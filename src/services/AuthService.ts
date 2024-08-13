@@ -6,7 +6,6 @@ const settings = {
   redirect_uri: `${window.location.origin}/callback`,
   response_type: 'id_token token',
   scope: 'openid profile apibottin apioutils',
-  post_logout_redirect_uri: `${window.location.origin}/prochantier-login`, 
   userStore: new WebStorageStateStore({ store: window.localStorage })
 };
 

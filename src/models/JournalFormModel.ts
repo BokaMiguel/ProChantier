@@ -4,7 +4,8 @@ export interface Employe {
   id: number;
   nom: string;
   prenom: string;
-  fonction: string;
+  employe?: string;
+  fonctionEmploye: string;
   equipement: string;
 }
 
@@ -27,13 +28,13 @@ export interface Activite {
 export interface Materiau {
   id: number;
   nom: string;
-  quantite: number;
+  quantite?: number;
 }
 
 export interface SousTraitant {
   id: number;
   nom: string;
-  quantite: number;
+  quantite?: number;
 }
 
 export interface ProjectInfo {
@@ -144,3 +145,28 @@ export const initialJournal: Journal = {
   sousTraitants: [initialSousTraitant],
   statut: initialStatut
 };
+
+export interface Materiau {
+  id: number;
+  nom: string;
+}
+
+export interface SousTraitant {
+  id: number;
+  nom: string;
+}
+
+export interface Fonction {
+  id: number;
+  nom: string;
+}
+
+export interface Equipement {
+  id: number;
+  nom: string;
+}
+
+export interface Localisation {
+  id: number;
+  base: string;
+}

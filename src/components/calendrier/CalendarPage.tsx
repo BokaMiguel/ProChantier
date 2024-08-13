@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -6,7 +6,9 @@ import interactionPlugin from "@fullcalendar/interaction";
 import listPlugin from "@fullcalendar/list";
 import frLocale from "@fullcalendar/core/locales/fr";
 import { useAuth } from "../../context/AuthContext";
-import { Project } from "../../models/UserModels";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import "./CalendarPage.scss"; // Assurez-vous d'importer le fichier CSS
 
 interface CalendarEvent {
   id: string;
@@ -21,24 +23,22 @@ interface CalendarEvent {
 }
 
 const CalendarPage: React.FC = () => {
-  const [events, setEvents] = useState<CalendarEvent[]>([
-    {
-      id: "1",
-      title: "Faire rampe",
-      start: new Date(),
-      extendedProps: {
-        projectName: "Projet A",
-        status: "empty",
-        notes: "",
-      },
-    },
-  ]);
+  const { projects, selectedProject, selectProject } = useAuth();
+  const [localSelectedProject, setLocalSelectedProject] = useState<
+    number | null
+  >(selectedProject ? selectedProject.ID : null);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
 
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
-    null
-  );
-  const [selectedProject, setSelectedProject] = useState<string>("2024-1232");
-  const { user: currentUser } = useAuth(); // Utiliser useAuth pour accéder aux données du contexte
+  useEffect(() => {
+    const savedProjectId = localStorage.getItem("selectedProjectId");
+    if (savedProjectId) {
+      const project = projects?.find((p) => p.ID === Number(savedProjectId));
+      if (project) {
+        selectProject(project);
+        setLocalSelectedProject(project.ID);
+      }
+    }
+  }, [projects, selectProject]);
 
   const handleDateSelect = (selectInfo: any) => {
     let title = prompt("Please enter the name of the activity");
@@ -56,7 +56,7 @@ const CalendarPage: React.FC = () => {
         extendedProps: {
           projectName,
           status: "empty",
-          notes: "", // Initialize notes with an empty string
+          notes: "",
         },
       };
 
@@ -66,11 +66,40 @@ const CalendarPage: React.FC = () => {
   };
 
   const handleEventClick = (clickInfo: any) => {
-    setSelectedEvent(clickInfo.event as unknown as CalendarEvent);
+    const event = clickInfo.event;
+    if (
+      window.confirm(
+        `Are you sure you want to delete the event '${event.title}'`
+      )
+    ) {
+      event.remove();
+      setEvents(events.filter((evt) => evt.id !== event.id));
+    }
   };
 
-  const closeModal = () => {
-    setSelectedEvent(null);
+  const handleConfirmSelection = () => {
+    console.log("Confirm button clicked");
+    console.log("Available projects:", projects);
+    console.log("Selected project ID:", localSelectedProject);
+    const selected = projects?.find(
+      (project) => project.ID === localSelectedProject
+    );
+    console.log("Selected project:", selected);
+    if (selected) {
+      selectProject(selected);
+      localStorage.setItem("selectedProjectId", String(selected.ID));
+    }
+  };
+
+  const updateCalendarTitle = (dateInfo: any) => {
+    const titleElement = document.querySelector(".fc-toolbar-title");
+    if (titleElement) {
+      const date = new Date(dateInfo.start);
+      const formattedMonth = format(date, "MMMM yyyy", { locale: fr });
+      const capitalizedTitle =
+        formattedMonth.charAt(0).toUpperCase() + formattedMonth.slice(1);
+      titleElement.innerHTML = capitalizedTitle;
+    }
   };
 
   return (
@@ -78,28 +107,30 @@ const CalendarPage: React.FC = () => {
       <h1 className="text-2xl font-bold mb-4 bg-blue-800 text-white p-3 rounded">
         Calendrier de Chantier
       </h1>
-
-      {/* Button for project selection */}
       <div className="mb-4 flex items-center space-x-2">
         <label htmlFor="project-select" className="text-gray-700 font-medium">
           Projet :
         </label>
         <select
           id="project-select"
-          value={selectedProject}
-          onChange={(e) => setSelectedProject(e.target.value)}
+          value={localSelectedProject !== null ? localSelectedProject : ""}
+          onChange={(e) => setLocalSelectedProject(Number(e.target.value))}
           className="p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
         >
-          {/* {currentUser &&
-            currentUser.projects &&
-            currentUser.projects.map((project: Project) => (
+          {projects &&
+            projects.map((project) => (
               <option key={project.ID} value={project.ID}>
                 {project.NumeroProjet}
               </option>
-            ))} */}
+            ))}
         </select>
+        <button
+          onClick={handleConfirmSelection}
+          className="ml-2 p-2 bg-blue-500 text-white rounded-md shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
+          Confirmer
+        </button>
       </div>
-
       <FullCalendar
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
         initialView="dayGridMonth"

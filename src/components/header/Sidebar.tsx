@@ -9,15 +9,23 @@ import {
   FaChevronRight,
   FaChevronLeft,
   FaUser,
+  FaProjectDiagram,
+  FaChevronDown,
+  FaChevronUp,
 } from "react-icons/fa";
 import { useAuth } from "../../context/AuthContext"; // Importer useAuth pour accéder au contexte utilisateur
 
 const Sidebar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(true);
-  const { user, login, logout } = useAuth(); // Utiliser le contexte utilisateur
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const { user, selectedProject, login } = useAuth(); // Utiliser le contexte utilisateur
 
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
+  };
+
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
   };
 
   return (
@@ -38,6 +46,30 @@ const Sidebar: React.FC = () => {
             />
           </div>
         </div>
+        {selectedProject && isOpen && (
+          <li className="flex flex-col p-4 text-gray-300">
+            <div className="flex items-center mb-2">
+              <FaProjectDiagram className="mr-2" />
+              <span className="text-sm">
+                Projet : {selectedProject.NumeroProjet}
+              </span>
+              <button
+                onClick={toggleDropdown}
+                className="ml-2 text-gray-300 focus:outline-none"
+              >
+                {isDropdownOpen ? <FaChevronUp /> : <FaChevronDown />}
+              </button>
+            </div>
+            {isDropdownOpen && isOpen && (
+              <div className="flex items-start mt-2">
+                <span className="text-sm font-italic">
+                  {selectedProject.NomProjet}
+                </span>
+              </div>
+            )}
+          </li>
+        )}
+
         <nav className="flex-1">
           <ul className="flex flex-col mt-2">
             <li>

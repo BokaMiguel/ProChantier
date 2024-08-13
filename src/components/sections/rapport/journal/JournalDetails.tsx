@@ -66,7 +66,9 @@ const JournalDetails: React.FC<JournalDetailsProps> = ({
                   <td className="px-4 py-2 border">
                     {employe.prenom + " " + employe.nom}
                   </td>
-                  <td className="px-4 py-2 border">{employe.fonction}</td>
+                  <td className="px-4 py-2 border">
+                    {employe.fonctionEmploye}
+                  </td>
                   <td className="px-4 py-2 border">{employe.equipement}</td>
                 </tr>
               ))}

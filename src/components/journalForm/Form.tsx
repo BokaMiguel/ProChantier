@@ -16,7 +16,7 @@ const Form: React.FC = () => {
     {
       id: 1,
       nom: "",
-      fonction: "",
+      fonctionEmploye: "",
       equipement: "",
       prenom: "",
     },

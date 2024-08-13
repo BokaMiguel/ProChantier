@@ -21,7 +21,7 @@ const InfoEmployes: React.FC<{
     const newUser: Employe = {
       id: users.length + 1,
       nom: "",
-      fonction: "",
+      fonctionEmploye: "",
       equipement: "",
       prenom: "",
     };
@@ -74,8 +74,10 @@ const InfoEmployes: React.FC<{
           ))}
         </select>
         <select
-          value={user.fonction}
-          onChange={(e) => handleChange(user.id, "fonction", e.target.value)}
+          value={user.fonctionEmploye}
+          onChange={(e) =>
+            handleChange(user.id, "fonctionEmploye", e.target.value)
+          }
           className="col-span-3 border rounded px-2 py-1 w-full"
         >
           <option value=""></option>
