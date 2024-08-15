@@ -8,7 +8,7 @@ interface ResourceTableProps {
   columns: string[];
   onAdd?: () => void;
   onEdit: (item: any) => void;
-  onDelete: (id: number) => void;
+  onDelete?: (id: number, item: any) => void; // Rendre onDelete optionnel
 }
 
 const ResourceTable: React.FC<ResourceTableProps> = ({
@@ -23,12 +23,13 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
   const [searchTerm, setSearchTerm] = useState<string>("");
 
   const filteredItems = items.filter((item) =>
-    columns.some((column) =>
-      item[column.toLowerCase()]
-        ?.toString()
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase())
-    )
+    columns.some((column) => {
+      const value = item[column.toLowerCase()];
+      return (
+        typeof value === "string" &&
+        value.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    })
   );
 
   return (
@@ -86,12 +87,14 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
                 >
                   <FaEdit />
                 </button>
-                <button
-                  onClick={() => onDelete(item.id)}
-                  className="text-red-600"
-                >
-                  <FaTrash />
-                </button>
+                {onDelete && title !== "Employés" && (
+                  <button
+                    onClick={() => onDelete(item.id, item)} // Passez l'ID et l'élément complet
+                    className="text-red-600"
+                  >
+                    <FaTrash />
+                  </button>
+                )}
               </td>
             </tr>
           ))}

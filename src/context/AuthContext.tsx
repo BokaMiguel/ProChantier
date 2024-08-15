@@ -4,6 +4,7 @@ import React, {
   useEffect,
   useState,
   ReactNode,
+  useCallback,
 } from "react";
 import { User } from "oidc-client";
 import {
@@ -21,22 +22,31 @@ import {
   getEquipementsProjet,
   getMateriauxOutillage,
   getBases,
+  getSousTraitantProjet,
 } from "../services/JournalService";
 import { Project } from "../models/ProjectInfoModel";
 import { UserClaims } from "../models/AuthModel";
-import { Employe } from "../models/JournalFormModel";
+import {
+  Employe,
+  Equipement,
+  Fonction,
+  Localisation,
+  Materiau,
+  SousTraitant,
+} from "../models/JournalFormModel";
 
 interface AuthContextProps {
   user: User | null;
   claims: UserClaims | null;
   projects: Project[] | null;
   selectedProject: Project | null;
-  employeeList: Employe[] | null;
-  fonctions: string[] | null;
+  employees: Employe[] | null;
+  fonctions: Fonction[] | null;
   lieux: string[] | null;
   activites: string[] | null;
-  equipements: string[] | null;
-  materiaux: string[] | null;
+  equipements: Equipement[] | null;
+  materiaux: Materiau[] | null;
+  sousTraitants: SousTraitant[] | null;
   bases: { id: number; base: string }[] | null;
   login: () => void;
   logout: () => void;
@@ -44,9 +54,12 @@ interface AuthContextProps {
   selectProject: (project: Project) => void;
   fetchBases: (projectId: number) => void;
   fetchLieux: (projectId: number) => void;
+  fetchEmployes: (projectId: number) => void;
   fetchFonctions: () => void;
   fetchEquipements: (projectId: number) => void;
   fetchActivites: (projectId: number) => void;
+  fetchMateriaux: () => void;
+  fetchSousTraitants: () => void;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -59,14 +72,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [employeeList, setEmployeeList] = useState<Employe[] | null>(null);
-  const [fonctions, setFonctions] = useState<string[] | null>(null);
+  const [fonctions, setFonctions] = useState<Fonction[] | null>(null);
   const [lieux, setLieux] = useState<string[] | null>(null);
   const [activites, setActivites] = useState<string[] | null>(null);
-  const [equipements, setEquipements] = useState<string[] | null>(null);
-  const [materiaux, setMateriaux] = useState<string[] | null>(null);
-  const [bases, setBases] = useState<{ id: number; base: string }[] | null>(
+  const [equipements, setEquipements] = useState<Equipement[] | null>(null);
+  const [materiaux, setMateriaux] = useState<Materiau[] | null>(null);
+  const [sousTraitants, setSousTraitants] = useState<SousTraitant[] | null>(
     null
   );
+  const [bases, setBases] = useState<Localisation[] | null>(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -88,13 +102,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     });
   }, []);
 
-  useEffect(() => {
-    if (selectedProject) {
-      fetchProjectDetails(selectedProject.ID);
-    }
-  }, [selectedProject]);
-
-  const fetchProjectDetails = async (projectId: number) => {
+  // Utilisation de useCallback pour mémoriser la fonction fetchProjectDetails
+  const fetchProjectDetails = useCallback(async (projectId: number) => {
     try {
       const employeeData = await getEmployeeList(projectId);
       setEmployeeList(employeeData);
@@ -111,15 +120,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const equipementData = await getEquipementsProjet(projectId);
       setEquipements(equipementData);
 
-      const materiauxData = await getMateriauxOutillage(projectId);
+      const materiauxData = await getMateriauxOutillage();
       setMateriaux(materiauxData);
 
       const basesData = await getBases(projectId);
       setBases(basesData);
+
+      const sousTraitantsData = await getSousTraitantProjet();
+      setSousTraitants(sousTraitantsData);
     } catch (error) {
       console.error("Error fetching project details:", error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (selectedProject) {
+      fetchProjectDetails(selectedProject.ID);
+    }
+  }, [selectedProject, fetchProjectDetails]);
 
   const handleUserLogin = () => {
     login();
@@ -154,30 +172,45 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     setSelectedProject(project);
   };
 
-  const fetchBases = async (projectId: number) => {
+  const fetchBases = useCallback(async (projectId: number) => {
     const basesData = await getBases(projectId);
     setBases(basesData);
-  };
+  }, []);
 
-  const fetchLieux = async (projectId: number) => {
+  const fetchLieux = useCallback(async (projectId: number) => {
     const lieuData = await getLieuProjet(projectId);
     setLieux(lieuData);
-  };
+  }, []);
 
-  const fetchFonctions = async () => {
+  const fetchEmployes = useCallback(async (projectId: number) => {
+    const employesData = await getEmployeeList(projectId);
+    setEmployeeList(employesData);
+  }, []);
+
+  const fetchFonctions = useCallback(async () => {
     const fonctionData = await getFonctionEmploye();
     setFonctions(fonctionData);
-  };
+  }, []);
 
-  const fetchEquipements = async (projectId: number) => {
+  const fetchEquipements = useCallback(async (projectId: number) => {
     const equipementData = await getEquipementsProjet(projectId);
     setEquipements(equipementData);
-  };
+  }, []);
 
-  const fetchActivites = async (projectId: number) => {
-    const equipementData = await getActiviteProjet(projectId);
-    setEquipements(equipementData);
-  };
+  const fetchActivites = useCallback(async (projectId: number) => {
+    const activiteData = await getActiviteProjet(projectId);
+    setActivites(activiteData);
+  }, []);
+
+  const fetchMateriaux = useCallback(async () => {
+    const materiauxData = await getMateriauxOutillage();
+    setMateriaux(materiauxData);
+  }, []);
+
+  const fetchSousTraitants = useCallback(async () => {
+    const sousTraitantsData = await getSousTraitantProjet();
+    setSousTraitants(sousTraitantsData);
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -186,22 +219,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         claims,
         projects,
         selectedProject,
-        employeeList,
+        employees: employeeList,
         fonctions,
         lieux,
         activites,
         equipements,
         materiaux,
         bases,
+        sousTraitants,
         login: handleUserLogin,
         logout: handleUserLogout,
         handleCallback: handleUserCallback,
         selectProject,
         fetchBases,
         fetchLieux,
+        fetchEmployes,
         fetchFonctions,
         fetchEquipements,
         fetchActivites,
+        fetchMateriaux,
+        fetchSousTraitants,
       }}
     >
       {children}

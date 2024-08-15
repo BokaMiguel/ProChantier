@@ -21,9 +21,15 @@ const InfoEmployes: React.FC<{
     const newUser: Employe = {
       id: users.length + 1,
       nom: "",
-      fonctionEmploye: "",
-      equipement: "",
       prenom: "",
+      fonction: {
+        id: null,
+        nom: "",
+      },
+      equipement: {
+        id: null,
+        nom: "",
+      },
     };
     setUsers((prevUsers: Employe[]) => [...prevUsers, newUser]);
   };
@@ -74,9 +80,9 @@ const InfoEmployes: React.FC<{
           ))}
         </select>
         <select
-          value={user.fonctionEmploye}
+          value={user.fonction.nom}
           onChange={(e) =>
-            handleChange(user.id, "fonctionEmploye", e.target.value)
+            handleChange(user.id, "fonction", e.target.value)
           }
           className="col-span-3 border rounded px-2 py-1 w-full"
         >
@@ -86,7 +92,7 @@ const InfoEmployes: React.FC<{
           <option value="Technicien">Technicien</option>
         </select>
         <select
-          value={user.equipement}
+          value={user.equipement.nom}
           onChange={(e) => handleChange(user.id, "equipement", e.target.value)}
           className="col-span-3 border rounded px-2 py-1 w-full"
         >

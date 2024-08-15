@@ -54,16 +54,15 @@ export const getEquipementsProjet = async (projectId: number) => {
   return response.json();
 };
 
-export const getMateriauxOutillage = async (projectId: number) => {
+export const getMateriauxOutillage = async () => {
   const response = await fetch(
-    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetMateriauxOutillage/${projectId}`,
+    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetMateriauxOutils`,
     { method: "GET" }
   );
   return response.json();
 };
 
 export const getBases = async (projectId: number) => {
-  console.log('projectId', projectId)
   const response = await fetch(
     `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetBases/${projectId}`,
     { method: "GET" }
@@ -96,13 +95,13 @@ export const deleteBase = async (baseId: number) => {
 
 // New methods for Lieu, Fonction, Equipement
 
-export const createOrUpdateLieu = async (lieu: string, projectId: number, id?: number) => {
-  const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdateLieu`, {
+export const createOrUpdateLieu = async (nom: string, ProjetID: number, id?: number) => {
+  const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdateLieuProjet`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ lieu, idProjet: projectId, id }),
+    body: JSON.stringify({ nom, ProjetID, id }),
   });
   if (!response.ok) {
     throw new Error("Failed to create or update lieu");
@@ -110,7 +109,7 @@ export const createOrUpdateLieu = async (lieu: string, projectId: number, id?: n
 };
 
 export const deleteLieu = async (lieuId: number) => {
-  const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/DeleteLieu/${lieuId}`, {
+  const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/DeleteLieuProjet/${lieuId}`, {
     method: "DELETE",
   });
   if (!response.ok) {
@@ -118,21 +117,47 @@ export const deleteLieu = async (lieuId: number) => {
   }
 };
 
-export const createOrUpdateFonction = async (fonction: string, id?: number) => {
-  const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdateFonction`, {
+export const createOrUpdateFonction = async (nom: string, id?: number) => {
+  const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdateFonctionEmploye`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ fonction, id }),
+    body: JSON.stringify({ nom, id }),
   });
+  console.log('response', response)
   if (!response.ok) {
     throw new Error("Failed to create or update fonction");
   }
 };
 
+export const updateEmployeeDetails = async (
+  employeeId: number,
+  fonctionId: number | null,
+  equipementId: number | null
+) => {
+  console.log('fonctionId', fonctionId)
+  console.log('equipementId', equipementId)
+  const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/UpdateEmployeeDetails`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      employeeId,
+      fonctionId,
+      equipementId,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to update employee details");
+  }
+};
+
+
 export const deleteFonction = async (fonctionId: number) => {
-  const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/DeleteFonction/${fonctionId}`, {
+  const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/DeleteFonctionEmploye/${fonctionId}`, {
     method: "DELETE",
   });
   if (!response.ok) {
@@ -140,13 +165,13 @@ export const deleteFonction = async (fonctionId: number) => {
   }
 };
 
-export const createOrUpdateEquipement = async (equipement: string, projectId: number, id?: number) => {
-  const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdateEquipement`, {
+export const createOrUpdateEquipement = async (nom: string, projectId: number, id?: number) => {
+  const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdateEquipementsProjet`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ equipement, idProjet: projectId, id }),
+    body: JSON.stringify({ nom, ProjetID: projectId, id }),
   });
   if (!response.ok) {
     throw new Error("Failed to create or update equipement");
@@ -154,7 +179,7 @@ export const createOrUpdateEquipement = async (equipement: string, projectId: nu
 };
 
 export const deleteEquipement = async (equipementId: number) => {
-  const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/DeleteEquipement/${equipementId}`, {
+  const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/DeleteEquipementsProjet/${equipementId}`, {
     method: "DELETE",
   });
   if (!response.ok) {
@@ -192,9 +217,9 @@ export const deleteMateriauxOutils = async (id: number) => {
   }
 };
 
-export const getSousTraitantProjet = async (id: number) => {
+export const getSousTraitantProjet = async () => {
   const response = await fetch(
-    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetSousTraitantProjet/${id}`,
+    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetSousTraitantProjet`,
     { method: "GET" }
   );
   return response.json();

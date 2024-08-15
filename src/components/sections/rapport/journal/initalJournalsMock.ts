@@ -47,8 +47,14 @@ export const initialJournals: Journal[] = [
         id: 1,
         nom: "Dupont",
         prenom: "Jean",
-        fonctionEmploye: "Ingénieur",
-        equipement: "Casque",
+        fonction: {
+          id: null,
+          nom: ""
+        },
+        equipement: {
+          id: null,
+          nom: ""
+        }
       },
     ],
     entreprise: "Entreprise A",
@@ -88,8 +94,14 @@ export const initialJournals: Journal[] = [
         id: 2,
         nom: "Martin",
         prenom: "Paul",
-        fonctionEmploye: "Ouvrier",
-        equipement: "Gants",
+        fonction: {
+          id: null,
+          nom: ""
+        },
+        equipement: {
+          id: null,
+          nom: ""
+        }
       },
     ],
     entreprise: "Entreprise C",
@@ -129,8 +141,14 @@ export const initialJournals: Journal[] = [
         id: 3,
         nom: "Boka",
         prenom: "Miguel",
-        fonctionEmploye: "Ouvrier",
-        equipement: "Gants",
+        fonction: {
+          id: null,
+          nom: ""
+        },
+        equipement: {
+          id: null,
+          nom: ""
+        }
       },
     ],
     entreprise: "Entreprise D",
@@ -170,8 +188,14 @@ export const initialJournals: Journal[] = [
         id: 4,
         nom: "Durand",
         prenom: "Alice",
-        fonctionEmploye: "Technicien",
-        equipement: "Casque",
+        fonction: {
+          id: null,
+          nom: ""
+        },
+        equipement: {
+          id: null,
+          nom: ""
+        }
       },
     ],
     entreprise: "Entreprise E",
@@ -210,9 +234,15 @@ export const initialJournals: Journal[] = [
       {
         id: 5,
         nom: "Blanc",
-        prenom: "Luc",
-        fonctionEmploye: "Peintre",
-        equipement: "Casque",
+        prenom: "Bob",
+        fonction: {
+          id: null,
+          nom: ""
+        },
+        equipement: {
+          id: null,
+          nom: ""
+        }
       },
     ],
     entreprise: "Entreprise F",
@@ -252,8 +282,14 @@ export const initialJournals: Journal[] = [
         id: 6,
         nom: "Noir",
         prenom: "Pierre",
-        fonctionEmploye: "Charpentier",
-        equipement: "Casque",
+        fonction: {
+          id: null,
+          nom: ""
+        },
+        equipement: {
+          id: null,
+          nom: ""
+        }
       },
     ],
     entreprise: "Entreprise G",
@@ -293,8 +329,14 @@ export const initialJournals: Journal[] = [
         id: 7,
         nom: "Vert",
         prenom: "Emilie",
-        fonctionEmploye: "Électricien",
-        equipement: "Gants",
+        fonction: {
+          id: null,
+          nom: ""
+        },
+        equipement: {
+          id: null,
+          nom: ""
+        }
       },
     ],
     entreprise: "Entreprise H",
@@ -334,8 +376,14 @@ export const initialJournals: Journal[] = [
         id: 8,
         nom: "Jaune",
         prenom: "Isabelle",
-        fonctionEmploye: "Plombier",
-        equipement: "Gants",
+        fonction: {
+          id: null,
+          nom: ""
+        },
+        equipement: {
+          id: null,
+          nom: ""
+        }
       },
     ],
     entreprise: "Entreprise I",
@@ -375,8 +423,14 @@ export const initialJournals: Journal[] = [
         id: 9,
         nom: "Rouge",
         prenom: "Julien",
-        fonctionEmploye: "Couvreur",
-        equipement: "Casque",
+        fonction: {
+          id: null,
+          nom: ""
+        },
+        equipement: {
+          id: null,
+          nom: ""
+        }
       },
     ],
     entreprise: "Entreprise J",
@@ -416,8 +470,14 @@ export const initialJournals: Journal[] = [
         id: 10,
         nom: "Blanc",
         prenom: "Marie",
-        fonctionEmploye: "Carreleur",
-        equipement: "Gants",
+        fonction: {
+          id: null,
+          nom: ""
+        },
+        equipement: {
+          id: null,
+          nom: ""
+        }
       },
     ],
     entreprise: "Entreprise K",

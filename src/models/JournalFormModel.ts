@@ -4,9 +4,14 @@ export interface Employe {
   id: number;
   nom: string;
   prenom: string;
-  employe?: string;
-  fonctionEmploye: string;
-  equipement: string;
+  fonction: {
+    id: number | null;
+    nom: string;
+  };
+  equipement: {
+    id: number | null;
+    nom: string;
+  };
 }
 
 export interface Activite {

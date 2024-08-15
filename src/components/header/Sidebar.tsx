@@ -96,7 +96,7 @@ const Sidebar: React.FC = () => {
                 className="flex items-center p-4 text-gray-300 hover:bg-gray-700 hover:text-white"
               >
                 <FaClipboardList className="mr-3" />
-                {isOpen && "Plannification"}
+                {isOpen && "Planification"}
               </Link>
             </li>
             <li>
