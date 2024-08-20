@@ -1,3 +1,8 @@
-.modal-localisation {
-    z-index: 5;
-}
+.modal-backdrop {
+    z-index: 999; // Le fond sombre a un z-index légèrement inférieur
+  }
+  
+  .modal-content {
+    z-index: 1000; // La modal elle-même a un z-index plus élevé
+  }
+  

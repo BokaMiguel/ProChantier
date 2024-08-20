@@ -63,8 +63,7 @@ const ModalGestionLocalisation: React.FC<ModalGestionLocalisationProps> = ({
         distance.baseA,
         distance.baseB,
         distance.distanceInMeters,
-        lieuId!,
-        distance.id
+        lieuId!
       );
       setEditingDistance(null);
       fetchDistances();
@@ -245,61 +244,67 @@ const ModalGestionLocalisation: React.FC<ModalGestionLocalisationProps> = ({
           Ajouter Distance
         </button>
 
-        <table className="min-w-full bg-white border rounded-lg shadow-md mb-4">
-          <thead className="bg-blue-800 text-white">
-            <tr>
-              <th className="px-4 py-2 border">
-                <div className="flex items-center justify-center">
-                  <FaMapMarkerAlt className="mr-1" />
-                  Base A
-                </div>
-              </th>
-              <th className="px-4 py-2 border">
-                <div className="flex items-center justify-center">
-                  <FaMapMarkerAlt className="mr-1" />
-                  Base B
-                </div>
-              </th>
-              <th className="px-4 py-2 border">
-                <div className="flex items-center justify-center">
-                  <FaRuler className="mr-1" />
-                  Distance (M)
-                </div>
-              </th>
-              <th className="px-4 py-2 border">
-                <div className="flex items-center justify-center">Actions</div>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredDistances.map((distance, index) => (
-              <tr
-                key={index}
-                className={index % 2 === 0 ? "bg-gray-100" : "bg-white"}
-              >
-                <td className="px-4 py-2 border">{distance.baseAName}</td>
-                <td className="px-4 py-2 border">{distance.baseBName}</td>
-                <td className="px-4 py-2 border">
-                  {distance.distanceInMeters}
-                </td>
-                <td className="px-4 py-2 border text-center">
-                  <button
-                    onClick={() => setEditingDistance(distance)}
-                    className="text-blue-600 mr-2"
-                  >
-                    <FaEdit />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteDistance(distance.id)}
-                    className="text-red-600"
-                  >
-                    <FaTrash />
-                  </button>
-                </td>
+        <div className="overflow-y-auto max-h-64">
+          {" "}
+          {/* Added max height and overflow-y */}
+          <table className="min-w-full bg-white border rounded-lg shadow-md mb-4">
+            <thead className="bg-blue-800 text-white">
+              <tr>
+                <th className="px-4 py-2 border">
+                  <div className="flex items-center justify-center">
+                    <FaMapMarkerAlt className="mr-1" />
+                    Base A
+                  </div>
+                </th>
+                <th className="px-4 py-2 border">
+                  <div className="flex items-center justify-center">
+                    <FaMapMarkerAlt className="mr-1" />
+                    Base B
+                  </div>
+                </th>
+                <th className="px-4 py-2 border">
+                  <div className="flex items-center justify-center">
+                    <FaRuler className="mr-1" />
+                    Distance (M)
+                  </div>
+                </th>
+                <th className="px-4 py-2 border">
+                  <div className="flex items-center justify-center">
+                    Actions
+                  </div>
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredDistances.map((distance, index) => (
+                <tr
+                  key={index}
+                  className={index % 2 === 0 ? "bg-gray-100" : "bg-white"}
+                >
+                  <td className="px-4 py-2 border">{distance.baseAName}</td>
+                  <td className="px-4 py-2 border">{distance.baseBName}</td>
+                  <td className="px-4 py-2 border">
+                    {distance.distanceInMeters}
+                  </td>
+                  <td className="px-4 py-2 border text-center">
+                    <button
+                      onClick={() => setEditingDistance(distance)}
+                      className="text-blue-600 mr-2"
+                    >
+                      <FaEdit />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteDistance(distance.id)}
+                      className="text-red-600"
+                    >
+                      <FaTrash />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

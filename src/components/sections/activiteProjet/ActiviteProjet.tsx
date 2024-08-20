@@ -8,17 +8,17 @@ import {
   FaLock,
   FaUnlock,
 } from "react-icons/fa";
-import StatsGrid from "../StatsGrid";
+import { useAuth } from "../../../context/AuthContext";
 import {
   Employe,
   Activite,
   initialActivite,
 } from "../../../models/JournalFormModel";
+import StatsGrid from "../StatsGrid";
 import LocalisationModal from "./LocalisationModal";
-import { useAuth } from "../../../context/AuthContext"; // Importez le contexte
 
 const ActiviteProjet: React.FC<{ users: Employe[] }> = ({ users }) => {
-  const { lieux } = useAuth(); // Récupérez les lieux depuis le contexte
+  const { lieux, bases } = useAuth(); // Récupérez les lieux et bases depuis le contexte
   const [activites, setActivites] = useState<Activite[]>([initialActivite]);
   const [nextId, setNextId] = useState(2);
   const [showModal, setShowModal] = useState(false);
@@ -107,9 +107,12 @@ const ActiviteProjet: React.FC<{ users: Employe[] }> = ({ users }) => {
 
   const handleLocalisationChange = () => {
     if (currentActiviteId !== null) {
+      // Supprimer les parenthèses existantes avant d'en ajouter une nouvelle
       const localisation = savedLocalisations
-        .map((loc) => (loc.includes("@") ? `(${loc})` : loc))
+        .map((loc) => loc.replace(/[()]/g, "")) // Enlever toutes les parenthèses
+        .map((loc) => (loc.includes("@") ? `(${loc})` : loc)) // Ajouter parenthèses pour les liaisons
         .join(", ");
+
       handleChange(currentActiviteId, "localisation", localisation);
       closeModal();
     }
@@ -157,9 +160,27 @@ const ActiviteProjet: React.FC<{ users: Employe[] }> = ({ users }) => {
     }
   };
 
+  // Filtrer les bases par lieu sélectionné
+  const getBasesForCurrentLieu = (lieuNom: string): string[] => {
+    const lieu = lieux?.find((l) => l.nom === lieuNom);
+    if (!lieu) return [];
+
+    return (
+      bases
+        ?.filter((base) => base.lieuId === lieu.id)
+        .map((base) => base.base) || []
+    );
+  };
+
   const renderActivites = () => {
     return activites.map((activite, index) => {
       const isLocked = lockedActivites.includes(activite.id);
+      const lieuBases = getBasesForCurrentLieu(
+        Array.isArray(activite.lieu)
+          ? activite.lieu.join(", ")
+          : activite.lieu ?? "" // Si activite.lieu est undefined, passer une chaîne vide
+      );
+
       return (
         <div
           key={activite.id}
@@ -268,6 +289,17 @@ const ActiviteProjet: React.FC<{ users: Employe[] }> = ({ users }) => {
               readOnly={isLocked}
             />
           </div>
+          <LocalisationModal
+            showModal={showModal}
+            closeModal={closeModal}
+            savedLocalisations={savedLocalisations}
+            setSavedLocalisations={setSavedLocalisations}
+            liaisonMode={liaisonMode}
+            setLiaisonMode={setLiaisonMode}
+            handleLocalisationChange={handleLocalisationChange}
+            clearAllLocalisations={clearAllLocalisations}
+            bases={lieuBases} // Passer les bases associées au lieu sélectionné
+          />
         </div>
       );
     });
@@ -301,16 +333,6 @@ const ActiviteProjet: React.FC<{ users: Employe[] }> = ({ users }) => {
         <FaPlusCircle className="mr-2" />
         Ajouter une activité
       </button>
-      <LocalisationModal
-        showModal={showModal}
-        closeModal={closeModal}
-        savedLocalisations={savedLocalisations}
-        setSavedLocalisations={setSavedLocalisations}
-        liaisonMode={liaisonMode}
-        setLiaisonMode={setLiaisonMode}
-        handleLocalisationChange={handleLocalisationChange}
-        clearAllLocalisations={clearAllLocalisations}
-      />
       {lockConfirm.show && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">

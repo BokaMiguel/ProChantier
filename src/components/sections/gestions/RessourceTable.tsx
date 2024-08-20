@@ -9,6 +9,7 @@ import {
   FaChevronRight,
   FaFileExcel,
 } from "react-icons/fa";
+import { CSVImporter } from "csv-import-react"; // Assurez-vous que ce package est installé
 
 interface ResourceTableProps {
   title: string;
@@ -20,7 +21,7 @@ interface ResourceTableProps {
   onDelete?: (id: number, item: any) => void;
   renderSubItems?: (item: any) => React.ReactNode;
   onDistances?: () => void;
-  onExportExcel?: () => void; // Add the onExportExcel prop
+  onImportExcel?: (data: any[]) => void; // Ajoutez cette ligne
 }
 
 const ResourceTable: React.FC<ResourceTableProps> = ({
@@ -33,10 +34,11 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
   onDelete,
   renderSubItems,
   onDistances,
-  onExportExcel, // Add the onExportExcel prop
+  onImportExcel, // Ajoutez cette ligne
 }) => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [expandedItemId, setExpandedItemId] = useState<number | null>(null);
+  const [isImporterOpen, setIsImporterOpen] = useState(false);
 
   const filteredItems = items.filter((item) =>
     columns.some((column) => {
@@ -52,6 +54,13 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
     setExpandedItemId(expandedItemId === itemId ? null : itemId);
   };
 
+  const handleCsvSubmit = (data: any[]) => {
+    if (onImportExcel) {
+      onImportExcel(data);
+    }
+    setIsImporterOpen(false);
+  };
+
   return (
     <div className="bg-white p-4 rounded-lg shadow-md">
       <div className="flex justify-between items-center mb-4">
@@ -60,14 +69,53 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
           <span>{title}</span>
         </h2>
         <div className="flex space-x-2">
-          {onExportExcel && (
-            <button
-              onClick={onExportExcel}
-              className="bg-green-700 text-white px-4 py-2 rounded flex items-center space-x-2"
-            >
-              <FaFileExcel />
-              <span>Export Excel</span>
-            </button>
+          {title === "Lieux" && onImportExcel && (
+            <>
+              <button
+                onClick={() => setIsImporterOpen(true)}
+                className="bg-green-700 text-white px-4 py-2 rounded flex items-center space-x-2"
+              >
+                <FaFileExcel />
+                <span>Importer Excel</span>
+              </button>
+              <CSVImporter
+                modalIsOpen={isImporterOpen}
+                modalOnCloseTriggered={() => setIsImporterOpen(false)}
+                darkMode={false}
+                onComplete={handleCsvSubmit}
+                template={{
+                  columns: [
+                    {
+                      name: "Lieu",
+                      key: "lieu",
+                      required: true,
+                      description: "Le nom du lieu",
+                      suggested_mappings: ["Lieu", "Location"],
+                    },
+                    {
+                      name: "Base A",
+                      key: "base_a",
+                      required: true,
+                      description: "La première base",
+                      suggested_mappings: ["Base A", "Base1"],
+                    },
+                    {
+                      name: "Base B",
+                      key: "base_b",
+                      required: true,
+                      description: "La deuxième base",
+                      suggested_mappings: ["Base B", "Base2"],
+                    },
+                    {
+                      name: "Distance Arrondie (M)",
+                      key: "distance_arrondie",
+                      data_type: "number",
+                      description: "Distance arrondie en mètres",
+                    },
+                  ],
+                }}
+              />
+            </>
           )}
           {onDistances && (
             <button

@@ -24,6 +24,7 @@ import {
   deleteMateriauxOutils,
   updateEmployeeDetails,
   deleteSousTraitantProjet,
+  createOrUpdateDistance,
 } from "../../../services/JournalService";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
 import ModalGestionLocalisation from "./ModalGestionLocalisation";
@@ -163,6 +164,94 @@ const Gestion: React.FC = () => {
       }
     }
   };
+  const handleImportExcel = async (data: any) => {
+    console.log("Données importées:", data);
+
+    if (!data.rows || !Array.isArray(data.rows)) {
+      console.error(
+        "Les données importées ne contiennent pas de lignes valides:",
+        data
+      );
+      return;
+    }
+
+    const rows = data.rows;
+
+    const lieuxSet = new Set<string>();
+    const baseAssociations: {
+      [lieu: string]: { base_a: string; base_b: string; distance: number }[];
+    } = {};
+
+    // Parcours de toutes les lignes pour extraire les lieux et bases distincts
+    rows.forEach((row: any) => {
+      const { lieu, base_a, base_b, distance_arrondie } = row.values;
+
+      lieuxSet.add(lieu);
+
+      if (!baseAssociations[lieu]) {
+        baseAssociations[lieu] = [];
+      }
+
+      // Vérification que les bases ne sont ni nulles ni égales à "N/A"
+      if (base_a && base_a !== "N/A" && base_b && base_b !== "N/A") {
+        const baseAString = String(base_a);
+        const baseBString = String(base_b);
+
+        baseAssociations[lieu].push({
+          base_a: baseAString,
+          base_b: baseBString,
+          distance: distance_arrondie,
+        });
+      } else {
+        console.warn(
+          `Lignes ignorées à cause de noms de base invalides: ${base_a}, ${base_b}`
+        );
+      }
+    });
+
+    // Création des lieux distincts
+    const lieuIdMap: { [lieu: string]: number } = {};
+    for (const lieu of lieuxSet) {
+      try {
+        const lieuId = await createOrUpdateLieu(lieu, selectedProject.ID);
+        lieuIdMap[lieu] = lieuId;
+        console.log(`Lieu ${lieu} créé avec ID ${lieuId}`);
+      } catch (error) {
+        console.error(`Erreur lors de la création du lieu ${lieu}:`, error);
+      }
+    }
+
+    // Création des bases associées et des distances
+    for (const [lieu, associations] of Object.entries(baseAssociations)) {
+      const lieuId = lieuIdMap[lieu];
+      const baseIdMap: { [base: string]: number } = {};
+
+      for (const { base_a, base_b, distance } of associations) {
+        try {
+          // Création ou récupération des IDs pour base_a et base_b
+          const baseAId =
+            baseIdMap[base_a] || (await createOrUpdateBase(base_a, lieuId));
+          baseIdMap[base_a] = baseAId;
+
+          const baseBId =
+            baseIdMap[base_b] || (await createOrUpdateBase(base_b, lieuId));
+          baseIdMap[base_b] = baseBId;
+
+          console.log(
+            `Base A: ${base_a} avec ID: ${baseAId}, Base B: ${base_b} avec ID: ${baseBId}`
+          );
+
+          // Création de la distance entre base_a et base_b
+          await createOrUpdateDistance(lieuId, baseAId, baseBId, distance);
+        } catch (error) {
+          console.error(
+            `Erreur lors de la création des bases ou de la distance pour le lieu ${lieu}:`,
+            error
+          );
+        }
+      }
+    }
+  };
 
   const performAction = async (
     category: string,
@@ -290,7 +379,8 @@ const Gestion: React.FC = () => {
         onDistances={() => {
           setSelectedLieu(lieux?.[0]?.id || null); // Set default selectedLieu to the first one
           setIsDistanceModalOpen(true);
-        }} // Add the onDistances function here
+        }}
+        onImportExcel={handleImportExcel}
       />
 
       <div className="grid grid-cols-1 gap-4">

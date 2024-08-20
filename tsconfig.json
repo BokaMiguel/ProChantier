@@ -1,11 +1,13 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "es2015",
     "lib": [
-      "dom",
       "dom.iterable",
-      "esnext"
+      "esnext",
+      "dom",
+      "es2015",
     ],
+    "downlevelIteration": true, // Permet l'itération sur des collections ES6+ dans des cibles plus anciennes
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,

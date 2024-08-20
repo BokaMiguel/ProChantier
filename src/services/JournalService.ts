@@ -71,16 +71,20 @@ export const getBases = async (lieuId: number) => {
 };
 
 export const createOrUpdateBase = async (Base: string, LieuID: number, Id?: number) => {
+  console.log('Base', Base)
+  console.log('LieuID', LieuID)
   const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdateBase`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ Base, LieuID, Id }), // Utiliser lieuId au lieu de projetId
+    body: JSON.stringify({ Base, LieuID, Id }),
   });
   if (!response.ok) {
     throw new Error("Failed to create or update base");
   }
+  const data = await response.json();
+  return data.id; // Retourne l'ID de la base créée ou mise à jour
 };
 
 export const deleteBase = async (baseId: number) => {
@@ -105,6 +109,8 @@ export const createOrUpdateLieu = async (nom: string, ProjetID: number, id?: num
   if (!response.ok) {
     throw new Error("Failed to create or update lieu");
   }
+  const data = await response.json();
+  return data.id; // Retourne l'ID du lieu créé ou mis à jour
 };
 
 export const deleteLieu = async (lieuId: number) => {
@@ -254,23 +260,14 @@ export const getDistancesForLieu = async (lieuId: number) => {
   return response.json();
 };
 
-export const createOrUpdateDistance = async (
-  BaseA: number,
-  BaseB: number,
-  DistanceInMeters: number,
-  LieuID: number,
-  Id?: number
-) => {
-  const response = await fetch(
-    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdateDistance`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ BaseA, BaseB, DistanceInMeters, LieuID, Id }),
-    }
-  );
+export const createOrUpdateDistance = async (lieuId: number, baseA: number, baseB: number, distance: number) => {
+  const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdateDistance`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ LieuID: lieuId, BaseA: baseA, BaseB: baseB, DistanceInMeters: distance }),
+  });
   if (!response.ok) {
     throw new Error("Failed to create or update distance");
   }

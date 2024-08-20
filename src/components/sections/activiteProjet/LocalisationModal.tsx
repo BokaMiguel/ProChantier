@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaTrash, FaTimes, FaSave } from "react-icons/fa";
 import "./LocalisationModal.scss";
 
@@ -11,9 +11,8 @@ interface LocalisationModalProps {
   setLiaisonMode: React.Dispatch<React.SetStateAction<boolean>>;
   handleLocalisationChange: () => void;
   clearAllLocalisations: () => void;
+  bases: string[]; // Ajouter la liste des bases en tant que prop
 }
-
-const mockLocalisations = Array.from({ length: 20 }, (_, i) => `1-${i + 1}`);
 
 const LocalisationModal: React.FC<LocalisationModalProps> = ({
   showModal,
@@ -23,7 +22,7 @@ const LocalisationModal: React.FC<LocalisationModalProps> = ({
   liaisonMode,
   setLiaisonMode,
   handleLocalisationChange,
-  clearAllLocalisations,
+  bases,
 }) => {
   const [selectedLocalisations, setSelectedLocalisations] = useState<string[]>(
     []
@@ -31,78 +30,27 @@ const LocalisationModal: React.FC<LocalisationModalProps> = ({
   const [showConfirm, setShowConfirm] = useState(false);
 
   const toggleLocalisation = (localisation: string) => {
-    if (liaisonMode) {
-      setSelectedLocalisations((prevSelected) =>
-        prevSelected.includes(localisation)
-          ? prevSelected.filter((loc) => loc !== localisation)
-          : [...prevSelected, localisation]
-      );
-    } else {
-      setSavedLocalisations((prevSelected) =>
-        prevSelected.includes(localisation)
-          ? prevSelected.filter((loc) => loc !== localisation)
-          : [...prevSelected, localisation]
-      );
-    }
-  };
-
-  const addLiaison = () => {
-    if (selectedLocalisations.length > 1) {
-      const liaison = selectedLocalisations.join("@");
-      setSelectedLocalisations([]);
-      setSavedLocalisations((prevSelected) => [...prevSelected, liaison]);
-    }
-  };
-
-  const deleteLocalisation = (loc: string) => {
     setSavedLocalisations((prevSelected) =>
-      prevSelected.filter((selected) => selected !== loc)
+      prevSelected.includes(localisation)
+        ? prevSelected.filter((loc) => loc !== localisation)
+        : [...prevSelected, localisation]
     );
-  };
-
-  const renderSelectedLocalisations = (
-    localisations: string[],
-    deletable = true
-  ) => {
-    return localisations.map((loc) => {
-      const isLiaison = loc.includes("@");
-      return (
-        <div
-          key={loc}
-          className={`py-1 px-3 rounded-full mb-2 ${
-            isLiaison ? "bg-blue-200" : "bg-green-200"
-          } flex items-center space-x-2 modal-localisation`}
-        >
-          <span>{loc}</span>
-          {deletable && (
-            <button
-              onClick={() => deleteLocalisation(loc)}
-              className="text-red-500 hover:text-red-700"
-            >
-              X
-            </button>
-          )}
-        </div>
-      );
-    });
   };
 
   return (
     <>
       {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded shadow-lg w-full max-w-lg space-y-4">
+        <div className="fixed inset-0 flex items-center justify-center modal-backdrop bg-black bg-opacity-50">
+          <div className="modal-content bg-white p-6 rounded shadow-lg w-full max-w-lg space-y-4">
             <h3 className="text-xl font-bold">Sélectionner une localisation</h3>
             <div className="flex justify-between items-center">
               <label className="flex items-center">
                 <input
                   type="checkbox"
                   checked={liaisonMode}
-                  onChange={() => {
-                    setLiaisonMode(!liaisonMode);
-                    setSelectedLocalisations([]);
-                  }}
+                  onChange={() => setLiaisonMode(!liaisonMode)}
                   className="mr-2"
+                  disabled={savedLocalisations.length > 0} // Désactive la case à cocher si des bases simples sont sélectionnées
                 />
                 Mode Liaison
               </label>
@@ -120,13 +68,12 @@ const LocalisationModal: React.FC<LocalisationModalProps> = ({
               </button>
             </div>
             <div className="grid grid-cols-4 gap-2 mb-4">
-              {mockLocalisations.map((loc) => (
+              {bases.map((loc) => (
                 <button
                   key={loc}
                   onClick={() => toggleLocalisation(loc)}
                   className={`py-2 px-4 rounded shadow ${
-                    savedLocalisations.includes(loc) ||
-                    selectedLocalisations.includes(loc)
+                    savedLocalisations.includes(loc)
                       ? "bg-blue-500 text-white"
                       : "bg-gray-200"
                   }`}
@@ -138,7 +85,14 @@ const LocalisationModal: React.FC<LocalisationModalProps> = ({
             {liaisonMode && selectedLocalisations.length > 0 && (
               <div className="flex justify-between items-center mb-4">
                 <button
-                  onClick={addLiaison}
+                  onClick={() => {
+                    const liaison = selectedLocalisations.join("@");
+                    setSavedLocalisations((prevSelected) => [
+                      ...prevSelected,
+                      liaison,
+                    ]);
+                    setSelectedLocalisations([]);
+                  }}
                   className="py-2 px-4 bg-blue-500 text-white rounded shadow"
                 >
                   Ajouter Liaison
@@ -150,7 +104,24 @@ const LocalisationModal: React.FC<LocalisationModalProps> = ({
                 Localisations enregistrées
               </h4>
               <div className="flex flex-wrap space-x-2 space-y-2">
-                {renderSelectedLocalisations(savedLocalisations, true)}
+                {savedLocalisations.map((loc) => (
+                  <div
+                    key={loc}
+                    className="py-1 px-3 rounded-full mb-2 bg-green-200 flex items-center space-x-2 modal-localisation"
+                  >
+                    <span>{loc}</span>
+                    <button
+                      onClick={() =>
+                        setSavedLocalisations((prevSelected) =>
+                          prevSelected.filter((selected) => selected !== loc)
+                        )
+                      }
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      X
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
             <div className="flex justify-end space-x-4">
@@ -169,32 +140,6 @@ const LocalisationModal: React.FC<LocalisationModalProps> = ({
                 Enregistrer
               </button>
             </div>
-            {showConfirm && (
-              <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
-                  <h3 className="text-xl font-bold mb-4">
-                    Confirmer la Suppression
-                  </h3>
-                  <p>
-                    Êtes-vous sûr de vouloir effacer toutes les localisations?
-                  </p>
-                  <div className="flex justify-end space-x-4 mt-4">
-                    <button
-                      onClick={() => setShowConfirm(false)}
-                      className="py-2 px-4 bg-gray-500 text-white rounded shadow"
-                    >
-                      Annuler
-                    </button>
-                    <button
-                      onClick={clearAllLocalisations}
-                      className="py-2 px-4 bg-red-500 text-white rounded shadow"
-                    >
-                      Effacer
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
