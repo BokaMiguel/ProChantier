@@ -1,14 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaUser, FaBriefcase, FaToolbox, FaTimes } from "react-icons/fa";
 import { Employe } from "../../models/JournalFormModel";
-
-const mockUsers = [
-  "Alice Dupont",
-  "Bob Martin",
-  "Charlie Legrand",
-  "David Durand",
-  "Eve Martin",
-];
+import { useAuth } from "../../context/AuthContext";
 
 const InfoEmployes: React.FC<{
   users: Employe[];
@@ -17,37 +10,69 @@ const InfoEmployes: React.FC<{
   const [showModal, setShowModal] = useState(false);
   const [userIdToDelete, setUserIdToDelete] = useState<number | null>(null);
 
+  const { employees, fonctions, equipements } = useAuth();
+
   const handleAddUser = () => {
-    const newUser: Employe = {
-      id: users.length + 1,
-      nom: "",
-      prenom: "",
-      fonction: {
-        id: null,
+    if (employees && users.length < employees.length) {
+      const newUser: Employe = {
+        id: users.length + 1,
         nom: "",
-      },
-      equipement: {
-        id: null,
-        nom: "",
-      },
-    };
-    setUsers((prevUsers: Employe[]) => [...prevUsers, newUser]);
+        prenom: "",
+        fonction: {
+          id: null,
+          nom: "",
+        },
+        equipement: {
+          id: null,
+          nom: "",
+        },
+      };
+      setUsers((prevUsers: Employe[]) => [...prevUsers, newUser]);
+    }
   };
 
-  const handleChange = (id: number, field: keyof Employe, value: string) => {
+  const handleChange = (
+    id: number,
+    field: keyof Employe | "fonction" | "equipement",
+    value: string
+  ) => {
     const updatedUsers = users.map((user) => {
       if (user.id === id) {
-        return { ...user, [field]: value };
+        if (field === "nom") {
+          const selectedEmployee = employees?.find(
+            (emp) => `${emp.prenom} ${emp.nom}` === value
+          );
+          return {
+            ...user,
+            nom: selectedEmployee?.nom || "",
+            prenom: selectedEmployee?.prenom || "",
+            fonction: selectedEmployee?.fonction || { id: null, nom: "" },
+            equipement: selectedEmployee?.equipement || { id: null, nom: "" },
+          };
+        } else if (field === "fonction") {
+          const selectedFonction = fonctions?.find((f) => f.nom === value);
+          return {
+            ...user,
+            fonction: selectedFonction
+              ? { id: selectedFonction.id, nom: selectedFonction.nom }
+              : { id: null, nom: "" },
+          };
+        } else if (field === "equipement") {
+          const selectedEquipement = equipements?.find((e) => e.nom === value);
+          return {
+            ...user,
+            equipement: selectedEquipement
+              ? { id: selectedEquipement.id, nom: selectedEquipement.nom }
+              : { id: null, nom: "" },
+          };
+        } else {
+          return { ...user, [field]: value };
+        }
       }
       return user;
     });
 
     setUsers(updatedUsers);
-
-    const lastUser = updatedUsers[updatedUsers.length - 1];
-    if (lastUser.nom !== "") {
-      handleAddUser();
-    }
   };
 
   const handleDeleteUser = (id: number) => {
@@ -64,32 +89,39 @@ const InfoEmployes: React.FC<{
     setUserIdToDelete(null);
   };
 
+  useEffect(() => {
+    // Si la liste des utilisateurs est plus petite que la liste des employés, ajoute un nouvel utilisateur
+    if (employees && users.length < employees.length) {
+      handleAddUser();
+    }
+  }, [users, employees]);
+
   const renderUserRows = () => {
     return users.map((user) => (
       <div key={user.id} className="grid grid-cols-10 gap-4 mb-4 items-center">
         <select
-          value={user.nom}
+          value={`${user.prenom} ${user.nom}`}
           onChange={(e) => handleChange(user.id, "nom", e.target.value)}
           className="col-span-3 border rounded px-2 py-1 w-full"
         >
           <option value=""></option>
-          {mockUsers.map((name, index) => (
-            <option key={index} value={name}>
-              {name}
+          {employees?.map((emp, index) => (
+            <option key={index} value={`${emp.prenom} ${emp.nom}`}>
+              {`${emp.prenom} ${emp.nom}`}
             </option>
           ))}
         </select>
         <select
           value={user.fonction.nom}
-          onChange={(e) =>
-            handleChange(user.id, "fonction", e.target.value)
-          }
+          onChange={(e) => handleChange(user.id, "fonction", e.target.value)}
           className="col-span-3 border rounded px-2 py-1 w-full"
         >
           <option value=""></option>
-          <option value="Chef de projet">Chef de projet</option>
-          <option value="Ingénieur">Ingénieur</option>
-          <option value="Technicien">Technicien</option>
+          {fonctions?.map((f) => (
+            <option key={f.id} value={f.nom}>
+              {f.nom}
+            </option>
+          ))}
         </select>
         <select
           value={user.equipement.nom}
@@ -97,9 +129,11 @@ const InfoEmployes: React.FC<{
           className="col-span-3 border rounded px-2 py-1 w-full"
         >
           <option value=""></option>
-          <option value="Ordinateur">Ordinateur</option>
-          <option value="Tablette">Tablette</option>
-          <option value="Smartphone">Smartphone</option>
+          {equipements?.map((e) => (
+            <option key={e.id} value={e.nom}>
+              {e.nom}
+            </option>
+          ))}
         </select>
         {user.nom !== "" && (
           <button

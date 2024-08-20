@@ -72,7 +72,7 @@ const FilterMenu: React.FC<FilterMenuProps> = ({
         (journal) =>
           journal.activites
             .flatMap((act) => act.lieu)
-            .filter(Boolean) as string[]
+            .filter(Boolean) as unknown as string[]
       )
     )
   );

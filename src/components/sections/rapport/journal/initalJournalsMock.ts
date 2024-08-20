@@ -19,7 +19,10 @@ export const initialJournals: Journal[] = [
           endHour: "10:00",
           entreprise: "Entreprise A",
           localisation: "Site A",
-          lieu: ["Lieu A"],
+          lieu: [{
+            id: 1, nom: 'Lieu E',
+            projetId: 0
+          }],
           quantite: 10,
           notes: "Préparation du terrain",
           isComplete: false
@@ -31,8 +34,10 @@ export const initialJournals: Journal[] = [
           endHour: "12:00",
           entreprise: "Entreprise B",
           localisation: "Site B",
-          lieu: ["Lieu B"],
-          quantite: 20,
+   lieu: [{
+            id: 1, nom: 'Lieu E',
+            projetId: 0
+          }],          quantite: 20,
           notes: "Coulage du béton",
           isComplete: false
       },
@@ -81,8 +86,10 @@ export const initialJournals: Journal[] = [
           endHour: "09:00",
           entreprise: "Entreprise C",
           localisation: "Site C",
-          lieu: ["Lieu C"],
-          quantite: 15,
+   lieu: [{
+            id: 1, nom: 'Lieu E',
+            projetId: 0
+          }],          quantite: 15,
           notes: "Assemblage complet",
           isComplete: false
       },
@@ -128,8 +135,10 @@ export const initialJournals: Journal[] = [
           endHour: "10:00",
           entreprise: "Entreprise D",
           localisation: "Site D",
-          lieu: ["Lieu D"],
-          quantite: 25,
+   lieu: [{
+            id: 1, nom: 'Lieu E',
+            projetId: 0
+          }],          quantite: 25,
           notes: "Installation réussie",
           isComplete: false
       },
@@ -175,8 +184,10 @@ export const initialJournals: Journal[] = [
           endHour: "13:00",
           entreprise: "Entreprise E",
           localisation: "Site E",
-          lieu: ["Lieu E"],
-          quantite: 30,
+   lieu: [{
+            id: 1, nom: 'Lieu E',
+            projetId: 0
+          }],          quantite: 30,
           notes: "Isolation thermique",
           isComplete: false
       },
@@ -222,8 +233,10 @@ export const initialJournals: Journal[] = [
           endHour: "12:00",
           entreprise: "Entreprise F",
           localisation: "Site F",
-          lieu: ["Lieu F"],
-          quantite: 20,
+   lieu: [{
+            id: 1, nom: 'Lieu E',
+            projetId: 0
+          }],          quantite: 20,
           notes: "Application de deux couches",
           isComplete: false
       },
@@ -269,8 +282,10 @@ export const initialJournals: Journal[] = [
           endHour: "11:30",
           entreprise: "Entreprise G",
           localisation: "Site G",
-          lieu: ["Lieu G"],
-          quantite: 35,
+   lieu: [{
+            id: 1, nom: 'Lieu E',
+            projetId: 0
+          }],          quantite: 35,
           notes: "Travail difficile à cause de la neige",
           isComplete: false
       },
@@ -316,8 +331,10 @@ export const initialJournals: Journal[] = [
           endHour: "12:00",
           entreprise: "Entreprise H",
           localisation: "Site H",
-          lieu: ["Lieu H"],
-          quantite: 25,
+   lieu: [{
+            id: 1, nom: 'Lieu E',
+            projetId: 0
+          }],          quantite: 25,
           notes: "Installation des câbles principaux",
           isComplete: false
       },
@@ -363,8 +380,10 @@ export const initialJournals: Journal[] = [
           endHour: "13:00",
           entreprise: "Entreprise I",
           localisation: "Site I",
-          lieu: ["Lieu I"],
-          quantite: 30,
+   lieu: [{
+            id: 1, nom: 'Lieu E',
+            projetId: 0
+          }],          quantite: 30,
           notes: "Installation des conduites d'eau",
           isComplete: false
       },
@@ -410,8 +429,10 @@ export const initialJournals: Journal[] = [
           endHour: "10:00",
           entreprise: "Entreprise J",
           localisation: "Site J",
-          lieu: ["Lieu J"],
-          quantite: 20,
+   lieu: [{
+            id: 1, nom: 'Lieu E',
+            projetId: 0
+          }],          quantite: 20,
           notes: "Installation des tuiles",
           isComplete: false
       },
@@ -457,8 +478,10 @@ export const initialJournals: Journal[] = [
           endHour: "11:00",
           entreprise: "Entreprise K",
           localisation: "Site K",
-          lieu: ["Lieu K"],
-          quantite: 25,
+   lieu: [{
+            id: 1, nom: 'Lieu E',
+            projetId: 0
+          }],          quantite: 25,
           notes: "Pose de carrelage",
           isComplete: false
       },

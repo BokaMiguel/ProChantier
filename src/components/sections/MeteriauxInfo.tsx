@@ -1,10 +1,6 @@
 import React, { useState } from "react";
-import {
-  FaCubes,
-  FaTimes,
-  FaPlusCircle,
-  FaSortNumericDown,
-} from "react-icons/fa";
+import { FaCubes, FaTimes, FaPlusCircle } from "react-icons/fa";
+import { useAuth } from "../../context/AuthContext"; // Importez votre contexte
 
 interface Materiau {
   id: number;
@@ -18,9 +14,8 @@ const initialMateriau: Materiau = {
   quantite: 0,
 };
 
-const mockMateriaux = ["Ciment", "Briques", "Sable", "Gravier", "Bois"];
-
 const MateriauxInfo: React.FC = () => {
+  const { materiaux: contextMateriaux } = useAuth(); // Récupérez les matériaux du contexte
   const [materiaux, setMateriaux] = useState<Materiau[]>([initialMateriau]);
   const [nextId, setNextId] = useState(2);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -82,9 +77,9 @@ const MateriauxInfo: React.FC = () => {
             className="col-span-6 shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           >
             <option value="">Sélectionner un matériau</option>
-            {mockMateriaux.map((nom, index) => (
-              <option key={index} value={nom}>
-                {nom}
+            {contextMateriaux?.map((nom, index) => (
+              <option key={index} value={nom.nom}>
+                {nom.nom}
               </option>
             ))}
           </select>

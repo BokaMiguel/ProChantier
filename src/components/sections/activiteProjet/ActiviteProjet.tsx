@@ -15,10 +15,10 @@ import {
   initialActivite,
 } from "../../../models/JournalFormModel";
 import LocalisationModal from "./LocalisationModal";
-
-const mockLieux = ["Site A", "Site B", "Site C", "Site D", "Site E"];
+import { useAuth } from "../../../context/AuthContext"; // Importez le contexte
 
 const ActiviteProjet: React.FC<{ users: Employe[] }> = ({ users }) => {
+  const { lieux } = useAuth(); // Récupérez les lieux depuis le contexte
   const [activites, setActivites] = useState<Activite[]>([initialActivite]);
   const [nextId, setNextId] = useState(2);
   const [showModal, setShowModal] = useState(false);
@@ -202,7 +202,11 @@ const ActiviteProjet: React.FC<{ users: Employe[] }> = ({ users }) => {
               Lieu:
             </label>
             <select
-              value={activite.lieu}
+              value={
+                Array.isArray(activite.lieu)
+                  ? activite.lieu.join(", ")
+                  : activite.lieu ?? ""
+              }
               onChange={(e) =>
                 handleChange(activite.id, "lieu", e.target.value)
               }
@@ -210,9 +214,9 @@ const ActiviteProjet: React.FC<{ users: Employe[] }> = ({ users }) => {
               disabled={isLocked}
             >
               <option value="">Sélectionner un lieu</option>
-              {mockLieux.map((lieu, index) => (
-                <option key={index} value={lieu}>
-                  {lieu}
+              {lieux?.map((lieu, index) => (
+                <option key={index} value={lieu.nom}>
+                  {lieu.nom}
                 </option>
               ))}
             </select>
@@ -272,13 +276,19 @@ const ActiviteProjet: React.FC<{ users: Employe[] }> = ({ users }) => {
   return (
     <div className="p-4 w-full space-y-4">
       <StatsGrid
-        users={users.map((user) => ({ id: user.id, nom: user.nom }))}
+        users={users.map((user) => ({
+          id: user.id,
+          nom: `${user.prenom} ${user.nom}`,
+        }))}
         nextStep={false}
         activiteCount={activites.length}
       />
       {activites.length > 5 && (
         <StatsGrid
-          users={users.map((user) => ({ id: user.id, nom: user.nom }))}
+          users={users.map((user) => ({
+            id: user.id,
+            nom: `${user.prenom} ${user.nom}`,
+          }))}
           nextStep={true}
           activiteCount={activites.length - 5}
         />

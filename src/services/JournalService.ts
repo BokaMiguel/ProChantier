@@ -62,21 +62,21 @@ export const getMateriauxOutillage = async () => {
   return response.json();
 };
 
-export const getBases = async (projectId: number) => {
+export const getBases = async (lieuId: number) => {
   const response = await fetch(
-    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetBases/${projectId}`,
+    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetBases/${lieuId}`,
     { method: "GET" }
   );
   return response.json();
 };
 
-export const createOrUpdateBase = async (base: string, projectId: number, id?: number) => {
+export const createOrUpdateBase = async (Base: string, LieuID: number, Id?: number) => {
   const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdateBase`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ base, idProjet: projectId, id }),
+    body: JSON.stringify({ Base, LieuID, Id }), // Utiliser lieuId au lieu de projetId
   });
   if (!response.ok) {
     throw new Error("Failed to create or update base");
@@ -84,7 +84,6 @@ export const createOrUpdateBase = async (base: string, projectId: number, id?: n
 };
 
 export const deleteBase = async (baseId: number) => {
-  console.log('baseId', baseId)
   const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/DeleteBase/${baseId}`, {
     method: "DELETE",
   });
@@ -125,7 +124,6 @@ export const createOrUpdateFonction = async (nom: string, id?: number) => {
     },
     body: JSON.stringify({ nom, id }),
   });
-  console.log('response', response)
   if (!response.ok) {
     throw new Error("Failed to create or update fonction");
   }
@@ -136,8 +134,6 @@ export const updateEmployeeDetails = async (
   fonctionId: number | null,
   equipementId: number | null
 ) => {
-  console.log('fonctionId', fonctionId)
-  console.log('equipementId', equipementId)
   const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/UpdateEmployeeDetails`, {
     method: "POST",
     headers: {
@@ -246,3 +242,49 @@ export const deleteSousTraitantProjet = async (id: number) => {
     throw new Error("Failed to delete sous-traitant projet");
   }
 };
+
+export const getDistancesForLieu = async (lieuId: number) => {
+  const response = await fetch(
+    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetDistancesForLieu/${lieuId}`,
+    { method: "GET" }
+  );
+  if (!response.ok) {
+    throw new Error("Failed to fetch distances for the specified Lieu");
+  }
+  return response.json();
+};
+
+export const createOrUpdateDistance = async (
+  BaseA: number,
+  BaseB: number,
+  DistanceInMeters: number,
+  LieuID: number,
+  Id?: number
+) => {
+  const response = await fetch(
+    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdateDistance`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ BaseA, BaseB, DistanceInMeters, LieuID, Id }),
+    }
+  );
+  if (!response.ok) {
+    throw new Error("Failed to create or update distance");
+  }
+};
+
+export const deleteDistance = async (distanceId: number) => {
+  const response = await fetch(
+    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/DeleteDistance/${distanceId}`,
+    {
+      method: "DELETE",
+    }
+  );
+  if (!response.ok) {
+    throw new Error("Failed to delete distance");
+  }
+};
+

@@ -8,7 +8,7 @@ import {
   FaUser,
 } from "react-icons/fa";
 import { useAuth } from "../../../context/AuthContext";
-import Modal from "./Modal";
+import ModalGestion from "./ModalGestion";
 import ResourceTable from "./RessourceTable";
 import {
   deleteBase,
@@ -23,8 +23,10 @@ import {
   createOrUpdateMateriauxOutils,
   deleteMateriauxOutils,
   updateEmployeeDetails,
+  deleteSousTraitantProjet,
 } from "../../../services/JournalService";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
+import ModalGestionLocalisation from "./ModalGestionLocalisation";
 import { Materiau } from "../../../models/JournalFormModel";
 
 const Gestion: React.FC = () => {
@@ -47,8 +49,10 @@ const Gestion: React.FC = () => {
   } = useAuth();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDistanceModalOpen, setIsDistanceModalOpen] = useState(false);
   const [currentCategory, setCurrentCategory] = useState<string | null>(null);
   const [currentItem, setCurrentItem] = useState<any>(null);
+  const [selectedLieu, setSelectedLieu] = useState<number | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{
     id: number;
@@ -56,9 +60,12 @@ const Gestion: React.FC = () => {
     category: string;
   } | null>(null);
 
+  const handleCloseDistanceModal = () => {
+    setIsDistanceModalOpen(false);
+  };
+
   const loadProjectData = useCallback(() => {
     if (selectedProject) {
-      fetchBases(selectedProject.ID);
       fetchLieux(selectedProject.ID);
       fetchFonctions();
       fetchEquipements(selectedProject.ID);
@@ -68,7 +75,6 @@ const Gestion: React.FC = () => {
     }
   }, [
     selectedProject,
-    fetchBases,
     fetchLieux,
     fetchFonctions,
     fetchEquipements,
@@ -85,35 +91,39 @@ const Gestion: React.FC = () => {
     return <div>Veuillez sélectionner un projet.</div>;
   }
 
-  const handleAdd = (category: string) => {
+  const handleAdd = (category: string, lieuId?: number) => {
     setCurrentCategory(category);
-    setCurrentItem(null);
+    setCurrentItem(lieuId ? { lieuId } : null);
     setIsModalOpen(true);
   };
 
   const handleEdit = (category: string, item: any) => {
-    // Recherche de l'ID de la fonction et de l'équipement en fonction du nom
-    const matchedFonction = fonctions?.find(
-      (f) => f.nom.trim() === item.fonction.trim()
-    );
-    const matchedEquipement = equipements?.find(
-      (e) => e.nom.trim() === item.equipement.trim()
-    );
+    if (category === "employes") {
+      const matchedFonction = fonctions?.find(
+        (f) => f.nom.trim() === item.fonction.trim()
+      );
+      const matchedEquipement = equipements?.find(
+        (e) => e.nom.trim() === item.equipement.trim()
+      );
 
-    // Mise à jour de l'élément avec les IDs correspondants
-    const updatedItem = {
-      ...item,
-      fonction: matchedFonction
-        ? { id: matchedFonction.id, nom: matchedFonction.nom }
-        : { id: null, nom: "Non spécifié" },
-      equipement: matchedEquipement
-        ? { id: matchedEquipement.id, nom: matchedEquipement.nom }
-        : { id: null, nom: "Non spécifié" },
-    };
+      const updatedItem = {
+        ...item,
+        fonction: matchedFonction
+          ? { id: matchedFonction.id, nom: matchedFonction.nom }
+          : { id: null, nom: "Non spécifié" },
+        equipement: matchedEquipement
+          ? { id: matchedEquipement.id, nom: matchedEquipement.nom }
+          : { id: null, nom: "Non spécifié" },
+      };
 
-    setCurrentItem(updatedItem);
-    setCurrentCategory(category);
-    setIsModalOpen(true);
+      setCurrentItem(updatedItem);
+      setCurrentCategory(category);
+      setIsModalOpen(true);
+    } else {
+      setCurrentItem(item);
+      setCurrentCategory(category);
+      setIsModalOpen(true);
+    }
   };
 
   const handleDelete = (category: string, id: number, itemName: string) => {
@@ -168,14 +178,6 @@ const Gestion: React.FC = () => {
         }
         await fetchMateriaux();
         break;
-      case "localisations":
-        if (action === "save") {
-          await createOrUpdateBase(item.nom, selectedProject.ID, item.id);
-        } else {
-          await deleteBase(item.id);
-        }
-        await fetchBases(selectedProject.ID);
-        break;
       case "lieux":
         if (action === "save") {
           await createOrUpdateLieu(item.nom, selectedProject.ID, item.id);
@@ -191,6 +193,7 @@ const Gestion: React.FC = () => {
           await deleteFonction(item.id);
         }
         await fetchFonctions();
+        await fetchEmployes(selectedProject.ID);
         break;
       case "equipements":
         if (action === "save") {
@@ -199,12 +202,24 @@ const Gestion: React.FC = () => {
           await deleteEquipement(item.id);
         }
         await fetchEquipements(selectedProject.ID);
+        await fetchEmployes(selectedProject.ID);
         break;
       case "sousTraitants":
         if (action === "save") {
           await createOrUpdateSousTraitantProjet(item.nom, item.id);
+        } else {
+          await deleteSousTraitantProjet(item.id);
         }
         await fetchSousTraitants();
+        break;
+      case "localisations":
+        if (action === "save") {
+          await createOrUpdateBase(item.nom, item.lieuId, item.id);
+          fetchBases(item.lieuId);
+        } else {
+          await deleteBase(item.id);
+        }
+        await fetchLieux(selectedProject.ID);
         break;
       case "employes":
         if (action === "save") {
@@ -213,7 +228,6 @@ const Gestion: React.FC = () => {
             item.fonction.id,
             item.equipement.id
           );
-          // Mettre à jour directement la liste des employés pour refléter le changement
         }
         await fetchEmployes(selectedProject.ID);
         break;
@@ -239,11 +253,45 @@ const Gestion: React.FC = () => {
     nom: e.nom,
   }));
 
+  const renderLocalisations = (lieu: any) => {
+    const localisations = bases?.filter((base) => base.lieuId === lieu.id);
+    return (
+      <ResourceTable
+        title={`Localisations pour ${lieu.nom}`}
+        icon={<FaMapMarkerAlt />}
+        items={localisations || []}
+        columns={["base"]}
+        onAdd={() => handleAdd("localisations", lieu.id)}
+        onEdit={(item) => handleEdit("localisations", item)}
+        onDelete={(id: number, item: any) =>
+          handleDelete("localisations", id, item.base)
+        }
+      />
+    );
+  };
+
   return (
     <div className="p-8 bg-gray-100 min-h-screen">
       <h1 className="text-2xl font-bold mb-6 text-center bg-blue-800 text-white p-4 rounded">
         Gestion des Ressources
       </h1>
+
+      <ResourceTable
+        title="Lieux"
+        icon={<FaMapMarkerAlt />}
+        items={lieux || []}
+        columns={["nom"]}
+        onAdd={() => handleAdd("lieux")}
+        onEdit={(item) => handleEdit("lieux", item)}
+        onDelete={(id: number, item: any) => {
+          handleDelete("lieux", id, item.nom);
+        }}
+        renderSubItems={renderLocalisations}
+        onDistances={() => {
+          setSelectedLieu(lieux?.[0]?.id || null); // Set default selectedLieu to the first one
+          setIsDistanceModalOpen(true);
+        }} // Add the onDistances function here
+      />
 
       <div className="grid grid-cols-1 gap-4">
         <ResourceTable
@@ -255,28 +303,6 @@ const Gestion: React.FC = () => {
           onEdit={(item) => handleEdit("materiaux", item)}
           onDelete={(id: number, item: Materiau) => {
             handleDelete("materiaux", id, item.nom);
-          }}
-        />
-        <ResourceTable
-          title="Localisations"
-          icon={<FaMapMarkerAlt />}
-          items={bases || []}
-          columns={["base"]}
-          onAdd={() => handleAdd("localisations")}
-          onEdit={(item) => handleEdit("localisations", item)}
-          onDelete={(id: number, item: any) => {
-            handleDelete("localisations", id, item.base);
-          }}
-        />
-        <ResourceTable
-          title="Lieux"
-          icon={<FaMapMarkerAlt />}
-          items={lieux || []}
-          columns={["nom"]}
-          onAdd={() => handleAdd("lieux")}
-          onEdit={(item) => handleEdit("lieux", item)}
-          onDelete={(id: number, item: any) => {
-            handleDelete("lieux", id, item.nom);
           }}
         />
         <ResourceTable
@@ -333,13 +359,23 @@ const Gestion: React.FC = () => {
       )}
 
       {isModalOpen && (
-        <Modal
+        <ModalGestion
           category={currentCategory}
           item={currentItem}
           fonctions={formattedFonctions || []}
           equipements={formattedEquipements || []}
           onClose={handleModalClose}
           onSubmit={handleModalSubmit}
+        />
+      )}
+
+      {isDistanceModalOpen && selectedLieu !== null && (
+        <ModalGestionLocalisation
+          onClose={handleCloseDistanceModal}
+          lieuId={selectedLieu}
+          bases={bases?.filter((base) => base.lieuId === selectedLieu) || []}
+          lieux={lieux || []} // Pass the lieux array to the modal
+          onLieuChange={setSelectedLieu} // Function to change the selected lieu
         />
       )}
     </div>

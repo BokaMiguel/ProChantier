@@ -14,6 +14,12 @@ export interface Employe {
   };
 }
 
+export interface Lieu {
+  id: number;
+  nom: string;
+  projetId: number;
+}
+
 export interface Activite {
   id: number;
   nom: string;
@@ -24,7 +30,7 @@ export interface Activite {
   signalisation?: string;
   notes?: string;
   isLab?: boolean;
-  lieu?: string[];
+  lieu?: Lieu[];
   quantite?: number;
   distanceMax?: number;
   isComplete: boolean;
@@ -174,4 +180,12 @@ export interface Equipement {
 export interface Localisation {
   id: number;
   base: string;
+  lieuId: number;
+}
+
+export interface LocalisationDistance {
+  id: number;
+  baseA: number;
+  baseB: number;
+  distance: number;
 }

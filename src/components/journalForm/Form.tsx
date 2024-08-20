@@ -8,10 +8,28 @@ import SousTraitantSection from "../sections/SousTraitantSection";
 import { Employe } from "../../models/JournalFormModel";
 import SectionHeader from "../sections/sectionHeader/SectionHeader";
 import MateriauxInfo from "../sections/MeteriauxInfo";
+import { useAuth } from "../../context/AuthContext";
 
 const Form: React.FC = () => {
-  const { type } = useParams<{ type: string }>();
+  const {
+    selectedProject,
+    fetchEmployes,
+    fetchBases,
+    fetchLieux,
+    fetchFonctions,
+    fetchEquipements,
+    fetchSousTraitants,
+    fetchMateriaux,
+    employees,
+    fonctions,
+    lieux,
+    equipements,
+    sousTraitants,
+    materiaux,
+    bases,
+  } = useAuth();
 
+  const { type } = useParams<{ type: string }>();
   const [users, setUsers] = useState<Employe[]>([
     {
       id: 1,

@@ -10,7 +10,7 @@ interface ModalProps {
   equipements: { id: number; nom: string }[];
 }
 
-const Modal: React.FC<ModalProps> = ({
+const ModalGestion: React.FC<ModalProps> = ({
   category,
   item,
   onClose,
@@ -21,7 +21,6 @@ const Modal: React.FC<ModalProps> = ({
   const [formState, setFormState] = useState<any>(item || {});
 
   useEffect(() => {
-    console.log("item", item);
     setFormState(item || {});
   }, [item]);
 
@@ -31,24 +30,28 @@ const Modal: React.FC<ModalProps> = ({
     const { name, value } = e.target;
 
     // Gérer les changements spécifiques pour les combobox
-    if (name === "fonctionId") {
-      const selectedFonction = fonctions.find((f) => f.id === parseInt(value));
-      setFormState((prevState: any) => ({
-        ...prevState,
-        fonction: selectedFonction
-          ? { id: selectedFonction.id, nom: selectedFonction.nom }
-          : { id: null, nom: "Non spécifié" },
-      }));
-    } else if (name === "equipementId") {
-      const selectedEquipement = equipements.find(
-        (e) => e.id === parseInt(value)
-      );
-      setFormState((prevState: any) => ({
-        ...prevState,
-        equipement: selectedEquipement
-          ? { id: selectedEquipement.id, nom: selectedEquipement.nom }
-          : { id: null, nom: "Non spécifié" },
-      }));
+    if (category === "employes") {
+      if (name === "fonctionId") {
+        const selectedFonction = fonctions.find(
+          (f) => f.id === parseInt(value)
+        );
+        setFormState((prevState: any) => ({
+          ...prevState,
+          fonction: selectedFonction
+            ? { id: selectedFonction.id, nom: selectedFonction.nom }
+            : { id: null, nom: "Non spécifié" },
+        }));
+      } else if (name === "equipementId") {
+        const selectedEquipement = equipements.find(
+          (e) => e.id === parseInt(value)
+        );
+        setFormState((prevState: any) => ({
+          ...prevState,
+          equipement: selectedEquipement
+            ? { id: selectedEquipement.id, nom: selectedEquipement.nom }
+            : { id: null, nom: "Non spécifié" },
+        }));
+      }
     } else {
       setFormState((prevState: any) => ({ ...prevState, [name]: value }));
     }
@@ -59,12 +62,16 @@ const Modal: React.FC<ModalProps> = ({
     onSubmit(formState);
   };
 
+  // Détermine si c'est une création ou une modification
+  const isEditing = !!formState.id;
+  const actionLabel = isEditing ? "Modifier" : "Ajouter";
+
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-lg">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">
-            {item ? "Modifier" : `Ajouter ${category}`}
+            {isEditing ? `Modifier ${category}` : `Ajouter ${category}`}
           </h2>
           <FaTimes className="cursor-pointer" onClick={onClose} />
         </div>
@@ -81,7 +88,7 @@ const Modal: React.FC<ModalProps> = ({
               <input
                 type="text"
                 name="nom"
-                value={formState.nom || ""}
+                value={formState.nom || formState.base || ""}
                 onChange={handleChange}
                 className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300 bg-gray-300"
               />
@@ -155,7 +162,7 @@ const Modal: React.FC<ModalProps> = ({
             type="submit"
             className="bg-blue-600 text-white px-4 py-2 rounded"
           >
-            {item ? "Modifier" : `Ajouter ${category}`}
+            {actionLabel} {category}
           </button>
         </form>
       </div>
@@ -163,4 +170,4 @@ const Modal: React.FC<ModalProps> = ({
   );
 };
 
-export default Modal;
+export default ModalGestion;

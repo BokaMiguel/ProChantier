@@ -78,13 +78,9 @@ const CalendarPage: React.FC = () => {
   };
 
   const handleConfirmSelection = () => {
-    console.log("Confirm button clicked");
-    console.log("Available projects:", projects);
-    console.log("Selected project ID:", localSelectedProject);
     const selected = projects?.find(
       (project) => project.ID === localSelectedProject
     );
-    console.log("Selected project:", selected);
     if (selected) {
       selectProject(selected);
       localStorage.setItem("selectedProjectId", String(selected.ID));

@@ -5,6 +5,8 @@ import React, {
   useState,
   ReactNode,
   useCallback,
+  Dispatch,
+  SetStateAction,
 } from "react";
 import { User } from "oidc-client";
 import {
@@ -30,6 +32,7 @@ import {
   Employe,
   Equipement,
   Fonction,
+  Lieu,
   Localisation,
   Materiau,
   SousTraitant,
@@ -42,17 +45,17 @@ interface AuthContextProps {
   selectedProject: Project | null;
   employees: Employe[] | null;
   fonctions: Fonction[] | null;
-  lieux: string[] | null;
+  lieux: Lieu[] | null;
   activites: string[] | null;
   equipements: Equipement[] | null;
   materiaux: Materiau[] | null;
   sousTraitants: SousTraitant[] | null;
-  bases: { id: number; base: string }[] | null;
+  bases: Localisation[] | null;
   login: () => void;
   logout: () => void;
   handleCallback: () => Promise<void>;
   selectProject: (project: Project) => void;
-  fetchBases: (projectId: number) => void;
+  fetchBases: (lieuId: number) => void;
   fetchLieux: (projectId: number) => void;
   fetchEmployes: (projectId: number) => void;
   fetchFonctions: () => void;
@@ -60,6 +63,7 @@ interface AuthContextProps {
   fetchActivites: (projectId: number) => void;
   fetchMateriaux: () => void;
   fetchSousTraitants: () => void;
+  setBases: Dispatch<SetStateAction<Localisation[] | null>>;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -73,7 +77,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [employeeList, setEmployeeList] = useState<Employe[] | null>(null);
   const [fonctions, setFonctions] = useState<Fonction[] | null>(null);
-  const [lieux, setLieux] = useState<string[] | null>(null);
+  const [lieux, setLieux] = useState<Lieu[] | null>(null);
   const [activites, setActivites] = useState<string[] | null>(null);
   const [equipements, setEquipements] = useState<Equipement[] | null>(null);
   const [materiaux, setMateriaux] = useState<Materiau[] | null>(null);
@@ -105,6 +109,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   // Utilisation de useCallback pour mémoriser la fonction fetchProjectDetails
   const fetchProjectDetails = useCallback(async (projectId: number) => {
     try {
+      // Récupération des données du projet
       const employeeData = await getEmployeeList(projectId);
       setEmployeeList(employeeData);
 
@@ -123,8 +128,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const materiauxData = await getMateriauxOutillage();
       setMateriaux(materiauxData);
 
-      const basesData = await getBases(projectId);
-      setBases(basesData);
+      // Récupération des bases associées aux lieux
+      if (lieuData && lieuData.length > 0) {
+        const basesData = await Promise.all(
+          lieuData.map(async (lieu: Lieu) => {
+            const bases = await getBases(lieu.id);
+            return bases.map((base: any) => ({
+              id: base.id,
+              base: base.base,
+              lieuId: lieu.id,
+            }));
+          })
+        );
+
+        // Flatten the array of arrays into a single array
+        const flattenedBasesData = basesData.flat();
+        setBases(flattenedBasesData);
+      } else {
+        setBases([]);
+      }
 
       const sousTraitantsData = await getSousTraitantProjet();
       setSousTraitants(sousTraitantsData);
@@ -172,15 +194,57 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     setSelectedProject(project);
   };
 
-  const fetchBases = useCallback(async (projectId: number) => {
-    const basesData = await getBases(projectId);
-    setBases(basesData);
+  const fetchBases = useCallback(async (lieuId: number) => {
+    if (lieuId > 0) {
+      const updatedBases = await getBases(lieuId);
+
+      setBases((prevBases) => {
+        // Filtrage des bases qui ne sont pas liées au lieu actuel
+        const otherBases = (prevBases ?? []).filter(
+          (base) => base.lieuId !== lieuId
+        );
+        // Combinaison des bases existantes avec les nouvelles bases pour ce lieu
+        return [...otherBases, ...updatedBases];
+      });
+    }
   }, []);
 
-  const fetchLieux = useCallback(async (projectId: number) => {
-    const lieuData = await getLieuProjet(projectId);
-    setLieux(lieuData);
-  }, []);
+  const fetchLieux = useCallback(
+    async (projectId: number) => {
+      try {
+        // Récupération des lieux pour le projet sélectionné
+        const lieuData = await getLieuProjet(projectId);
+        setLieux(lieuData);
+
+        if (lieuData && lieuData.length > 0) {
+          // Récupération des bases pour chaque lieu
+          const basesData = await Promise.all(
+            lieuData.map(async (lieu: Lieu) => {
+              const bases = await getBases(lieu.id);
+              return bases.map((base: any) => ({
+                id: base.id,
+                base: base.base,
+                lieuId: lieu.id,
+              }));
+            })
+          );
+
+          // Aplatissement des résultats pour avoir un seul tableau de bases
+          const flattenedBasesData = basesData.flat();
+          setBases(flattenedBasesData);
+        } else {
+          // Si aucun lieu n'est trouvé, on réinitialise les bases
+          setBases([]);
+        }
+      } catch (error) {
+        console.error(
+          "Erreur lors de la récupération des lieux et des bases:",
+          error
+        );
+      }
+    },
+    [setLieux, setBases]
+  );
 
   const fetchEmployes = useCallback(async (projectId: number) => {
     const employesData = await getEmployeeList(projectId);
@@ -239,6 +303,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         fetchActivites,
         fetchMateriaux,
         fetchSousTraitants,
+        setBases,
       }}
     >
       {children}

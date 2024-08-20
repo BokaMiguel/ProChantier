@@ -1,5 +1,14 @@
 import React, { useState } from "react";
-import { FaEdit, FaTrash, FaPlus, FaSearch } from "react-icons/fa";
+import {
+  FaEdit,
+  FaTrash,
+  FaPlus,
+  FaSearch,
+  FaRoute,
+  FaChevronDown,
+  FaChevronRight,
+  FaFileExcel,
+} from "react-icons/fa";
 
 interface ResourceTableProps {
   title: string;
@@ -8,7 +17,10 @@ interface ResourceTableProps {
   columns: string[];
   onAdd?: () => void;
   onEdit: (item: any) => void;
-  onDelete?: (id: number, item: any) => void; // Rendre onDelete optionnel
+  onDelete?: (id: number, item: any) => void;
+  renderSubItems?: (item: any) => React.ReactNode;
+  onDistances?: () => void;
+  onExportExcel?: () => void; // Add the onExportExcel prop
 }
 
 const ResourceTable: React.FC<ResourceTableProps> = ({
@@ -19,8 +31,12 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
   onAdd,
   onEdit,
   onDelete,
+  renderSubItems,
+  onDistances,
+  onExportExcel, // Add the onExportExcel prop
 }) => {
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [expandedItemId, setExpandedItemId] = useState<number | null>(null);
 
   const filteredItems = items.filter((item) =>
     columns.some((column) => {
@@ -32,6 +48,10 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
     })
   );
 
+  const toggleExpand = (itemId: number) => {
+    setExpandedItemId(expandedItemId === itemId ? null : itemId);
+  };
+
   return (
     <div className="bg-white p-4 rounded-lg shadow-md">
       <div className="flex justify-between items-center mb-4">
@@ -39,14 +59,34 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
           {icon}
           <span>{title}</span>
         </h2>
-        {onAdd && (
-          <button
-            onClick={onAdd}
-            className="bg-blue-600 text-white px-4 py-2 rounded"
-          >
-            <FaPlus />
-          </button>
-        )}
+        <div className="flex space-x-2">
+          {onExportExcel && (
+            <button
+              onClick={onExportExcel}
+              className="bg-green-700 text-white px-4 py-2 rounded flex items-center space-x-2"
+            >
+              <FaFileExcel />
+              <span>Export Excel</span>
+            </button>
+          )}
+          {onDistances && (
+            <button
+              onClick={onDistances}
+              className="bg-orange-600 text-white px-4 py-2 rounded flex items-center space-x-2"
+            >
+              <FaRoute />
+              <span>Distances</span>
+            </button>
+          )}
+          {onAdd && (
+            <button
+              onClick={onAdd}
+              className="bg-blue-600 text-white px-4 py-2 rounded"
+            >
+              <FaPlus />
+            </button>
+          )}
+        </div>
       </div>
       <div className="flex mb-4">
         <FaSearch className="mr-2" />
@@ -71,32 +111,59 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
         </thead>
         <tbody>
           {filteredItems.map((item, index) => (
-            <tr
-              key={index}
-              className={`${index % 2 === 0 ? "bg-gray-100" : "bg-white"}`}
-            >
-              {columns.map((column, idx) => (
-                <td key={idx} className="px-4 py-2 border">
-                  {item[column.toLowerCase()]}
-                </td>
-              ))}
-              <td className="px-4 py-2 border text-center">
-                <button
-                  onClick={() => onEdit(item)}
-                  className="text-blue-600 mr-2"
-                >
-                  <FaEdit />
-                </button>
-                {onDelete && title !== "Employés" && (
+            <React.Fragment key={index}>
+              <tr className={index % 2 === 0 ? "bg-gray-100" : "bg-white"}>
+                {columns.map((column, idx) => (
+                  <td key={idx} className="px-4 py-2 border">
+                    {title === "Lieux" && column === "nom" ? (
+                      <div className="flex items-center">
+                        <button
+                          onClick={() => toggleExpand(item.id)}
+                          className="mr-2"
+                        >
+                          {expandedItemId === item.id ? (
+                            <FaChevronDown />
+                          ) : (
+                            <FaChevronRight />
+                          )}
+                        </button>
+                        {item[column.toLowerCase()]}
+                      </div>
+                    ) : (
+                      item[column.toLowerCase()]
+                    )}
+                  </td>
+                ))}
+                <td className="px-4 py-2 border text-center">
                   <button
-                    onClick={() => onDelete(item.id, item)} // Passez l'ID et l'élément complet
-                    className="text-red-600"
+                    onClick={() => onEdit(item)}
+                    className="text-blue-600 mr-2"
                   >
-                    <FaTrash />
+                    <FaEdit />
                   </button>
+                  {onDelete && (
+                    <button
+                      onClick={() => onDelete(item.id, item)}
+                      className="text-red-600"
+                    >
+                      <FaTrash />
+                    </button>
+                  )}
+                </td>
+              </tr>
+              {expandedItemId === item.id &&
+                renderSubItems &&
+                title === "Lieux" && (
+                  <tr>
+                    <td
+                      colSpan={columns.length + 1}
+                      className="px-4 py-2 border"
+                    >
+                      {renderSubItems(item)}
+                    </td>
+                  </tr>
                 )}
-              </td>
-            </tr>
+            </React.Fragment>
           ))}
         </tbody>
       </table>
