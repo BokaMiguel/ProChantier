@@ -57,25 +57,25 @@ const FilterMenu: React.FC<FilterMenuProps> = ({
       )
     )
   );
-  const distinctActivities = Array.from(
-    new Set(
-      initialJournals.flatMap((journal) =>
-        journal.activites.map((act) => act.nom)
-      )
-    )
-  ).filter((activity) =>
-    activity.toLowerCase().includes(activitySearch.toLowerCase())
-  );
-  const distinctLocations = Array.from(
-    new Set(
-      initialJournals.flatMap(
-        (journal) =>
-          journal.activites
-            .flatMap((act) => act.lieu)
-            .filter(Boolean) as unknown as string[]
-      )
-    )
-  );
+  // const distinctActivities = Array.from(
+  //   new Set(
+  //     initialJournals.flatMap((journal) =>
+  //       journal.activites.map((act) => act.nom)
+  //     )
+  //   )
+  // ).filter((activity) =>
+  //   activity.toLowerCase().includes(activitySearch.toLowerCase())
+  // );
+  // const distinctLocations = Array.from(
+  //   new Set(
+  //     initialJournals.flatMap(
+  //       (journal) =>
+  //         journal.activites
+  //           .flatMap((act) => act.lieu)
+  //           .filter(Boolean) as unknown as string[]
+  //     )
+  //   )
+  // );
 
   const handleStatutChange = (statut: string) => {
     setSelectedStatut((prev) =>
@@ -309,11 +309,11 @@ const FilterMenu: React.FC<FilterMenuProps> = ({
               className="border p-2 rounded"
             >
               <option value="">Sélectionner une activité</option>
-              {distinctActivities.map((activity) => (
+              {/* {distinctActivities.map((activity) => (
                 <option key={activity} value={activity}>
                   {activity}
                 </option>
-              ))}
+              ))} */}
             </select>
           </div>
         </div>
@@ -322,7 +322,7 @@ const FilterMenu: React.FC<FilterMenuProps> = ({
             Lieux
           </h3>
           <div className="flex flex-wrap gap-2">
-            {distinctLocations.map((location) => (
+            {/* {distinctLocations.map((location) => (
               <label key={location} className="flex items-center">
                 <input
                   type="checkbox"
@@ -335,7 +335,7 @@ const FilterMenu: React.FC<FilterMenuProps> = ({
                   {location}
                 </span>
               </label>
-            ))}
+            ))} */}
           </div>
         </div>
         <div className="mb-4 w-full">

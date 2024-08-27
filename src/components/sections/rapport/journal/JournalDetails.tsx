@@ -124,18 +124,18 @@ const JournalDetails: React.FC<JournalDetailsProps> = ({
             <tbody>
               {journal.activites.map((activite) => (
                 <tr key={activite.id}>
-                  <td className="px-4 py-2 border">{activite.nom}</td>
+                  {/* <td className="px-4 py-2 border">{activite.nom}</td> */}
                   <td className="px-4 py-2 border">
-                    {activite.lieu?.join(", ")}
+                    {/* {activite.lieu?.nom ?? ""} */}
                   </td>
 
-                  <td className="px-4 py-2 border">{activite.localisation}</td>
+                  {/* <td className="px-4 py-2 border">{activite.localisation}</td> */}
                   <td className="px-4 py-2 border">
-                    {activite.startHour + " " + activite.endHour}
+                    {activite.hrsDebut + " " + activite.hrsFin}
                   </td>
                   <td className="px-4 py-2 border">{activite.quantite}</td>
 
-                  <td className="px-4 py-2 border">{activite.notes}</td>
+                  {/* <td className="px-4 py-2 border">{activite.notes}</td> */}
                 </tr>
               ))}
             </tbody>

@@ -4,7 +4,7 @@ export const initialJournals: Journal[] = [
   {
     id: 1,
     projetInfo: {
-      type: "Journal de Chantier",
+      type: 1,
       date: new Date("2024-05-01"),
       arrivee: "08:00",
       depart: "16:00",
@@ -13,33 +13,12 @@ export const initialJournals: Journal[] = [
     },
     activites: [
       {
-          id: 1,
-          nom: "Excavation",
-          startHour: "08:00",
-          endHour: "10:00",
-          entreprise: "Entreprise A",
-          localisation: "Site A",
-          lieu: [{
-            id: 1, nom: 'Lieu E',
-            projetId: 0
-          }],
-          quantite: 10,
-          notes: "Préparation du terrain",
-          isComplete: false
-      },
-      {
-          id: 2,
-          nom: "Fondations",
-          startHour: "10:00",
-          endHour: "12:00",
-          entreprise: "Entreprise B",
-          localisation: "Site B",
-   lieu: [{
-            id: 1, nom: 'Lieu E',
-            projetId: 0
-          }],          quantite: 20,
-          notes: "Coulage du béton",
-          isComplete: false
+        id: 11,
+        activiteID: 0,
+        hrsDebut: "07:00",
+        hrsFin: "11:00",
+        defaultEntrepriseId: 0,
+        note: "Pose de carrelage",
       },
     ],
     materiaux: [
@@ -71,7 +50,7 @@ export const initialJournals: Journal[] = [
   {
     id: 2,
     projetInfo: {
-      type: "Journal de Chantier",
+      type: 1,
       date: new Date("2024-06-15"),
       arrivee: "07:00",
       depart: "15:00",
@@ -80,18 +59,12 @@ export const initialJournals: Journal[] = [
     },
     activites: [
       {
-          id: 3,
-          nom: "Montage échafaudage",
-          startHour: "07:00",
-          endHour: "09:00",
-          entreprise: "Entreprise C",
-          localisation: "Site C",
-   lieu: [{
-            id: 1, nom: 'Lieu E',
-            projetId: 0
-          }],          quantite: 15,
-          notes: "Assemblage complet",
-          isComplete: false
+        id: 11,
+        activiteID: 0,
+        hrsDebut: "07:00",
+        hrsFin: "11:00",
+        defaultEntrepriseId: 0,
+        note: "Pose de carrelage",
       },
     ],
     materiaux: [{ id: 3, nom: "Échafaudage", quantite: 50 }],
@@ -120,7 +93,7 @@ export const initialJournals: Journal[] = [
   {
     id: 3,
     projetInfo: {
-      type: "Journal de Chantier",
+      type: 1,
       date: new Date("2024-07-10"),
       arrivee: "06:00",
       depart: "14:00",
@@ -129,18 +102,12 @@ export const initialJournals: Journal[] = [
     },
     activites: [
       {
-          id: 4,
-          nom: "Pose de tuyaux",
-          startHour: "06:00",
-          endHour: "10:00",
-          entreprise: "Entreprise D",
-          localisation: "Site D",
-   lieu: [{
-            id: 1, nom: 'Lieu E',
-            projetId: 0
-          }],          quantite: 25,
-          notes: "Installation réussie",
-          isComplete: false
+        id: 11,
+        activiteID: 0,
+        hrsDebut: "07:00",
+        hrsFin: "11:00",
+        defaultEntrepriseId: 0,
+        note: "Pose de carrelage",
       },
     ],
     materiaux: [{ id: 4, nom: "Tuyaux", quantite: 30 }],
@@ -169,7 +136,7 @@ export const initialJournals: Journal[] = [
   {
     id: 4,
     projetInfo: {
-      type: "Bon de Travail",
+      type: 1,   
       date: new Date("2024-08-01"),
       arrivee: "19:00",
       depart: "22:00",
@@ -178,18 +145,12 @@ export const initialJournals: Journal[] = [
     },
     activites: [
       {
-          id: 5,
-          nom: "Isolation",
-          startHour: "09:00",
-          endHour: "13:00",
-          entreprise: "Entreprise E",
-          localisation: "Site E",
-   lieu: [{
-            id: 1, nom: 'Lieu E',
-            projetId: 0
-          }],          quantite: 30,
-          notes: "Isolation thermique",
-          isComplete: false
+        id: 11,
+        activiteID: 0,
+        hrsDebut: "07:00",
+        hrsFin: "11:00",
+        defaultEntrepriseId: 0,
+        note: "Pose de carrelage",
       },
     ],
     materiaux: [{ id: 5, nom: "Laine de verre", quantite: 70 }],
@@ -218,7 +179,7 @@ export const initialJournals: Journal[] = [
   {
     id: 5,
     projetInfo: {
-      type: "Journal de Chantier",
+      type: 1,
       date: new Date("2024-09-15"),
       arrivee: "19:00",
       depart: "22:00",
@@ -227,18 +188,12 @@ export const initialJournals: Journal[] = [
     },
     activites: [
       {
-          id: 6,
-          nom: "Peinture",
-          startHour: "08:00",
-          endHour: "12:00",
-          entreprise: "Entreprise F",
-          localisation: "Site F",
-   lieu: [{
-            id: 1, nom: 'Lieu E',
-            projetId: 0
-          }],          quantite: 20,
-          notes: "Application de deux couches",
-          isComplete: false
+        id: 11,
+        activiteID: 0,
+        hrsDebut: "07:00",
+        hrsFin: "11:00",
+        defaultEntrepriseId: 0,
+        note: "Pose de carrelage",
       },
     ],
     materiaux: [{ id: 6, nom: "Peinture", quantite: 40 }],
@@ -267,7 +222,7 @@ export const initialJournals: Journal[] = [
   {
     id: 6,
     projetInfo: {
-      type: "Journal de Chantier",
+      type: 1,
       date: new Date("2024-10-20"),
       arrivee: "07:30",
       depart: "15:30",
@@ -276,18 +231,12 @@ export const initialJournals: Journal[] = [
     },
     activites: [
       {
-          id: 7,
-          nom: "Charpente",
-          startHour: "07:30",
-          endHour: "11:30",
-          entreprise: "Entreprise G",
-          localisation: "Site G",
-   lieu: [{
-            id: 1, nom: 'Lieu E',
-            projetId: 0
-          }],          quantite: 35,
-          notes: "Travail difficile à cause de la neige",
-          isComplete: false
+        id: 11,
+        activiteID: 0,
+        hrsDebut: "07:00",
+        hrsFin: "11:00",
+        defaultEntrepriseId: 0,
+        note: "Pose de carrelage",
       },
     ],
     materiaux: [{ id: 7, nom: "Bois", quantite: 60 }],
@@ -316,7 +265,7 @@ export const initialJournals: Journal[] = [
   {
     id: 7,
     projetInfo: {
-      type: "Journal de Chantier",
+      type: 1,
       date: new Date("2024-11-05"),
       arrivee: "08:00",
       depart: "16:00",
@@ -325,18 +274,12 @@ export const initialJournals: Journal[] = [
     },
     activites: [
       {
-          id: 8,
-          nom: "Installation électrique",
-          startHour: "08:00",
-          endHour: "12:00",
-          entreprise: "Entreprise H",
-          localisation: "Site H",
-   lieu: [{
-            id: 1, nom: 'Lieu E',
-            projetId: 0
-          }],          quantite: 25,
-          notes: "Installation des câbles principaux",
-          isComplete: false
+        id: 11,
+        activiteID: 0,
+        hrsDebut: "07:00",
+        hrsFin: "11:00",
+        defaultEntrepriseId: 0,
+        note: "Pose de carrelage",
       },
     ],
     materiaux: [{ id: 8, nom: "Câbles", quantite: 100 }],
@@ -365,7 +308,7 @@ export const initialJournals: Journal[] = [
   {
     id: 8,
     projetInfo: {
-      type: "Journal de Chantier",
+      type: 1,
       date: new Date("2024-12-10"),
       arrivee: "09:00",
       depart: "17:00",
@@ -374,18 +317,12 @@ export const initialJournals: Journal[] = [
     },
     activites: [
       {
-          id: 9,
-          nom: "Plomberie",
-          startHour: "09:00",
-          endHour: "13:00",
-          entreprise: "Entreprise I",
-          localisation: "Site I",
-   lieu: [{
-            id: 1, nom: 'Lieu E',
-            projetId: 0
-          }],          quantite: 30,
-          notes: "Installation des conduites d'eau",
-          isComplete: false
+        id: 11,
+        activiteID: 0,
+        hrsDebut: "07:00",
+        hrsFin: "11:00",
+        defaultEntrepriseId: 0,
+        note: "Pose de carrelage",
       },
     ],
     materiaux: [{ id: 9, nom: "Tuyaux", quantite: 80 }],
@@ -414,7 +351,7 @@ export const initialJournals: Journal[] = [
   {
     id: 9,
     projetInfo: {
-      type: "Journal de Chantier",
+      type: 1,
       date: new Date("2024-01-25"),
       arrivee: "06:00",
       depart: "14:00",
@@ -423,18 +360,12 @@ export const initialJournals: Journal[] = [
     },
     activites: [
       {
-          id: 10,
-          nom: "Toiture",
-          startHour: "06:00",
-          endHour: "10:00",
-          entreprise: "Entreprise J",
-          localisation: "Site J",
-   lieu: [{
-            id: 1, nom: 'Lieu E',
-            projetId: 0
-          }],          quantite: 20,
-          notes: "Installation des tuiles",
-          isComplete: false
+        id: 11,
+        activiteID: 0,
+        hrsDebut: "07:00",
+        hrsFin: "11:00",
+        defaultEntrepriseId: 0,
+        note: "Pose de carrelage",
       },
     ],
     materiaux: [{ id: 10, nom: "Tuiles", quantite: 100 }],
@@ -463,7 +394,7 @@ export const initialJournals: Journal[] = [
   {
     id: 10,
     projetInfo: {
-      type: "Journal de Chantier",
+      type: 1,
       date: new Date("2024-02-15"),
       arrivee: "07:00",
       depart: "15:00",
@@ -472,18 +403,12 @@ export const initialJournals: Journal[] = [
     },
     activites: [
       {
-          id: 11,
-          nom: "Revêtement de sol",
-          startHour: "07:00",
-          endHour: "11:00",
-          entreprise: "Entreprise K",
-          localisation: "Site K",
-   lieu: [{
-            id: 1, nom: 'Lieu E',
-            projetId: 0
-          }],          quantite: 25,
-          notes: "Pose de carrelage",
-          isComplete: false
+        id: 11,
+        activiteID: 0,
+        hrsDebut: "07:00",
+        hrsFin: "11:00",
+        defaultEntrepriseId: 0,
+        note: "Pose de carrelage",
       },
     ],
     materiaux: [{ id: 11, nom: "Carrelage", quantite: 200 }],

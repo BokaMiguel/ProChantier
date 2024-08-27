@@ -6,6 +6,7 @@ import {
   FaTools,
   FaBriefcase,
   FaUser,
+  FaClipboardList,
 } from "react-icons/fa";
 import { useAuth } from "../../../context/AuthContext";
 import ModalGestion from "./ModalGestion";
@@ -25,6 +26,8 @@ import {
   updateEmployeeDetails,
   deleteSousTraitantProjet,
   createOrUpdateDistance,
+  createOrUpdateActivite,
+  deleteActivite,
 } from "../../../services/JournalService";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
 import ModalGestionLocalisation from "./ModalGestionLocalisation";
@@ -40,6 +43,7 @@ const Gestion: React.FC = () => {
     fetchEquipements,
     fetchSousTraitants,
     fetchMateriaux,
+    fetchActivites,
     employees,
     fonctions,
     lieux,
@@ -47,6 +51,7 @@ const Gestion: React.FC = () => {
     sousTraitants,
     materiaux,
     bases,
+    activites,
   } = useAuth();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -73,9 +78,11 @@ const Gestion: React.FC = () => {
       fetchSousTraitants();
       fetchMateriaux();
       fetchEmployes(selectedProject.ID);
+      fetchActivites(selectedProject.ID);
     }
   }, [
     selectedProject,
+    fetchActivites,
     fetchLieux,
     fetchFonctions,
     fetchEquipements,
@@ -275,6 +282,15 @@ const Gestion: React.FC = () => {
         }
         await fetchLieux(selectedProject.ID);
         break;
+      case "activites":
+        if (action === "save") {
+          console.log("item", item);
+          await createOrUpdateActivite(item.nom, selectedProject.ID, item.id);
+        } else {
+          await deleteActivite(item.id);
+        }
+        await fetchActivites(selectedProject.ID);
+        break;
       case "fonctions":
         if (action === "save") {
           await createOrUpdateFonction(item.nom, item.id);
@@ -332,15 +348,19 @@ const Gestion: React.FC = () => {
     equipement: employee.equipement?.nom || "Non spécifié",
   }));
 
-  const formattedFonctions = fonctions?.map((f) => ({
-    id: f.id,
-    nom: f.nom,
-  }));
+  const formattedFonctions = fonctions
+    ?.filter((f) => f.id !== null) // Filter out null values
+    .map((f) => ({
+      id: f.id as number, // Assert the type to number
+      nom: f.nom,
+    }));
 
-  const formattedEquipements = equipements?.map((e) => ({
-    id: e.id,
-    nom: e.nom,
-  }));
+  const formattedEquipements = equipements
+    ?.filter((e) => e.id !== null) // Filter out items with null id
+    .map((e) => ({
+      id: e.id as number, // Assert the type to number
+      nom: e.nom,
+    }));
 
   const renderLocalisations = (lieu: any) => {
     const localisations = bases?.filter((base) => base.lieuId === lieu.id);
@@ -365,25 +385,41 @@ const Gestion: React.FC = () => {
         Gestion des Ressources
       </h1>
 
-      <ResourceTable
-        title="Lieux"
-        icon={<FaMapMarkerAlt />}
-        items={lieux || []}
-        columns={["nom"]}
-        onAdd={() => handleAdd("lieux")}
-        onEdit={(item) => handleEdit("lieux", item)}
-        onDelete={(id: number, item: any) => {
-          handleDelete("lieux", id, item.nom);
-        }}
-        renderSubItems={renderLocalisations}
-        onDistances={() => {
-          setSelectedLieu(lieux?.[0]?.id || null); // Set default selectedLieu to the first one
-          setIsDistanceModalOpen(true);
-        }}
-        onImportExcel={handleImportExcel}
-      />
+      <div className="mt-6">
+        <ResourceTable
+          title="Lieux"
+          icon={<FaMapMarkerAlt />}
+          items={lieux || []}
+          columns={["nom"]}
+          onAdd={() => handleAdd("lieux")}
+          onEdit={(item) => handleEdit("lieux", item)}
+          onDelete={(id: number, item: any) => {
+            handleDelete("lieux", id, item.nom);
+          }}
+          renderSubItems={renderLocalisations}
+          onDistances={() => {
+            setSelectedLieu(lieux?.[0]?.id || null); // Set default selectedLieu to the first one
+            setIsDistanceModalOpen(true);
+          }}
+          onImportExcel={handleImportExcel}
+        />
+      </div>
 
-      <div className="grid grid-cols-1 gap-4">
+      <div className="mt-6">
+        <ResourceTable
+          title="Activités"
+          icon={<FaClipboardList />}
+          items={activites || []}
+          columns={["nom"]}
+          onAdd={() => handleAdd("activites")}
+          onEdit={(item) => handleEdit("activites", item)}
+          onDelete={(id: number, item: any) => {
+            handleDelete("activites", id, item.nom);
+          }}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 mt-6">
         <ResourceTable
           title="Matériaux"
           icon={<FaBoxes />}

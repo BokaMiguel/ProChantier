@@ -1,17 +1,19 @@
-// models/JournalFormModel.ts
-
 export interface Employe {
   id: number;
   nom: string;
   prenom: string;
-  fonction: {
-    id: number | null;
-    nom: string;
-  };
-  equipement: {
-    id: number | null;
-    nom: string;
-  };
+  fonction: Fonction;
+  equipement: Equipement;
+}
+
+export interface Fonction {
+  id: number | null;
+  nom: string;
+}
+
+export interface Equipement {
+  id: number | null;
+  nom: string;
 }
 
 export interface Lieu {
@@ -23,17 +25,7 @@ export interface Lieu {
 export interface Activite {
   id: number;
   nom: string;
-  entreprise?: string;
-  localisation?: string;
-  startHour: string;
-  endHour: string;
-  signalisation?: string;
-  notes?: string;
-  isLab?: boolean;
-  lieu?: Lieu[];
-  quantite?: number;
-  distanceMax?: number;
-  isComplete: boolean;
+  projetId: number;
 }
 
 export interface Materiau {
@@ -49,7 +41,7 @@ export interface SousTraitant {
 }
 
 export interface ProjectInfo {
-  type: "Bon de Travail" | "Journal de Chantier";
+  type: number;
   nomProjet: string;
   date: Date;
   arrivee: string;
@@ -105,23 +97,19 @@ export interface Journal {
   localisation: string;
   plageHoraire: string;
   notes: string;
-  activites: Activite[];
+  activites: ActivitePlanif[];
   employes: Employe[];
   materiaux: Materiau[];
   sousTraitants: SousTraitant[];
   statut: Statut;
 }
 
-export const initialActivite: Activite = {
-  id: 1,
-  nom: "",
-  lieu: [],
-  localisation: "",
+export const initialActivite: ActivitePlanif = {
+  id: 1, 
+  activiteID: 0,
   quantite: 0,
-  notes: "",
-  startHour: "",
-  endHour: "",
-  isComplete: false
+  hrsDebut: "",
+  hrsFin: "",
 };
 
 export const initialMateriau: Materiau = {
@@ -139,7 +127,7 @@ export const initialSousTraitant: SousTraitant = {
 export const initialJournal: Journal = {
   id: 1,
   projetInfo: {
-    type: 'Bon de Travail',
+    type: 1,
     date: new Date(),
     arrivee: '',
     depart: '',
@@ -157,24 +145,23 @@ export const initialJournal: Journal = {
   statut: initialStatut
 };
 
-export interface Materiau {
+export interface SignalisationProjet {
   id: number;
+  idProjet: number;
   nom: string;
 }
 
-export interface SousTraitant {
+export interface ActivitePlanif {
   id: number;
-  nom: string;
-}
-
-export interface Fonction {
-  id: number;
-  nom: string;
-}
-
-export interface Equipement {
-  id: number;
-  nom: string;
+  activiteID: number;
+  lieuID?: number;
+  hrsDebut: string;
+  hrsFin: string;
+  defaultEntrepriseId?: number;
+  isLab?: boolean;
+  signalisationId?: number;
+  note?: string;
+  quantite?: number;
 }
 
 export interface Localisation {
@@ -188,4 +175,53 @@ export interface LocalisationDistance {
   baseA: number;
   baseB: number;
   distance: number;
+}
+
+export interface TabEquipes {
+  id: number;
+  nomEquipe: string;
+  projetId: number;
+}
+
+export interface TabBottins {
+  id: number;
+  nom: string;
+}
+
+export interface TabBottinsEquipe {
+  idEquipe: number;
+  idBottins: number;
+}
+
+// Nouveau modèle : TabMateriauxJournal
+export interface TabMateriauxJournal {
+  journalId: number; // FK vers Journal
+  materialId: number; // FK vers Materiau
+  quantite: number;
+}
+
+// Nouveau modèle : TabSousTraitantJournal
+export interface TabSousTraitantJournal {
+  journalId: number; // FK vers Journal
+  sousTraitantId: number; // FK vers SousTraitant
+  quantite: number;
+}
+
+// Nouveau modèle : TabTypeProjet
+export interface TabTypeProjet {
+  id: number;
+  description: string;
+}
+
+// Nouveau modèle : TabLocalisationActivites
+export interface TabLocalisationActivites {
+  activiteId: number; // FK vers Activite
+  locDistanceId: number; // FK vers LocalisationDistance
+  locId: number; // FK vers Localisation
+}
+
+// Nouveau modèle : TabEquipeJournal
+export interface TabEquipeJournal {
+  journalId: number; // FK vers Journal
+  equipeId: number; // FK vers TabEquipes
 }

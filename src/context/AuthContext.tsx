@@ -25,16 +25,21 @@ import {
   getMateriauxOutillage,
   getBases,
   getSousTraitantProjet,
+  getSignalisationProjet,
+  getActivitePlanif,
 } from "../services/JournalService";
 import { Project } from "../models/ProjectInfoModel";
 import { UserClaims } from "../models/AuthModel";
 import {
+  Activite,
+  ActivitePlanif,
   Employe,
   Equipement,
   Fonction,
   Lieu,
   Localisation,
   Materiau,
+  SignalisationProjet,
   SousTraitant,
 } from "../models/JournalFormModel";
 
@@ -45,12 +50,14 @@ interface AuthContextProps {
   selectedProject: Project | null;
   employees: Employe[] | null;
   fonctions: Fonction[] | null;
+  activitesPlanif: ActivitePlanif[] | null;
   lieux: Lieu[] | null;
-  activites: string[] | null;
+  activites: Activite[] | null;
   equipements: Equipement[] | null;
   materiaux: Materiau[] | null;
   sousTraitants: SousTraitant[] | null;
   bases: Localisation[] | null;
+  signalisations: SignalisationProjet[] | null;
   login: () => void;
   logout: () => void;
   handleCallback: () => Promise<void>;
@@ -63,6 +70,8 @@ interface AuthContextProps {
   fetchActivites: (projectId: number) => void;
   fetchMateriaux: () => void;
   fetchSousTraitants: () => void;
+  fetchSignalisations: (projectId: number) => void;
+  fetchActivitesPlanif: (projectId: number) => void;
   setBases: Dispatch<SetStateAction<Localisation[] | null>>;
 }
 
@@ -78,13 +87,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [employeeList, setEmployeeList] = useState<Employe[] | null>(null);
   const [fonctions, setFonctions] = useState<Fonction[] | null>(null);
   const [lieux, setLieux] = useState<Lieu[] | null>(null);
-  const [activites, setActivites] = useState<string[] | null>(null);
+  const [activites, setActivites] = useState<Activite[] | null>(null);
+  const [activitesPlanif, setActivitesPlanif] = useState<
+    ActivitePlanif[] | null
+  >(null);
   const [equipements, setEquipements] = useState<Equipement[] | null>(null);
   const [materiaux, setMateriaux] = useState<Materiau[] | null>(null);
   const [sousTraitants, setSousTraitants] = useState<SousTraitant[] | null>(
     null
   );
   const [bases, setBases] = useState<Localisation[] | null>(null);
+  const [signalisations, setSignalisations] = useState<
+    SignalisationProjet[] | null
+    
+  >(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -127,6 +143,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
       const materiauxData = await getMateriauxOutillage();
       setMateriaux(materiauxData);
+
+      const activitesPlanifData = await getActivitePlanif(projectId);
+      setActivitesPlanif(activitesPlanifData);
+
+      const signalisationData = await getSignalisationProjet(projectId);
+      setSignalisations(signalisationData);
 
       // Récupération des bases associées aux lieux
       if (lieuData && lieuData.length > 0) {
@@ -266,9 +288,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     setActivites(activiteData);
   }, []);
 
+  const fetchActivitesPlanif = useCallback(async (projectId: number) => {
+    const activiteData = await getActivitePlanif(projectId);
+    setActivitesPlanif(activiteData);
+  }, []);
+
   const fetchMateriaux = useCallback(async () => {
     const materiauxData = await getMateriauxOutillage();
     setMateriaux(materiauxData);
+  }, []);
+
+  const fetchSignalisations = useCallback(async (projectId: number) => {
+    const signalisationData = await getSignalisationProjet(projectId);
+    setSignalisations(signalisationData);
   }, []);
 
   const fetchSousTraitants = useCallback(async () => {
@@ -291,6 +323,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         materiaux,
         bases,
         sousTraitants,
+        signalisations,
+        activitesPlanif,
         login: handleUserLogin,
         logout: handleUserLogout,
         handleCallback: handleUserCallback,
@@ -303,6 +337,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         fetchActivites,
         fetchMateriaux,
         fetchSousTraitants,
+        fetchSignalisations,
+        fetchActivitesPlanif,
         setBases,
       }}
     >

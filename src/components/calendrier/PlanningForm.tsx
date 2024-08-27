@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   DragDropContext,
   Droppable,
@@ -11,24 +11,23 @@ import {
   FaClock,
   FaBuilding,
   FaMapMarkerAlt,
-  FaRuler,
   FaEdit,
-  FaExclamationTriangle,
+  FaSign,
   FaTrash,
   FaFlask,
   FaCog,
-  FaSign,
-  FaStar,
   FaSave,
   FaFileImport,
+  FaPencilAlt,
 } from "react-icons/fa";
-import { format, startOfWeek, endOfWeek, addDays } from "date-fns";
+import { format, startOfWeek, endOfWeek, addDays, parse } from "date-fns";
 import { fr } from "date-fns/locale";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import CreateActivityModal from "./CreateActivityModal"; // Assurez-vous que le chemin est correct
-import { Activite } from "../../models/JournalFormModel";
-import ActivityList from "./ActivityList"; // Assurez-vous que le chemin est correct
+import { ActivitePlanif } from "../../models/JournalFormModel";
+import { useAuth } from "../../context/AuthContext";
+import ActivityList from "./ActivityList";
 
 const daysOfWeek = [
   "Dimanche",
@@ -40,48 +39,15 @@ const daysOfWeek = [
   "Samedi",
 ];
 
-const initialActivities: Activite[] = [
-  {
-    id: 1,
-    nom: "Sciage du revêtement en béton, forage pour modifications de massifs",
-    startHour: "08:00",
-    endHour: "12:00",
-    entreprise: "Entreprise A",
-    localisation: "Site A",
-    signalisation: "gauche",
-    isLab: false,
-    isComplete: false,
-  },
-];
-
-const mockActivities: Activite[] = [
-  {
-    id: 1,
-    nom: "Sciage du revêtement en béton",
-    entreprise: "Entreprise A",
-    startHour: "08:00",
-    endHour: "12:00",
-    signalisation: "Gauche",
-    isComplete: false,
-  },
-  {
-    id: 2,
-    nom: "Forage pour modifications de massifs",
-    entreprise: "Entreprise B",
-    startHour: "13:00",
-    endHour: "17:00",
-    signalisation: "Droite",
-    isComplete: false,
-  },
-  // Ajoutez plus de mock activities ici
-];
-
-let globalIdCounter = 100; // Initialise un compteur global pour générer des IDs uniques
-
 const PlanningForm: React.FC = () => {
+  const { activitesPlanif, activites, lieux, sousTraitants, signalisations } =
+    useAuth(); // Récupération des données depuis useAuth
+
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [activities, setActivities] = useState<{ [key: string]: Activite[] }>({
-    Dimanche: initialActivities,
+  const [activities, setActivities] = useState<{
+    [key: string]: ActivitePlanif[];
+  }>({
+    Dimanche: [],
     Lundi: [],
     Mardi: [],
     Mercredi: [],
@@ -91,14 +57,34 @@ const PlanningForm: React.FC = () => {
   });
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [activityToEdit, setActivityToEdit] = useState<Activite | null>(null);
+  const [activityToEdit, setActivityToEdit] = useState<ActivitePlanif | null>(
+    null
+  );
+  const [selectedDay, setSelectedDay] = useState<string>("");
   const [selectedActivities, setSelectedActivities] = useState<Set<number>>(
     new Set()
   );
-  const [selectedDay, setSelectedDay] = useState<string>("");
 
   const start = startOfWeek(selectedDate, { weekStartsOn: 0 });
   const end = endOfWeek(start, { weekStartsOn: 0 });
+
+  useEffect(() => {
+    if (activitesPlanif) {
+      // Initialisation des activités à partir de activitesPlanif
+      const updatedActivities = daysOfWeek.reduce((acc, day) => {
+        acc[day] = activitesPlanif.filter((activity) => {
+          if (activity.hrsDebut) {
+            const activityDate = parse(activity.hrsFin, "HH:mm", new Date());
+            return format(activityDate, "EEEE", { locale: fr }) === day;
+          }
+          return false;
+        });
+        return acc;
+      }, {} as { [key: string]: ActivitePlanif[] });
+
+      setActivities(updatedActivities);
+    }
+  }, [activitesPlanif]);
 
   const onDragEnd = (result: DropResult) => {
     const { source, destination } = result;
@@ -156,32 +142,30 @@ const PlanningForm: React.FC = () => {
     });
   };
 
-  const handleEditActivity = (activity: Activite) => {
+  const handleEditActivity = (activity: ActivitePlanif) => {
     setActivityToEdit(activity);
     setShowModal(true);
   };
 
-  const handleSaveActivity = (activity: Activite) => {
-    if (activityToEdit) {
-      setActivities((prevActivities) => {
-        const updatedActivities = { ...prevActivities };
-        for (const day in updatedActivities) {
-          updatedActivities[day] = updatedActivities[day].map((act) =>
-            act.id === activity.id ? activity : act
-          );
-        }
-        return updatedActivities;
-      });
+  const handleSaveActivity = (activity: ActivitePlanif) => {
+    if (activity.hrsDebut && activity.hrsFin) {
+      if (activityToEdit) {
+        setActivities((prevActivities) => {
+          const updatedActivities = { ...prevActivities };
+          for (const day in updatedActivities) {
+            updatedActivities[day] = updatedActivities[day].map((act) =>
+              act.id === activity.id ? activity : act
+            );
+          }
+          return updatedActivities;
+        });
+      }
     } else {
       setActivities((prevActivities) => {
         const updatedActivities = { ...prevActivities };
-        const newActivity: Activite = {
-          ...activity,
-          id: globalIdCounter++,
-        };
         updatedActivities[selectedDay] = [
           ...updatedActivities[selectedDay],
-          newActivity,
+          { ...activity, id: Date.now() },
         ];
         return updatedActivities;
       });
@@ -199,43 +183,24 @@ const PlanningForm: React.FC = () => {
     });
   };
 
-  const handleImportActivities = (day: string) => {
-    const selected = Array.from(selectedActivities)
-      .map((id) => mockActivities.find((activity) => activity.id === id))
-      .filter((activity) => activity !== undefined) as Activite[];
-
-    setActivities((prevActivities) => {
-      const updatedActivities = { ...prevActivities };
-      selected.forEach((activity) => {
-        const newActivity: Activite = {
-          ...activity,
-          id: globalIdCounter++, // Utilise le compteur global pour générer un nouvel ID
-        };
-        updatedActivities[day] = [...updatedActivities[day], newActivity];
-      });
-      return updatedActivities;
-    });
-
-    setSelectedActivities(new Set()); // Clear the selection
-    setShowImportModal(false);
+  const getActivityName = (id: number) => {
+    const activity = activites?.find((act) => act.id === id);
+    return activity ? activity.nom : "Inconnu";
   };
 
-  const handleSelectActivities = (selectedActivities: Activite[]) => {
-    setActivities((prevActivities) => {
-      const updatedActivities = { ...prevActivities };
-      selectedActivities.forEach((activity) => {
-        const newActivity: Activite = {
-          ...activity,
-          id: globalIdCounter++,
-        };
-        updatedActivities[selectedDay] = [
-          ...updatedActivities[selectedDay],
-          newActivity,
-        ];
-      });
-      return updatedActivities;
-    });
-    setShowImportModal(false);
+  const getLieuName = (id: number) => {
+    const lieu = lieux?.find((l) => l.id === id);
+    return lieu ? lieu.nom : "Inconnu";
+  };
+
+  const getEntrepriseName = (id: number) => {
+    const entreprise = sousTraitants?.find((ent) => ent.id === id);
+    return entreprise ? entreprise.nom : "Inconnu";
+  };
+
+  const getSignalisationName = (id: number) => {
+    const signalisation = signalisations?.find((sig) => sig.id === id);
+    return signalisation ? signalisation.nom : "Inconnu";
   };
 
   const handleToggleActivity = (activityId: number) => {
@@ -250,9 +215,25 @@ const PlanningForm: React.FC = () => {
     });
   };
 
+  const handleImportActivities = (activitiesToImport: ActivitePlanif[]) => {
+    setActivities((prevActivities) => {
+      const updatedActivities = { ...prevActivities };
+      activitiesToImport.forEach((activity) => {
+        updatedActivities[selectedDay] = [
+          ...updatedActivities[selectedDay],
+          { ...activity, id: Date.now() },
+        ];
+      });
+      return updatedActivities;
+    });
+
+    setSelectedActivities(new Set());
+    setShowImportModal(false);
+  };
+
   return (
-    <div className="p-8 bg-gray-100 min-h-screen">
-      <h1 className="text-2xl font-bold mb-6 text-center bg-blue-800 text-white p-4 rounded flex items-center justify-center">
+    <div className="p-4 bg-gray-100 min-h-screen">
+      <h1 className="text-2xl font-bold mb-4 text-center bg-blue-800 text-white p-4 rounded flex items-center justify-center">
         Planification des Travaux
       </h1>
       <div className="flex flex-col md:flex-row md:justify-between items-center mb-4">
@@ -273,14 +254,14 @@ const PlanningForm: React.FC = () => {
         </div>
       </div>
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="space-y-4">
+        <div className="space-y-2">
           {daysOfWeek.map((day, index) => (
             <Droppable key={day} droppableId={day} direction="vertical">
               {(provided) => (
                 <div
                   {...provided.droppableProps}
                   ref={provided.innerRef}
-                  className="bg-white p-4 rounded shadow-md"
+                  className="bg-white p-2 rounded shadow-md"
                 >
                   <div className="flex justify-between items-center mb-2">
                     <h2 className="font-bold text-lg flex items-center">
@@ -294,7 +275,7 @@ const PlanningForm: React.FC = () => {
                       <button
                         className="bg-blue-500 text-white p-2 rounded flex items-center"
                         onClick={() => {
-                          setActivityToEdit(null); // Assurez-vous que nous ne modifions pas une activité existante
+                          setActivityToEdit(null);
                           setSelectedDay(day);
                           setShowModal(true);
                         }}
@@ -315,7 +296,7 @@ const PlanningForm: React.FC = () => {
                     </div>
                   </div>
                   <div
-                    className="grid grid-cols-12 gap-4 border-b border-gray-300 mb-2 pb-2 bg-gray-200"
+                    className="grid grid-cols-12 gap-2 border-b border-gray-300 mb-2 pb-2 bg-gray-200"
                     style={{ paddingTop: "5px" }}
                   >
                     <div className="font-bold flex items-center justify-center col-span-2">
@@ -331,9 +312,8 @@ const PlanningForm: React.FC = () => {
                     </div>
                     <div className="font-bold flex items-center justify-center col-auto">
                       <FaMapMarkerAlt className="mr-1" />
-                      Localisation
+                      Lieu
                     </div>
-
                     <div className="font-bold flex items-center justify-center col-span-2">
                       <FaSign className="mr-2" /> Signalisation
                     </div>
@@ -359,19 +339,21 @@ const PlanningForm: React.FC = () => {
                           {...provided.dragHandleProps}
                           className="bg-gray-50 p-2 mb-2 rounded shadow"
                         >
-                          <div className="grid grid-cols-12 gap-4 items-center">
-                            <div className="col-span-2">{activity.nom}</div>
+                          <div className="grid grid-cols-12 gap-2 items-center">
                             <div className="col-span-2">
-                              {activity.startHour} - {activity.endHour}
+                              {getActivityName(activity.activiteID)}
                             </div>
                             <div className="col-span-2">
-                              {activity.entreprise}
+                              {activity.hrsDebut} - {activity.hrsFin}
+                            </div>
+                            <div className="col-span-2">
+                              {getEntrepriseName(activity.defaultEntrepriseId!)}
                             </div>
                             <div className="col-auto">
-                              {activity.localisation}
+                              {getLieuName(activity.lieuID!)}
                             </div>
                             <div className="col-span-2">
-                              {activity.signalisation}
+                              {getSignalisationName(activity.signalisationId!)}
                             </div>
                             <div className="col-auto">
                               <input
@@ -385,15 +367,10 @@ const PlanningForm: React.FC = () => {
                             </div>
                             <div
                               className="col-auto flex gap-2 justify-end"
-                              style={{ marginRight: "25%" }}
+                              style={{ marginRight: "10%" }}
                             >
-                              {activity.notes && activity.notes.length > 0 && (
-                                <button
-                                  onClick={() => handleEditActivity(activity)}
-                                  className="text-orange-500"
-                                >
-                                  <FaExclamationTriangle />
-                                </button>
+                              {activity.note && (
+                                <FaPencilAlt className="text-yellow-500" />
                               )}
                               <button
                                 onClick={() => handleEditActivity(activity)}
@@ -436,7 +413,7 @@ const PlanningForm: React.FC = () => {
         <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center">
           <div className="bg-white p-4 rounded shadow-md max-w-4xl w-full max-h-screen overflow-y-auto">
             <ActivityList
-              onSelectActivity={handleSelectActivities}
+              onSelectActivity={handleImportActivities}
               selectedActivities={selectedActivities}
               onToggleActivity={handleToggleActivity}
             />
@@ -444,7 +421,13 @@ const PlanningForm: React.FC = () => {
               <span>{selectedActivities.size} activités sélectionnées</span>
               <div className="flex space-x-2">
                 <button
-                  onClick={() => handleImportActivities(selectedDay)}
+                  onClick={() =>
+                    handleImportActivities(
+                      Array.from(selectedActivities).map((id) =>
+                        activitesPlanif?.find((activity) => activity.id === id)
+                      ) as ActivitePlanif[]
+                    )
+                  }
                   className="bg-blue-500 text-white p-2 rounded flex items-center justify-center"
                 >
                   <FaFileImport className="mr-2" />

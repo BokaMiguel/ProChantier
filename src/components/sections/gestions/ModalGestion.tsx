@@ -82,6 +82,7 @@ const ModalGestion: React.FC<ModalProps> = ({
             "fonctions",
             "equipements",
             "materiaux",
+            "activites",
           ].includes(category!) && (
             <div className="mb-4">
               <label className="block mb-1">Nom</label>

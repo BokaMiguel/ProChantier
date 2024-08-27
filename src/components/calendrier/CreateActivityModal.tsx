@@ -2,20 +2,21 @@ import React, { useState, useEffect } from "react";
 import {
   FaBuilding,
   FaMapMarkerAlt,
-  FaRoad,
   FaClock,
   FaSign,
   FaPencilAlt,
   FaSave,
   FaTimes,
 } from "react-icons/fa";
-import { Activite } from "../../models/JournalFormModel";
+import { ActivitePlanif } from "../../models/JournalFormModel";
+import { useAuth } from "../../context/AuthContext";
+import { createOrUpdateActivitePlanif } from "../../services/JournalService";
 
 interface CreateActivityModalProps {
   isOpen: boolean;
-  activity: Activite | null;
+  activity: ActivitePlanif | null;
   onClose: () => void;
-  onSave: (activity: Activite) => void;
+  onSave: (activity: ActivitePlanif) => void;
 }
 
 const CreateActivityModal: React.FC<CreateActivityModalProps> = ({
@@ -24,63 +25,66 @@ const CreateActivityModal: React.FC<CreateActivityModalProps> = ({
   activity,
   onSave,
 }) => {
-  const [activityName, setActivityName] = useState<string>("");
-  const [entreprise, setEntreprise] = useState<string>("");
-  const [localisation, setLocalisation] = useState<string>("");
-  const [signalisation, setSignalisation] = useState<string>("");
+  const [activiteId, setActiviteId] = useState<number | null>(null);
+  const [entrepriseId, setEntrepriseId] = useState<number | null>(null);
+  const [lieuId, setLieuId] = useState<number | null>(null);
+  const [signalisationId, setSignalisationId] = useState<number | null>(null);
   const [startHour, setStartHour] = useState<string>("");
   const [endHour, setEndHour] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+  const { lieux, sousTraitants, signalisations, activites, selectedProject } =
+    useAuth();
 
   useEffect(() => {
     if (activity) {
-      setActivityName(activity.nom ?? "");
-      setEntreprise(activity.entreprise ?? "");
-      setLocalisation(activity.localisation ?? "");
-      setStartHour(activity.startHour ?? "");
-      setEndHour(activity.endHour ?? "");
-      setSignalisation(activity.signalisation ?? "");
-      setNotes(activity.notes ?? "");
+      setActiviteId(activity.activiteID ?? null);
+      setEntrepriseId(activity.defaultEntrepriseId ?? 0);
+      setLieuId(activity.lieuID ?? null);
+      setStartHour(activity.hrsDebut ?? "");
+      setEndHour(activity.hrsFin ?? "");
+      setSignalisationId(activity.signalisationId ?? null);
+      setNotes(activity.note ?? "");
     } else {
       // Réinitialiser les champs si aucune activité n'est fournie
-      setActivityName("Activité");
-      setEntreprise("");
-      setLocalisation("");
+      setActiviteId(null);
+      setEntrepriseId(null);
+      setLieuId(null);
       setStartHour("");
       setEndHour("");
-      setSignalisation("");
+      setSignalisationId(null);
       setNotes("");
     }
   }, [activity, isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (activity) {
-      onSave({
-        ...activity,
-        nom: activityName,
-        entreprise,
-        localisation,
-        startHour,
-        endHour,
-        signalisation,
-        notes,
-      });
-    } else {
-      const newActivity: Activite = {
-        id: Date.now(), // Utilisez un nombre unique
-        nom: activityName,
-        entreprise,
-        localisation,
-        startHour,
-        endHour,
-        signalisation,
-        notes,
-        isComplete: false,
-      };
-      onSave(newActivity);
+
+    // Validation du format des heures
+    const validTimeFormat = /^([0-1]\d|2[0-3]):([0-5]\d)$/;
+
+    if (!validTimeFormat.test(startHour) || !validTimeFormat.test(endHour)) {
+      console.error("Invalid time format for startHour or endHour");
+      return;
     }
-    onClose();
+
+    const activitePlanif: ActivitePlanif = {
+      id: activity?.id || Date.now(),
+      activiteID: activiteId!,
+      lieuID: lieuId ?? undefined,
+      hrsDebut: startHour,
+      hrsFin: endHour,
+      defaultEntrepriseId: entrepriseId ?? undefined,
+      signalisationId: signalisationId ?? undefined,
+      note: notes,
+    };
+
+    try {
+      await createOrUpdateActivitePlanif(activitePlanif, selectedProject!.ID);
+      onSave(activitePlanif);
+      onClose();
+    } catch (error) {
+      console.error("Failed to save activity", error);
+    }
   };
 
   if (!isOpen) return null;
@@ -101,14 +105,21 @@ const CreateActivityModal: React.FC<CreateActivityModalProps> = ({
             <div className="flex flex-col">
               <label className="block mb-2 font-bold">
                 <FaBuilding className="inline mr-2" />
-                Nom de l'Activité
+                Sélectionner une Activité
               </label>
-              <input
-                type="text"
-                value={activityName}
-                onChange={(e) => setActivityName(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300"
-              />
+              <select
+                value={activiteId || ""}
+                onChange={(e) => setActiviteId(Number(e.target.value))}
+                className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300 bg-white"
+                required
+              >
+                <option value="">Sélectionner une activité</option>
+                {activites?.map((activite) => (
+                  <option key={activite.id} value={activite.id}>
+                    {activite.nom}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="flex flex-col">
               <label className="block mb-2 font-bold">
@@ -116,30 +127,34 @@ const CreateActivityModal: React.FC<CreateActivityModalProps> = ({
                 Entreprise
               </label>
               <select
-                value={entreprise}
-                onChange={(e) => setEntreprise(e.target.value)}
+                value={entrepriseId || ""}
+                onChange={(e) => setEntrepriseId(Number(e.target.value))}
                 className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300 bg-white"
               >
                 <option value="">Sélectionner une entreprise</option>
-                {/* Ajoutez ici les options pour les entreprises */}
-                <option value="Entreprise1">Entreprise1</option>
-                <option value="Entreprise2">Entreprise2</option>
+                {sousTraitants?.map((sousTraitant) => (
+                  <option key={sousTraitant.id} value={sousTraitant.id}>
+                    {sousTraitant.nom}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="flex flex-col">
               <label className="block mb-2 font-bold">
                 <FaMapMarkerAlt className="inline mr-2" />
-                Localisation
+                Lieu
               </label>
               <select
-                value={localisation}
-                onChange={(e) => setLocalisation(e.target.value)}
+                value={lieuId || ""}
+                onChange={(e) => setLieuId(Number(e.target.value))}
                 className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300 bg-white"
               >
-                <option value="">Sélectionner une localisation</option>
-                {/* Ajoutez ici les options pour les localisations */}
-                <option value="Localisation1">Localisation1</option>
-                <option value="Localisation2">Localisation2</option>
+                <option value="">Sélectionner un lieu</option>
+                {lieux?.map((lieu) => (
+                  <option key={lieu.id} value={lieu.id}>
+                    {lieu.nom}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="flex flex-col">
@@ -153,12 +168,14 @@ const CreateActivityModal: React.FC<CreateActivityModalProps> = ({
                   value={startHour}
                   onChange={(e) => setStartHour(e.target.value)}
                   className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300"
+                  required
                 />
                 <input
                   type="time"
                   value={endHour}
                   onChange={(e) => setEndHour(e.target.value)}
                   className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300"
+                  required
                 />
               </div>
             </div>
@@ -168,14 +185,16 @@ const CreateActivityModal: React.FC<CreateActivityModalProps> = ({
                 Signalisation
               </label>
               <select
-                value={signalisation}
-                onChange={(e) => setSignalisation(e.target.value)}
+                value={signalisationId || ""}
+                onChange={(e) => setSignalisationId(Number(e.target.value))}
                 className="w-full px-4 py-2 rounded-lg shadow-sm border-gray-300 bg-white"
               >
                 <option value="">Sélectionner une signalisation</option>
-                {/* Ajoutez ici les options pour les signalisation */}
-                <option value="Signalisation1">Signalisation1</option>
-                <option value="Signalisation2">Signalisation2</option>
+                {signalisations?.map((sig) => (
+                  <option key={sig.id} value={sig.id}>
+                    {sig.nom}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="col-span-2">

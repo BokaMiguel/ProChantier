@@ -1,31 +1,16 @@
 import React, { useState } from "react";
 import { FaSearch } from "react-icons/fa";
-import { Activite } from "../../models/JournalFormModel";
-
-const mockActivities: Activite[] = [
-  {
-    id: 1,
-    nom: "Sciage du revêtement en béton",
-    entreprise: "Entreprise A",
-    startHour: "08:00",
-    endHour: "12:00",
-    signalisation: "Gauche",
-    isComplete: false,
-  },
-  {
-    id: 2,
-    nom: "Forage pour modifications de massifs",
-    entreprise: "Entreprise B",
-    startHour: "13:00",
-    endHour: "17:00",
-    signalisation: "Droite",
-    isComplete: false,
-  },
-  // Ajoutez plus de mock activities ici
-];
+import {
+  ActivitePlanif,
+  Activite,
+  SousTraitant,
+  SignalisationProjet,
+  Lieu,
+} from "../../models/JournalFormModel";
+import { useAuth } from "../../context/AuthContext"; // Importez useAuth
 
 interface ActivityListProps {
-  onSelectActivity: (activities: Activite[]) => void;
+  onSelectActivity: (activities: ActivitePlanif[]) => void;
   selectedActivities: Set<number>;
   onToggleActivity: (activityId: number) => void;
 }
@@ -35,18 +20,56 @@ const ActivityList: React.FC<ActivityListProps> = ({
   selectedActivities,
   onToggleActivity,
 }) => {
+  const { activitesPlanif, activites, lieux, sousTraitants, signalisations } =
+    useAuth(); // Récupération des données depuis useAuth
   const [searchTerm, setSearchTerm] = useState("");
 
   const handleImportActivities = () => {
-    const selected = mockActivities.filter((activity) =>
+    const selected = activitesPlanif?.filter((activity) =>
       selectedActivities.has(activity.id)
     );
-    onSelectActivity(selected);
+    if (selected) {
+      onSelectActivity(selected);
+    }
   };
 
-  const filteredActivities = mockActivities.filter((activity) =>
-    activity.nom.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredActivities = activitesPlanif?.filter((activity) => {
+    const activityName =
+      activites?.find((act) => act.id === activity.activiteID)?.nom || "";
+    return activityName.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
+  const getActivityName = (id: number | undefined) => {
+    if (id === undefined) return "Inconnu";
+    console.log("id", id);
+    const activity = activites?.find((act) => act.id === id);
+    console.log("activity", activity);
+    return activity ? activity.nom : "Inconnu";
+  };
+
+  const getLieuName = (id: number | undefined) => {
+    if (id === undefined) return "Inconnu";
+    const lieu = lieux?.find((l) => l.id === id);
+    return lieu ? lieu.nom : "Inconnu";
+  };
+
+  const getEntrepriseName = (id: number | undefined) => {
+    if (id === undefined) return "Inconnu";
+    const entreprise = sousTraitants?.find((ent) => ent.id === id);
+    return entreprise ? entreprise.nom : "Inconnu";
+  };
+
+  const getSignalisationName = (id: number | undefined) => {
+    if (id === undefined) return "Inconnu";
+    const signalisation = signalisations?.find((sig) => sig.id === id);
+    return signalisation ? signalisation.nom : "Inconnu";
+  };
+
+  console.log("activitesPlanif", activitesPlanif);
+  console.log("activites", activites);
+  console.log("lieux", lieux);
+  console.log("sousTraitants", sousTraitants);
+  console.log("signalisations", signalisations);
 
   return (
     <div className="p-4 bg-white rounded shadow-md max-h-96 overflow-y-auto">
@@ -66,7 +89,7 @@ const ActivityList: React.FC<ActivityListProps> = ({
         </div>
       </div>
       <ul className="space-y-4">
-        {filteredActivities.map((activity) => (
+        {filteredActivities?.map((activity) => (
           <li
             key={activity.id}
             onClick={() => onToggleActivity(activity.id)}
@@ -77,18 +100,24 @@ const ActivityList: React.FC<ActivityListProps> = ({
             }`}
           >
             <div className="w-full">
-              <div className="font-semibold">{activity.nom}</div>
+              <div className="font-semibold">
+                {getActivityName(activity.activiteID)}
+              </div>
               <div className="text-sm">
                 <span className="font-medium">Entreprise:</span>{" "}
-                {activity.entreprise || "N/A"}
+                {getEntrepriseName(activity.defaultEntrepriseId!)}
               </div>
               <div className="text-sm">
                 <span className="font-medium">Plage Horaire:</span>{" "}
-                {activity.startHour} - {activity.endHour}
+                {activity.hrsDebut} - {activity.hrsFin}
+              </div>
+              <div className="text-sm">
+                <span className="font-medium">Localisation:</span>{" "}
+                {getLieuName(activity.lieuID!)}
               </div>
               <div className="text-sm">
                 <span className="font-medium">Signalisation:</span>{" "}
-                {activity.signalisation || "N/A"}
+                {getSignalisationName(activity.signalisationId!)}
               </div>
             </div>
           </li>
