@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   FaHome,
   FaTasks,
@@ -12,6 +12,8 @@ import {
   FaProjectDiagram,
   FaChevronDown,
   FaChevronUp,
+  FaFileInvoice, // Icone pour Bordereau
+  FaClock, // Icone pour Feuille de temps
 } from "react-icons/fa";
 import { useAuth } from "../../context/AuthContext"; // Importer useAuth pour accéder au contexte utilisateur
 
@@ -19,6 +21,35 @@ const Sidebar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(true);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { user, selectedProject, login } = useAuth(); // Utiliser le contexte utilisateur
+  const location = useLocation();
+
+  const NavItem = ({
+    to,
+    icon,
+    label,
+  }: {
+    to: string;
+    icon: React.ReactNode;
+    label: string;
+  }) => {
+    const isActive = location.pathname === to;
+    return (
+      <li className={`relative ${isActive ? "bg-blue-700" : ""}`}>
+        <Link
+          to={to}
+          className={`flex items-center p-4 text-gray-300 hover:bg-gray-700 hover:text-white ${
+            isActive ? "text-white" : ""
+          }`}
+        >
+          {icon}
+          {isOpen && <span className="ml-3">{label}</span>}
+        </Link>
+        {isActive && (
+          <div className="absolute top-0 right-0 w-1 h-full bg-white shadow-[0_0_10px_#ffffff] rounded-l" />
+        )}
+      </li>
+    );
+  };
 
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
@@ -72,51 +103,41 @@ const Sidebar: React.FC = () => {
 
         <nav className="flex-1">
           <ul className="flex flex-col mt-2">
-            <li>
-              <Link
-                to="/calendrier"
-                className="flex items-center p-4 text-gray-300 hover:bg-gray-700 hover:text-white"
-              >
-                <FaHome className="mr-3" />
-                {isOpen && "Accueil"}
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/journal-chantier"
-                className="flex items-center p-4 text-gray-300 hover:bg-gray-700 hover:text-white"
-              >
-                <FaTasks className="mr-3" />
-                {isOpen && "Journal de chantier"}
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/planning"
-                className="flex items-center p-4 text-gray-300 hover:bg-gray-700 hover:text-white"
-              >
-                <FaClipboardList className="mr-3" />
-                {isOpen && "Planification"}
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/gestions"
-                className="flex items-center p-4 text-gray-300 hover:bg-gray-700 hover:text-white"
-              >
-                <FaCog className="mr-3" />
-                {isOpen && "Gestions"}
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/rapport"
-                className="flex items-center p-4 text-gray-300 hover:bg-gray-700 hover:text-white"
-              >
-                <FaChartBar className="mr-3" />
-                {isOpen && "Rapport"}
-              </Link>
-            </li>
+            <NavItem
+              to="/"
+              icon={<FaHome className="mr-3" />}
+              label="Accueil"
+            />
+            <NavItem
+              to="/journal-chantier"
+              icon={<FaTasks className="mr-3" />}
+              label="Journal de chantier"
+            />
+            <NavItem
+              to="/planning"
+              icon={<FaClipboardList className="mr-3" />}
+              label="Planification"
+            />
+            <NavItem
+              to="/gestions"
+              icon={<FaCog className="mr-3" />}
+              label="Gestions"
+            />
+            <NavItem
+              to="/rapport"
+              icon={<FaChartBar className="mr-3" />}
+              label="Rapport"
+            />
+            <NavItem
+              to="/bordereau"
+              icon={<FaFileInvoice className="mr-3" />}
+              label="Bordereau"
+            />
+            <NavItem
+              to="/feuille-de-temps"
+              icon={<FaClock className="mr-3" />}
+              label="Feuille de temps"
+            />
           </ul>
         </nav>
       </div>

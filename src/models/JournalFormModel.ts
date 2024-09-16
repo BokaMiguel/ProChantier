@@ -161,6 +161,7 @@ export interface ActivitePlanif {
   isLab?: boolean;
   signalisationId?: number;
   note?: string;
+  date?: Date;
   quantite?: number;
 }
 

@@ -1,12 +1,6 @@
 import React, { useState } from "react";
 import { FaSearch } from "react-icons/fa";
-import {
-  ActivitePlanif,
-  Activite,
-  SousTraitant,
-  SignalisationProjet,
-  Lieu,
-} from "../../models/JournalFormModel";
+import { ActivitePlanif } from "../../models/JournalFormModel";
 import { useAuth } from "../../context/AuthContext"; // Importez useAuth
 
 interface ActivityListProps {
@@ -24,26 +18,19 @@ const ActivityList: React.FC<ActivityListProps> = ({
     useAuth(); // Récupération des données depuis useAuth
   const [searchTerm, setSearchTerm] = useState("");
 
-  const handleImportActivities = () => {
-    const selected = activitesPlanif?.filter((activity) =>
-      selectedActivities.has(activity.id)
-    );
-    if (selected) {
-      onSelectActivity(selected);
-    }
-  };
-
+  // Filtrer les activités où Date est null et qui correspondent à la recherche
   const filteredActivities = activitesPlanif?.filter((activity) => {
     const activityName =
       activites?.find((act) => act.id === activity.activiteID)?.nom || "";
-    return activityName.toLowerCase().includes(searchTerm.toLowerCase());
+    return (
+      activity.date === null &&
+      activityName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   });
 
   const getActivityName = (id: number | undefined) => {
     if (id === undefined) return "Inconnu";
-    console.log("id", id);
     const activity = activites?.find((act) => act.id === id);
-    console.log("activity", activity);
     return activity ? activity.nom : "Inconnu";
   };
 
@@ -64,12 +51,6 @@ const ActivityList: React.FC<ActivityListProps> = ({
     const signalisation = signalisations?.find((sig) => sig.id === id);
     return signalisation ? signalisation.nom : "Inconnu";
   };
-
-  console.log("activitesPlanif", activitesPlanif);
-  console.log("activites", activites);
-  console.log("lieux", lieux);
-  console.log("sousTraitants", sousTraitants);
-  console.log("signalisations", signalisations);
 
   return (
     <div className="p-4 bg-white rounded shadow-md max-h-96 overflow-y-auto">

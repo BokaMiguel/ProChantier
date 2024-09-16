@@ -23,13 +23,13 @@ const AppContent: React.FC = () => {
       <Sidebar />
       <div className="flex-1">
         <Routes>
-          <Route path="/" element={<Form />} />
-          <Route path="/:type" element={<Form />} />
-          <Route path="/calendrier" element={<CalendarPage />} />
+          <Route path="/" element={<CalendarPage />} />
           <Route path="/planning" element={<PlanningForm />} />
           <Route path="/rapport" element={<Rapport />} />
           <Route path="/gestions" element={<Gestion />} />
           <Route path="/callback" element={<Callback />} />
+          <Route path="/journal-chantier" element={<Form />} />
+          <Route path="/journal-chantier/:idPlanif" element={<Form />} />
         </Routes>
       </div>
     </div>

@@ -10,7 +10,6 @@ import {
 } from "react-icons/fa";
 import { ActivitePlanif } from "../../models/JournalFormModel";
 import { useAuth } from "../../context/AuthContext";
-import { createOrUpdateActivitePlanif } from "../../services/JournalService";
 
 interface CreateActivityModalProps {
   isOpen: boolean;
@@ -32,20 +31,18 @@ const CreateActivityModal: React.FC<CreateActivityModalProps> = ({
   const [startHour, setStartHour] = useState<string>("");
   const [endHour, setEndHour] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
-  const { lieux, sousTraitants, signalisations, activites, selectedProject } =
-    useAuth();
+  const { lieux, sousTraitants, signalisations, activites } = useAuth();
 
   useEffect(() => {
     if (activity) {
       setActiviteId(activity.activiteID ?? null);
-      setEntrepriseId(activity.defaultEntrepriseId ?? 0);
+      setEntrepriseId(activity.defaultEntrepriseId ?? null);
       setLieuId(activity.lieuID ?? null);
       setStartHour(activity.hrsDebut ?? "");
       setEndHour(activity.hrsFin ?? "");
       setSignalisationId(activity.signalisationId ?? null);
       setNotes(activity.note ?? "");
     } else {
-      // Réinitialiser les champs si aucune activité n'est fournie
       setActiviteId(null);
       setEntrepriseId(null);
       setLieuId(null);
@@ -56,10 +53,9 @@ const CreateActivityModal: React.FC<CreateActivityModalProps> = ({
     }
   }, [activity, isOpen]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation du format des heures
     const validTimeFormat = /^([0-1]\d|2[0-3]):([0-5]\d)$/;
 
     if (!validTimeFormat.test(startHour) || !validTimeFormat.test(endHour)) {
@@ -75,16 +71,13 @@ const CreateActivityModal: React.FC<CreateActivityModalProps> = ({
       hrsFin: endHour,
       defaultEntrepriseId: entrepriseId ?? undefined,
       signalisationId: signalisationId ?? undefined,
-      note: notes,
+      note: notes || "", // Note peut être vide
+      isLab: activity?.isLab || false, // Assurez-vous que l'état du `checkbox` est correct
+      date: activity?.date || undefined, // Conserver la date si elle existe déjà
     };
 
-    try {
-      await createOrUpdateActivitePlanif(activitePlanif, selectedProject!.ID);
-      onSave(activitePlanif);
-      onClose();
-    } catch (error) {
-      console.error("Failed to save activity", error);
-    }
+    onSave(activitePlanif);
+    onClose();
   };
 
   if (!isOpen) return null;

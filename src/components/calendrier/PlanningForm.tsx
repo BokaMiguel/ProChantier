@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   DragDropContext,
   Droppable,
@@ -28,6 +28,10 @@ import CreateActivityModal from "./CreateActivityModal"; // Assurez-vous que le 
 import { ActivitePlanif } from "../../models/JournalFormModel";
 import { useAuth } from "../../context/AuthContext";
 import ActivityList from "./ActivityList";
+import {
+  createOrUpdateActivitePlanif,
+  createOrUpdateJournalProjet,
+} from "../../services/JournalService"; // Importez la méthode
 
 const daysOfWeek = [
   "Dimanche",
@@ -40,8 +44,14 @@ const daysOfWeek = [
 ];
 
 const PlanningForm: React.FC = () => {
-  const { activitesPlanif, activites, lieux, sousTraitants, signalisations } =
-    useAuth(); // Récupération des données depuis useAuth
+  const {
+    activitesPlanif,
+    activites,
+    lieux,
+    sousTraitants,
+    signalisations,
+    selectedProject,
+  } = useAuth(); // Récupération des données depuis useAuth
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [activities, setActivities] = useState<{
@@ -65,26 +75,34 @@ const PlanningForm: React.FC = () => {
     new Set()
   );
 
-  const start = startOfWeek(selectedDate, { weekStartsOn: 0 });
-  const end = endOfWeek(start, { weekStartsOn: 0 });
+  const start = useMemo(
+    () => startOfWeek(selectedDate, { weekStartsOn: 0 }),
+    [selectedDate]
+  );
+  const end = useMemo(() => endOfWeek(start, { weekStartsOn: 0 }), [start]);
 
   useEffect(() => {
     if (activitesPlanif) {
-      // Initialisation des activités à partir de activitesPlanif
-      const updatedActivities = daysOfWeek.reduce((acc, day) => {
+      const updatedActivities = daysOfWeek.reduce((acc, day, index) => {
+        const currentDayDate = addDays(start, index);
+
         acc[day] = activitesPlanif.filter((activity) => {
-          if (activity.hrsDebut) {
-            const activityDate = parse(activity.hrsFin, "HH:mm", new Date());
-            return format(activityDate, "EEEE", { locale: fr }) === day;
+          if (activity.date) {
+            const activityDate = new Date(activity.date);
+            return (
+              format(activityDate, "yyyy-MM-dd") ===
+              format(currentDayDate, "yyyy-MM-dd")
+            );
           }
           return false;
         });
+
         return acc;
       }, {} as { [key: string]: ActivitePlanif[] });
 
       setActivities(updatedActivities);
     }
-  }, [activitesPlanif]);
+  }, [activitesPlanif, start]);
 
   const onDragEnd = (result: DropResult) => {
     const { source, destination } = result;
@@ -148,28 +166,26 @@ const PlanningForm: React.FC = () => {
   };
 
   const handleSaveActivity = (activity: ActivitePlanif) => {
-    if (activity.hrsDebut && activity.hrsFin) {
-      if (activityToEdit) {
-        setActivities((prevActivities) => {
-          const updatedActivities = { ...prevActivities };
-          for (const day in updatedActivities) {
-            updatedActivities[day] = updatedActivities[day].map((act) =>
-              act.id === activity.id ? activity : act
-            );
-          }
-          return updatedActivities;
-        });
+    setActivities((prevActivities) => {
+      const updatedActivities = { ...prevActivities };
+
+      // Trouver le jour correspondant à l'activité en fonction de sa date
+      const dayOfWeek = daysOfWeek.find((day) =>
+        updatedActivities[day].some((act) => act.id === activity.id)
+      );
+
+      if (dayOfWeek) {
+        // Mettre à jour l'activité existante
+        updatedActivities[dayOfWeek] = updatedActivities[dayOfWeek].map((act) =>
+          act.id === activity.id ? activity : act
+        );
+      } else {
+        // Si l'activité n'existe pas dans les activités du jour, on l'ajoute
+        updatedActivities[selectedDay].push(activity);
       }
-    } else {
-      setActivities((prevActivities) => {
-        const updatedActivities = { ...prevActivities };
-        updatedActivities[selectedDay] = [
-          ...updatedActivities[selectedDay],
-          { ...activity, id: Date.now() },
-        ];
-        return updatedActivities;
-      });
-    }
+      return updatedActivities;
+    });
+
     setShowModal(false);
   };
 
@@ -229,6 +245,54 @@ const PlanningForm: React.FC = () => {
 
     setSelectedActivities(new Set());
     setShowImportModal(false);
+  };
+
+  const handleSavePlanning = async () => {
+    try {
+      for (const day of daysOfWeek) {
+        const currentDate = format(
+          addDays(start, daysOfWeek.indexOf(day)),
+          "yyyy-MM-dd"
+        );
+        for (const activity of activities[day]) {
+          // Préparer les données pour l'API d'ActivitePlanif
+          const activiteData = {
+            id: activity.date ? activity.id : undefined, // Fournir l'ID si une date est présente
+            activiteId: activity.activiteID,
+            lieuId: activity.lieuID,
+            startHour: activity.hrsDebut,
+            endHour: activity.hrsFin,
+            defaultEntrepriseId: activity.defaultEntrepriseId,
+            isLab: activity.isLab,
+            signalisationId: activity.signalisationId,
+            note: activity.note,
+            date: currentDate, // Date du jour associé à l'activité
+          };
+
+          // Créer ou mettre à jour l'activité et obtenir l'ID
+          const createdActiviteId = await createOrUpdateActivitePlanif(
+            activiteData,
+            selectedProject!.ID
+          );
+
+          // Utiliser l'ID retourné pour créer ou mettre à jour le journal
+          await createOrUpdateJournalProjet(
+            currentDate, // La date correspondant au jour
+            activity.hrsDebut,
+            activity.hrsFin,
+            1, // Statut par défaut
+            selectedProject!.ID, // ID du projet sélectionné
+            createdActiviteId // Utilisez l'ID de l'activité créée/mise à jour
+          );
+        }
+      }
+      alert("Planification sauvegardée avec succès !");
+    } catch (error) {
+      console.error("Failed to save planning", error);
+      alert(
+        "Une erreur est survenue lors de la sauvegarde de la planification."
+      );
+    }
   };
 
   return (
@@ -447,7 +511,7 @@ const PlanningForm: React.FC = () => {
 
       <div className="flex justify-end mt-8">
         <button
-          onClick={() => console.log(activities)}
+          onClick={handleSavePlanning}
           className="bg-green-600 text-white p-3 rounded flex items-center"
         >
           <FaSave className="mr-2" />

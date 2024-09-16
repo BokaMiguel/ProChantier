@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { FaArrowRight, FaFilePdf } from "react-icons/fa";
+import { usePDF } from "react-to-pdf";
 import InfoProjet from "../sections/InfoProjet";
 import InfoEmployes from "../sections/InfoEmployes";
 import ActiviteProjet from "../sections/activiteProjet/ActiviteProjet";
@@ -86,9 +87,15 @@ const Form: React.FC = () => {
 
   const visibleSections = getVisibleSections();
 
+  // Référence pour le contenu à convertir en PDF
+  const { toPDF, targetRef } = usePDF({ filename: "formulaire.pdf" });
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center py-4">
-      <div className="w-full max-w-4xl bg-white rounded shadow-md p-6 space-y-6">
+      <div
+        ref={targetRef}
+        className="w-full max-w-4xl bg-white rounded shadow-md p-6 space-y-6"
+      >
         {sections.infoProjet.visible && (
           <section>
             <SectionHeader
@@ -162,7 +169,10 @@ const Form: React.FC = () => {
         )}
 
         <div className="text-right mt-6 space-x-4">
-          <button className="inline-flex items-center px-4 py-2 bg-red-500 text-white rounded hover:bg-red-700 transition-colors duration-300">
+          <button
+            onClick={() => toPDF()}
+            className="inline-flex items-center px-4 py-2 bg-red-500 text-white rounded hover:bg-red-700 transition-colors duration-300"
+          >
             Générer PDF
             <FaFilePdf className="ml-2" />
           </button>

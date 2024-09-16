@@ -441,16 +441,16 @@ export const getJournalProjet = async (journalId: number) => {
 };
 
 export const createOrUpdateJournalProjet = async (
-  JournalID: number,
   Date: string,
   HrsDebut: string,
   HrsFin: string,
-  MeteoId: number,
   StatutId: number,
-  IDProjetType: number,
   IDProjet: number,
-  ActiviteID: number
+  ActiviteID: number,
+  IDProjetType?: number,
+  MeteoId?: number,
 ) => {
+  
   const response = await fetch(
     `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdateJournalProjet`,
     {
@@ -459,7 +459,6 @@ export const createOrUpdateJournalProjet = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        JournalID,
         Date,
         HrsDebut,
         HrsFin,
@@ -495,21 +494,20 @@ export const getActivitePlanif = async (id: number) => {
 };
 
 export const createOrUpdateActivitePlanif = async (activiteData: any, projectId: number) => {
-  // Transformation des données pour correspondre au modèle attendu par l'API
   const formattedData = {
+    ID: activiteData.id || undefined, // Ajout de l'ID facultatif
     ActiviteID: activiteData.activiteId,
     LieuID: activiteData.lieuId,
     ProjetID: projectId,
     HrsDebut: activiteData.startHour,
     HrsFin: activiteData.endHour,
     DefaultEntrepriseId: activiteData.defaultEntrepriseId,
-    IsLab: activiteData.isLab || false, 
+    IsLab: activiteData.isLab || false,
     SignalisationId: activiteData.signalisationId,
     Note: activiteData.note || "",
-    Quantite: activiteData.quantite || 0, 
+    Date: activiteData.date || null,
+    Quantite: activiteData.quantite || 0,
   };
-
-  console.log('formattedData', formattedData);
 
   const response = await fetch(
     `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdateActivitePlanif`,
@@ -521,10 +519,13 @@ export const createOrUpdateActivitePlanif = async (activiteData: any, projectId:
       body: JSON.stringify(formattedData),
     }
   );
+
   if (!response.ok) {
     throw new Error("Failed to create or update activite planif");
   }
-  return response.json();
+
+  const result = await response.json();
+  return result.id; // Assurez-vous que l'API retourne l'ID de l'entité créée/mise à jour
 };
 
 

@@ -8,6 +8,7 @@ import {
   FaLock,
   FaUnlock,
 } from "react-icons/fa";
+import { useParams } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import {
   Employe,
@@ -16,10 +17,21 @@ import {
 } from "../../../models/JournalFormModel";
 import StatsGrid from "../StatsGrid";
 import LocalisationModal from "./LocalisationModal";
+import LocalisationLiaisonModal from "./LocalisationLiaisonModal";
+import { getDistancesForLieu } from "../../../services/JournalService";
 
 const ActiviteProjet: React.FC<{ users: Employe[] }> = ({ users }) => {
-  const { lieux, bases } = useAuth(); // Récupérez les lieux et bases depuis le contexte
-  const [activites, setActivites] = useState<ActivitePlanif[]>([
+  const { idPlanif } = useParams<{ idPlanif: string }>();
+  const {
+    activitesPlanif,
+    activites,
+    lieux,
+    bases,
+    sousTraitants,
+    signalisations,
+  } = useAuth();
+
+  const [activitesState, setActivitesState] = useState<ActivitePlanif[]>([
     initialActivite,
   ]);
   const [nextId, setNextId] = useState(2);
@@ -27,13 +39,9 @@ const ActiviteProjet: React.FC<{ users: Employe[] }> = ({ users }) => {
   const [currentActiviteId, setCurrentActiviteId] = useState<number | null>(
     null
   );
-  const [selectedLocalisations, setSelectedLocalisations] = useState<string[]>(
-    []
-  );
-  const [savedLocalisations, setSavedLocalisations] = useState<string[]>([]);
-  const [liaisonMode, setLiaisonMode] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [notes, setNotes] = useState("");
+  const [isLiaisonMode, setIsLiaisonMode] = useState<boolean>(false);
+  const [savedBases, setSavedBases] = useState<string[]>([]);
+  const [savedLiaisons, setSavedLiaisons] = useState<string[]>([]);
   const [lockedActivites, setLockedActivites] = useState<number[]>([]);
   const [lockConfirm, setLockConfirm] = useState<{
     show: boolean;
@@ -47,284 +55,355 @@ const ActiviteProjet: React.FC<{ users: Employe[] }> = ({ users }) => {
 
   const notesRef = useRef<{ [key: number]: HTMLTextAreaElement | null }>({});
 
-  // useEffect(() => {
-  //   Object.keys(notesRef.current).forEach((key: any) => {
-  //     if (notesRef.current[key]) {
-  //       notesRef.current[key]!.style.height = "auto";
-  //       notesRef.current[key]!.style.height = `${
-  //         notesRef.current[key]!.scrollHeight
-  //       }px`;
-  //     }
-  //   });
-  // }, [activites]);
+  const [distances, setDistances] = useState<any[]>([]);
 
-  // const handleAddActivite = () => {
-  //   const newActivite: ActivitePlanif = {
-  //     id: nextId,
-  //     lieu: undefined, // Par défaut, pas de lieu sélectionné
-  //     localisation: "",
-  //     quantite: 0,
-  //     nom: "",
-  //     notes: "",
-  //     startHour: "",
-  //     endHour: "",
-  //     isComplete: false,
-  //   };
-  //   setActivites((prevActivites) => [...prevActivites, newActivite]);
-  //   setNextId(nextId + 1);
-  // };
+  const getBasesForCurrentLieu = (lieuId: number): string[] => {
+    return (
+      bases
+        ?.filter((base) => base.lieuId === lieuId)
+        .map((base) => base.base) || []
+    );
+  };
 
-  // const handleChange = (
-  //   id: number,
-  //   field: keyof ActivitePlanif,
-  //   value: any
-  // ) => {
-  //   const updatedActivites = activites.map((activite) => {
-  //     if (activite.id === id) {
-  //       return { ...activite, [field]: value };
-  //     }
-  //     return activite;
-  //   });
-  //   setActivites(updatedActivites);
-  // };
+  const handleToggleLiaisonMode = (mode: boolean) => {
+    setIsLiaisonMode(mode);
+  };
 
-  // const openModal = (id: number) => {
-  //   setCurrentActiviteId(id);
-  //   const currentActivite = activites.find((activite) => activite.id === id);
-  //   if (currentActivite) {
-  //     setSavedLocalisations(
-  //       currentActivite.localisation
-  //         ? currentActivite.localisation.split(", ")
-  //         : []
-  //     );
-  //   }
-  //   setSelectedLocalisations([]);
-  //   setShowModal(true);
-  // };
+  const fetchDistances = async (lieuId: number) => {
+    try {
+      const data = await getDistancesForLieu(lieuId);
+      const mappedDistances = data.map((distance: any) => ({
+        ...distance,
+        baseAName:
+          bases?.find((base) => base.id === distance.baseA)?.base || "N/A",
+        baseBName:
+          bases?.find((base) => base.id === distance.baseB)?.base || "N/A",
+      }));
+      setDistances(mappedDistances);
+    } catch (error) {
+      console.error("Failed to fetch distances:", error);
+    }
+  };
 
-  // const closeModal = () => {
-  //   setShowModal(false);
-  //   setLiaisonMode(false);
-  // };
+  useEffect(() => {
+    if (idPlanif && activitesPlanif && activites) {
+      const currentPlanif = activitesPlanif.find(
+        (planif) => planif.id === Number(idPlanif)
+      );
+      if (currentPlanif) {
+        const relatedActivite = activites.find(
+          (activite) => activite.id === currentPlanif.activiteID
+        );
+        const lieu = lieux?.find((l) => l.id === currentPlanif.lieuID);
+        const entreprise = sousTraitants?.find(
+          (st) => st.id === currentPlanif.defaultEntrepriseId
+        );
+        const signalisation = signalisations?.find(
+          (sig) => sig.id === currentPlanif.signalisationId
+        );
 
-  // const handleLocalisationChange = () => {
-  //   if (currentActiviteId !== null) {
-  //     // Supprimer les parenthèses existantes avant d'en ajouter une nouvelle
-  //     const localisation = savedLocalisations
-  //       .map((loc) => loc.replace(/[()]/g, "")) // Enlever toutes les parenthèses
-  //       .map((loc) => (loc.includes("@") ? `(${loc})` : loc)) // Ajouter parenthèses pour les liaisons
-  //       .join(", ");
+        setActivitesState([
+          {
+            ...currentPlanif,
+            lieuID: lieu?.id,
+            note: currentPlanif.note || "",
+            defaultEntrepriseId: entreprise?.id,
+            signalisationId: signalisation?.id,
+          },
+        ]);
+        setSavedBases([]);
+        setSavedLiaisons([]);
 
-  //     handleChange(currentActiviteId, "localisation", localisation);
-  //     closeModal();
-  //   }
-  // };
+        if (lieu?.id) {
+          fetchDistances(lieu.id);
+        }
+      }
+    }
+  }, [
+    idPlanif,
+    activitesPlanif,
+    activites,
+    lieux,
+    bases,
+    sousTraitants,
+    signalisations,
+  ]);
 
-  // const requestDeleteActivite = (id: number) => {
-  //   setDeleteConfirm({ show: true, id });
-  // };
+  useEffect(() => {
+    Object.keys(notesRef.current).forEach((key: any) => {
+      if (notesRef.current[key]) {
+        notesRef.current[key]!.style.height = "auto";
+        notesRef.current[key]!.style.height = `${
+          notesRef.current[key]!.scrollHeight
+        }px`;
+      }
+    });
+  }, [activitesState]);
 
-  // const confirmDeleteActivite = () => {
-  //   if (deleteConfirm.id !== null) {
-  //     setActivites((prevActivites) =>
-  //       prevActivites.filter((activite) => activite.id !== deleteConfirm.id)
-  //     );
-  //     setLockedActivites((prevLockedActivites) =>
-  //       prevLockedActivites.filter((lockedId) => lockedId !== deleteConfirm.id)
-  //     );
-  //     setDeleteConfirm({ show: false, id: null });
-  //   }
-  // };
+  const handleChange = (
+    id: number,
+    field: keyof ActivitePlanif,
+    value: any
+  ) => {
+    const updatedActivites = activitesState.map((activite) => {
+      if (activite.id === id) {
+        return { ...activite, [field]: value };
+      }
+      return activite;
+    });
+    setActivitesState(updatedActivites);
+  };
 
-  // const clearAllLocalisations = () => {
-  //   setSelectedLocalisations([]);
-  //   setSavedLocalisations([]);
-  //   setShowConfirm(false);
-  // };
+  const openModal = (id: number) => {
+    setCurrentActiviteId(id);
+    setShowModal(true);
+  };
 
-  // const handleLockUnlock = (id: number, lock: boolean) => {
-  //   setLockConfirm({ show: true, id, lock });
-  // };
+  const closeModal = () => {
+    setShowModal(false);
+  };
 
-  // const confirmLockUnlock = () => {
-  //   if (lockConfirm.id !== null) {
-  //     if (lockConfirm.lock) {
-  //       setLockedActivites((prevLockedActivites) => [
-  //         ...prevLockedActivites,
-  //         lockConfirm.id!,
-  //       ]);
-  //     } else {
-  //       setLockedActivites((prevLockedActivites) =>
-  //         prevLockedActivites.filter((lockedId) => lockedId !== lockConfirm.id)
-  //       );
-  //     }
-  //     setLockConfirm({ show: false, id: null, lock: false });
-  //   }
-  // };
+  const handleBasesChange = (newBases: string[]) => {
+    setSavedBases(newBases);
+    closeModal();
+  };
 
-  // const getBasesForCurrentLieu = (lieuId: number): string[] => {
-  //   return (
-  //     bases
-  //       ?.filter((base) => base.lieuId === lieuId)
-  //       .map((base) => base.base) || []
-  //   );
-  // };
+  const handleLiaisonsChange = (newLiaisons: string[]) => {
+    setSavedLiaisons(newLiaisons);
+    closeModal();
+  };
 
-  // const renderActivites = () => {
-  //   return activites.map((activite, index) => {
-  //     const isLocked = lockedActivites.includes(activite.id);
-  //     const lieuBases = activite.lieu
-  //       ? getBasesForCurrentLieu(activite.lieu.id)
-  //       : [];
+  const clearAllLocalisations = () => {
+    if (isLiaisonMode) {
+      setSavedLiaisons([]);
+    } else {
+      setSavedBases([]);
+    }
+  };
 
-  //     return (
-  //       <div
-  //         key={activite.id}
-  //         className="border rounded p-4 mb-4 shadow-md flex flex-col space-y-4 relative"
-  //       >
-  //         <h3 className="text-lg font-bold">
-  //           {index + 1}.{" "}
-  //           {activite.nom && (
-  //             <span className="text-cyan-700">{activite.nom}</span>
-  //           )}
-  //           {index > 0 && (
-  //             <button
-  //               onClick={() => requestDeleteActivite(activite.id)}
-  //               className="absolute top-2 right-2 text-zinc-500 hover:text-red-700"
-  //             >
-  //               <FaTimes />
-  //             </button>
-  //           )}
-  //           <button
-  //             onClick={() => handleLockUnlock(activite.id, !isLocked)}
-  //             style={{ fontSize: "1.0rem" }}
-  //             className={`absolute top-2 right-8 ${
-  //               isLocked ? "text-green-500" : "text-zinc-500"
-  //             } hover:text-yellow-400`}
-  //           >
-  //             {isLocked ? <FaUnlock /> : <FaLock />}
-  //           </button>
-  //         </h3>
-  //         <input
-  //           type="text"
-  //           placeholder="Nom de l'activité"
-  //           value={activite.nom}
-  //           onChange={(e) => handleChange(activite.id, "nom", e.target.value)}
-  //           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-  //           readOnly={isLocked}
-  //         />
-  //         <div className="grid grid-cols-12 gap-4 items-center">
-  //           <label className="col-span-2 flex items-center">
-  //             <FaMapSigns className="mr-2" />
-  //             Lieu:
-  //           </label>
-  //           <select
-  //             value={activite.lieu?.id || ""}
-  //             onChange={(e) => {
-  //               const selectedLieu = lieux?.find(
-  //                 (lieu) => lieu.id === parseInt(e.target.value)
-  //               );
-  //               if (selectedLieu) {
-  //                 handleChange(activite.id, "lieu", selectedLieu);
-  //               }
-  //             }}
-  //             className="col-span-7 shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-  //             disabled={isLocked}
-  //           >
-  //             <option value="">Sélectionner un lieu</option>
-  //             {lieux?.map((lieu) => (
-  //               <option key={lieu.id} value={lieu.id}>
-  //                 {lieu.nom}
-  //               </option>
-  //             ))}
-  //           </select>
-  //           <div className="col-span-3 flex items-center">
-  //             <FaCubes className="mr-2" />
-  //             <input
-  //               type="number"
-  //               placeholder="Quantité"
-  //               value={activite.quantite}
-  //               onChange={(e) =>
-  //                 handleChange(
-  //                   activite.id,
-  //                   "quantite",
-  //                   parseFloat(e.target.value) || 0
-  //                 )
-  //               }
-  //               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-  //               readOnly={isLocked}
-  //             />
-  //           </div>
-  //         </div>
-  //         <div className="flex items-center">
-  //           <FaMapMarkerAlt className="mr-2" />
-  //           <input
-  //             type="text"
-  //             placeholder="Localisation"
-  //             value={activite.localisation}
-  //             readOnly
-  //             onClick={() => !isLocked && openModal(activite.id)}
-  //             className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${
-  //               isLocked ? "cursor-not-allowed" : "cursor-pointer"
-  //             }`}
-  //           />
-  //         </div>
-  //         <div className="mb-4">
-  //           <label className="block text-gray-700 text-sm font-bold mb-2 text-center">
-  //             Notes / Remarques
-  //           </label>
-  //           <textarea
-  //             ref={(el) => (notesRef.current[activite.id] = el)}
-  //             placeholder="Écrire une note ou une remarque."
-  //             value={activite.notes}
-  //             onChange={(e) =>
-  //               handleChange(activite.id, "notes", e.target.value)
-  //             }
-  //             rows={3}
-  //             className="shadow-inner border border-gray-400 rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline resize-none bg-gray-200"
-  //             style={{ overflow: "hidden" }}
-  //             readOnly={isLocked}
-  //           />
-  //         </div>
-  //         <LocalisationModal
-  //           showModal={showModal}
-  //           closeModal={closeModal}
-  //           savedLocalisations={savedLocalisations}
-  //           setSavedLocalisations={setSavedLocalisations}
-  //           liaisonMode={liaisonMode}
-  //           setLiaisonMode={setLiaisonMode}
-  //           handleLocalisationChange={handleLocalisationChange}
-  //           clearAllLocalisations={clearAllLocalisations}
-  //           bases={lieuBases} // Passer les bases associées au lieu sélectionné
-  //         />
-  //       </div>
-  //     );
-  //   });
-  // };
+  const requestDeleteActivite = (id: number) => {
+    setDeleteConfirm({ show: true, id });
+  };
+
+  const confirmDeleteActivite = () => {
+    if (deleteConfirm.id !== null) {
+      setActivitesState((prevActivites) =>
+        prevActivites.filter((activite) => activite.id !== deleteConfirm.id)
+      );
+      setLockedActivites((prevLockedActivites) =>
+        prevLockedActivites.filter((lockedId) => lockedId !== deleteConfirm.id)
+      );
+      setDeleteConfirm({ show: false, id: null });
+    }
+  };
+
+  const handleLockUnlock = (id: number, lock: boolean) => {
+    setLockConfirm({ show: true, id, lock });
+  };
+
+  const confirmLockUnlock = () => {
+    if (lockConfirm.id !== null) {
+      if (lockConfirm.lock) {
+        setLockedActivites((prevLockedActivites) => [
+          ...prevLockedActivites,
+          lockConfirm.id!,
+        ]);
+      } else {
+        setLockedActivites((prevLockedActivites) =>
+          prevLockedActivites.filter((lockedId) => lockedId !== lockConfirm.id)
+        );
+      }
+      setLockConfirm({ show: false, id: null, lock: false });
+    }
+  };
+
+  const renderActivites = () => {
+    return activitesState.map((activite, index) => {
+      const isLocked = lockedActivites.includes(activite.id);
+      const lieuBases = activite.lieuID
+        ? getBasesForCurrentLieu(activite.lieuID)
+        : [];
+
+      const displayedLocalisations = isLiaisonMode ? savedLiaisons : savedBases;
+
+      return (
+        <div
+          key={activite.id}
+          className="border rounded p-4 mb-4 shadow-md flex flex-col space-y-4 relative"
+        >
+          <h3 className="text-lg font-bold">
+            {index + 1}.{" "}
+            <span className="text-cyan-700">
+              {activites?.find((act) => act.id === activite.activiteID)?.nom ||
+                "Inconnu"}
+            </span>
+            {index > 0 && (
+              <button
+                onClick={() => requestDeleteActivite(activite.id)}
+                className="absolute top-2 right-2 text-zinc-500 hover:text-red-700"
+              >
+                <FaTimes />
+              </button>
+            )}
+            <button
+              onClick={() => handleLockUnlock(activite.id, !isLocked)}
+              style={{ fontSize: "1.0rem" }}
+              className={`absolute top-2 right-8 ${
+                isLocked ? "text-green-500" : "text-zinc-500"
+              } hover:text-yellow-400`}
+            >
+              {isLocked ? <FaUnlock /> : <FaLock />}
+            </button>
+          </h3>
+
+          <select
+            value={activite.activiteID || ""}
+            onChange={(e) =>
+              handleChange(activite.id, "activiteID", parseInt(e.target.value))
+            }
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            disabled={isLocked}
+          >
+            <option value="">Sélectionner une activité</option>
+            {activites?.map((act) => (
+              <option key={act.id} value={act.id}>
+                {act.nom}
+              </option>
+            ))}
+          </select>
+
+          <div className="grid grid-cols-12 gap-4 items-center">
+            <label className="col-span-2 flex items-center">
+              <FaMapSigns className="mr-2" />
+              Lieu:
+            </label>
+            <select
+              value={activite.lieuID || ""}
+              onChange={(e) => {
+                const selectedLieu = lieux?.find(
+                  (lieu) => lieu.id === parseInt(e.target.value)
+                );
+                if (selectedLieu) {
+                  handleChange(activite.id, "lieuID", selectedLieu.id);
+                  setSavedBases([]);
+                  setSavedLiaisons([]);
+                  fetchDistances(selectedLieu.id);
+                }
+              }}
+              className="col-span-7 shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              disabled={isLocked}
+            >
+              <option value="">Sélectionner un lieu</option>
+              {lieux?.map((lieu) => (
+                <option key={lieu.id} value={lieu.id}>
+                  {lieu.nom}
+                </option>
+              ))}
+            </select>
+            <div className="col-span-3 flex items-center">
+              <FaCubes className="mr-2" />
+              <input
+                type="number"
+                placeholder="Quantité"
+                value={activite.quantite || 0}
+                onChange={(e) =>
+                  handleChange(
+                    activite.id,
+                    "quantite",
+                    parseFloat(e.target.value) || 0
+                  )
+                }
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                readOnly={isLocked}
+              />
+            </div>
+          </div>
+          <div className="flex items-center">
+            <FaMapMarkerAlt className="mr-2" />
+            <textarea
+              placeholder="Sélectionner des bases ou liaisons"
+              value={displayedLocalisations.join(", ")}
+              readOnly
+              onClick={() => !isLocked && openModal(activite.id)}
+              className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline resize-none ${
+                isLocked ? "cursor-not-allowed" : "cursor-pointer"
+              }`}
+              style={{
+                whiteSpace: "pre-wrap",
+                overflowWrap: "break-word",
+                height: "auto",
+              }}
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2 text-center">
+              Notes / Remarques
+            </label>
+            <textarea
+              ref={(el) => (notesRef.current[activite.id] = el)}
+              placeholder="Écrire une note ou une remarque."
+              value={activite.note || ""}
+              onChange={(e) =>
+                handleChange(activite.id, "note", e.target.value)
+              }
+              rows={3}
+              className="shadow-inner border border-gray-400 rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline resize-none bg-gray-200"
+              style={{ overflow: "hidden" }}
+              readOnly={isLocked}
+            />
+          </div>
+
+          {isLiaisonMode ? (
+            <LocalisationLiaisonModal
+              showModal={showModal}
+              closeModal={closeModal}
+              savedLiaisons={savedLiaisons}
+              setSavedLiaisons={handleLiaisonsChange}
+              distances={distances}
+              onToggleLiaisonMode={handleToggleLiaisonMode}
+              isLiaisonMode={isLiaisonMode}
+              clearAllLocalisations={clearAllLocalisations}
+            />
+          ) : (
+            <LocalisationModal
+              showModal={showModal}
+              closeModal={closeModal}
+              savedLocalisations={savedBases}
+              setSavedLocalisations={handleBasesChange}
+              isLiaisonMode={isLiaisonMode}
+              setIsLiaisonMode={setIsLiaisonMode}
+              clearAllLocalisations={clearAllLocalisations}
+              bases={lieuBases}
+            />
+          )}
+        </div>
+      );
+    });
+  };
 
   return (
     <div className="p-4 w-full space-y-4">
-      {/* <StatsGrid
+      <StatsGrid
         users={users.map((user) => ({
           id: user.id,
           nom: `${user.prenom} ${user.nom}`,
         }))}
         nextStep={false}
-        activiteCount={activites.length}
+        activiteCount={activitesState.length}
       />
-      {activites.length > 5 && (
+      {activitesState.length > 5 && (
         <StatsGrid
           users={users.map((user) => ({
             id: user.id,
             nom: `${user.prenom} ${user.nom}`,
           }))}
           nextStep={true}
-          activiteCount={activites.length - 5}
+          activiteCount={activitesState.length - 5}
         />
       )}
       {renderActivites()}
       <button
-        onClick={handleAddActivite}
+        onClick={() => setNextId(nextId + 1)}
         className="w-full py-2 px-4 bg-blue-500 text-white rounded shadow flex items-center justify-center"
       >
         <FaPlusCircle className="mr-2" />
@@ -382,7 +461,7 @@ const ActiviteProjet: React.FC<{ users: Employe[] }> = ({ users }) => {
             </div>
           </div>
         </div>
-      )} */}
+      )}
     </div>
   );
 };
