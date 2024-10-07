@@ -73,6 +73,15 @@ const InfoEmployes: React.FC<{
     });
 
     setUsers(updatedUsers);
+
+    // Add a new row if an employee is selected and we haven't reached the maximum
+    if (
+      field === "nom" &&
+      value !== "" &&
+      users.length < (employees?.length || 0)
+    ) {
+      handleAddUser();
+    }
   };
 
   const handleDeleteUser = (id: number) => {
@@ -82,16 +91,26 @@ const InfoEmployes: React.FC<{
 
   const confirmDeleteUser = () => {
     if (userIdToDelete !== null) {
-      const updatedUsers = users.filter((user) => user.id !== userIdToDelete);
-      setUsers(updatedUsers.map((user, index) => ({ ...user, id: index + 1 })));
+      const updatedUsers = users.map((user) =>
+        user.id === userIdToDelete
+          ? {
+              ...user,
+              nom: "",
+              prenom: "",
+              fonction: { id: null, nom: "" },
+              equipement: { id: null, nom: "" },
+            }
+          : user
+      );
+      setUsers(updatedUsers);
     }
     setShowModal(false);
     setUserIdToDelete(null);
   };
 
   useEffect(() => {
-    // Si la liste des utilisateurs est plus petite que la liste des employés, ajoute un nouvel utilisateur
-    if (employees && users.length < employees.length) {
+    // If there are no users, add one empty user
+    if (users.length === 0 && employees && employees.length > 0) {
       handleAddUser();
     }
   }, [users, employees]);
@@ -100,16 +119,28 @@ const InfoEmployes: React.FC<{
     return users.map((user) => (
       <div key={user.id} className="grid grid-cols-10 gap-4 mb-4 items-center">
         <select
-          value={`${user.prenom} ${user.nom}`}
+          value={user.nom && user.prenom ? `${user.prenom} ${user.nom}` : ""}
           onChange={(e) => handleChange(user.id, "nom", e.target.value)}
           className="col-span-3 border rounded px-2 py-1 w-full"
         >
           <option value=""></option>
-          {employees?.map((emp, index) => (
-            <option key={index} value={`${emp.prenom} ${emp.nom}`}>
-              {`${emp.prenom} ${emp.nom}`}
-            </option>
-          ))}
+          {employees
+            ?.filter(
+              (emp) =>
+                !users.some(
+                  (u) =>
+                    u.id !== user.id &&
+                    u.nom === emp.nom &&
+                    u.prenom === emp.prenom &&
+                    u.nom !== "" &&
+                    u.prenom !== ""
+                )
+            )
+            .map((emp, index) => (
+              <option key={index} value={`${emp.prenom} ${emp.nom}`}>
+                {`${emp.prenom} ${emp.nom}`}
+              </option>
+            ))}
         </select>
         <select
           value={user.fonction.nom}
@@ -135,14 +166,12 @@ const InfoEmployes: React.FC<{
             </option>
           ))}
         </select>
-        {user.nom !== "" && (
-          <button
-            onClick={() => handleDeleteUser(user.id)}
-            className="col-span-1 hover:text-red-700 flex items-center justify-center"
-          >
-            <FaTimes />
-          </button>
-        )}
+        <button
+          onClick={() => handleDeleteUser(user.id)}
+          className="col-span-1 hover:text-red-700 flex items-center justify-center"
+        >
+          <FaTimes />
+        </button>
       </div>
     ));
   };

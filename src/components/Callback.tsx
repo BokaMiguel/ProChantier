@@ -1,22 +1,28 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { handleCallback } from "../services/AuthService";
+import { useAuth } from "../context/AuthContext";
 
 const Callback: React.FC = () => {
   const navigate = useNavigate();
+  const { handleCallback, isLoading } = useAuth();
 
   useEffect(() => {
-    handleCallback()
-      .then(() => {
-        navigate("/");
-      })
-      .catch((err) => {
+    const handleCallbackEffect = async () => {
+      try {
+        await handleCallback();
+        navigate("/", { replace: true });
+      } catch (err) {
         console.error("Error handling callback:", err);
-        navigate("/error"); // Rediriger vers une page d'erreur ou afficher un message d'erreur
-      });
-  }, [handleCallback, navigate]);
+        navigate("/error", { replace: true });
+      }
+    };
 
-  return <div>Loading...</div>;
+    if (!isLoading) {
+      handleCallbackEffect();
+    }
+  }, [handleCallback, navigate, isLoading]);
+
+  return <div>Processing authentication...</div>;
 };
 
 export default Callback;

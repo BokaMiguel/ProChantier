@@ -58,9 +58,10 @@ interface AuthContextProps {
   sousTraitants: SousTraitant[] | null;
   bases: Localisation[] | null;
   signalisations: SignalisationProjet[] | null;
+  isLoading: boolean;
   login: () => void;
   logout: () => void;
-  handleCallback: () => Promise<void>;
+  handleCallback: () => Promise<User>;
   selectProject: (project: Project) => void;
   fetchBases: (lieuId: number) => void;
   fetchLieux: (projectId: number) => void;
@@ -80,6 +81,7 @@ const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
+  const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [claims, setClaims] = useState<UserClaims | null>(null);
   const [projects, setProjects] = useState<Project[] | null>(null);
@@ -96,31 +98,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [sousTraitants, setSousTraitants] = useState<SousTraitant[] | null>(
     null
   );
+  const [initialFetchAttempted, setInitialFetchAttempted] = useState(false);
   const [bases, setBases] = useState<Localisation[] | null>(null);
   const [signalisations, setSignalisations] = useState<
     SignalisationProjet[] | null
-    
   >(null);
 
   useEffect(() => {
     const fetchUser = async () => {
-      const storedUser = await getUser();
-      if (storedUser) {
-        setUser(storedUser);
-        const userClaims = storedUser.profile as unknown as UserClaims;
-        setClaims(userClaims);
+      if (!user && !initialFetchAttempted) {
+        setInitialFetchAttempted(true);
+        setIsLoading(true);
+        try {
+          const storedUser = await getUser();
+          if (storedUser) {
+            setUser(storedUser);
+            const userClaims = storedUser.profile as unknown as UserClaims;
+            setClaims(userClaims);
 
-        const projectsData = await getAuthorizedProjects(userClaims.sub);
-        setProjects(projectsData);
-      } else {
-        login();
+            const projectsData = await getAuthorizedProjects(userClaims.sub);
+            setProjects(projectsData);
+          }
+        } catch (err) {
+          console.error("Error loading user:", err);
+        } finally {
+          setIsLoading(false);
+        }
+      } else if (user) {
+        setIsLoading(false);
       }
     };
 
-    fetchUser().catch((err) => {
-      console.error("Error loading user:", err);
-    });
-  }, []);
+    fetchUser();
+  }, [user, initialFetchAttempted]);
 
   // Utilisation de useCallback pour mémoriser la fonction fetchProjectDetails
   const fetchProjectDetails = useCallback(async (projectId: number) => {
@@ -203,15 +213,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const handleUserCallback = async () => {
-    const user = await handleCallback();
-    setUser(user);
-    const userClaims = user.profile as unknown as UserClaims;
-    setClaims(userClaims);
+    setIsLoading(true);
+    try {
+      const user = await handleCallback();
+      setUser(user);
+      const userClaims = user.profile as unknown as UserClaims;
+      setClaims(userClaims);
 
-    const projectsData = await getAuthorizedProjects(userClaims.sub);
-    setProjects(projectsData);
+      const projectsData = await getAuthorizedProjects(userClaims.sub);
+      setProjects(projectsData);
+
+      return user;
+    } catch (error) {
+      console.error("Error in handleUserCallback:", error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
   };
-
+  
   const selectProject = (project: Project) => {
     setSelectedProject(project);
   };
@@ -325,6 +345,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         sousTraitants,
         signalisations,
         activitesPlanif,
+        isLoading,
         login: handleUserLogin,
         logout: handleUserLogout,
         handleCallback: handleUserCallback,
