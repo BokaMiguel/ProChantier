@@ -6,10 +6,16 @@ import InfoProjet from "../sections/InfoProjet";
 import InfoEmployes from "../sections/InfoEmployes";
 import ActiviteProjet from "../sections/activiteProjet/ActiviteProjet";
 import SousTraitantSection from "../sections/SousTraitantSection";
-import { Employe } from "../../models/JournalFormModel";
-import SectionHeader from "../sections/sectionHeader/SectionHeader";
 import MateriauxInfo from "../sections/MeteriauxInfo";
+import SectionHeader from "../sections/sectionHeader/SectionHeader";
 import { useAuth } from "../../context/AuthContext";
+import {
+  Employe,
+  ActivitePlanif,
+  initialActivite,
+  LocalisationDistance,
+  Localisation,
+} from "../../models/JournalFormModel";
 
 const Form: React.FC = () => {
   const {
@@ -28,10 +34,21 @@ const Form: React.FC = () => {
     sousTraitants,
     materiaux,
     bases,
+    activitesPlanif,
+    activites,
+    signalisations,
   } = useAuth();
 
-  const { type } = useParams<{ type: string }>();
-  const [users, setUsers] = useState<Employe[]>([
+  const { type, idPlanif } = useParams<{ type: string; idPlanif: string }>();
+
+  // InfoProjet state
+  const [journalDate, setJournalDate] = useState<Date>(new Date());
+  const [journalArrivee, setJournalArrivee] = useState("06:30");
+  const [journalDepart, setJournalDepart] = useState("16:30");
+  const [journalWeather, setJournalWeather] = useState("");
+
+  // InfoEmployes state
+  const [journalUsers, setJournalUsers] = useState<Employe[]>([
     {
       id: 1,
       nom: "",
@@ -47,6 +64,28 @@ const Form: React.FC = () => {
     },
   ]);
 
+  // ActiviteProjet state
+  const [journalActivitesState, setJournalActivitesState] = useState<
+    ActivitePlanif[]
+  >([initialActivite]);
+  const [journalSavedBases, setJournalSavedBases] = useState<Localisation[]>(
+    []
+  );
+  const [journalSavedLiaisons, setJournalSavedLiaisons] = useState<
+    LocalisationDistance[]
+  >([]);
+
+  const [savedBasesAttachment, setSavedBasesAttachment] = useState<string[]>(
+    []
+  );
+
+  // UserStats state
+  const [journalUserStats, setJournalUserStats] = useState<any[]>([]);
+
+  // MateriauxInfo and SousTraitantSection state
+  const [journalMateriaux, setJournalMateriaux] = useState<any[]>([]);
+  const [journalSousTraitants, setJournalSousTraitants] = useState<any[]>([]);
+
   const [sections, setSections] = useState({
     infoProjet: { visible: true, open: true },
     infoEmployes: { visible: true, open: true },
@@ -54,7 +93,6 @@ const Form: React.FC = () => {
     materiaux: { visible: true, open: true },
     sousTraitants: { visible: true, open: true },
   });
-
   useEffect(() => {
     if (type === "entretien") {
       setSections((prevSections) => ({
@@ -68,6 +106,51 @@ const Form: React.FC = () => {
       }));
     }
   }, [type]);
+
+  useEffect(() => {
+    if (idPlanif && activitesPlanif && activites) {
+      const currentPlanif = activitesPlanif.find(
+        (planif) => planif.id === Number(idPlanif)
+      );
+      if (currentPlanif) {
+        const relatedActivite = activites.find(
+          (activite) => activite.id === currentPlanif.activiteID
+        );
+        const lieu = lieux?.find((l) => l.id === currentPlanif.lieuID);
+        const entreprise = sousTraitants?.find(
+          (st) => st.id === currentPlanif.defaultEntrepriseId
+        );
+        const signalisation = signalisations?.find(
+          (sig) => sig.id === currentPlanif.signalisationId
+        );
+
+        setJournalActivitesState([
+          {
+            ...currentPlanif,
+            lieuID: lieu?.id ?? null,
+            note: currentPlanif.note || "",
+            defaultEntrepriseId: entreprise?.id ?? null,
+            signalisationId: signalisation?.id ?? null,
+          },
+        ]);
+        setJournalSavedBases([]);
+        setJournalSavedLiaisons([]);
+
+        if (currentPlanif.date) {
+          setJournalDate(new Date(currentPlanif.date));
+        }
+        setJournalArrivee(currentPlanif.hrsDebut || "06:30");
+        setJournalDepart(currentPlanif.hrsFin || "16:30");
+      }
+    }
+  }, [
+    idPlanif,
+    activitesPlanif,
+    activites,
+    lieux,
+    sousTraitants,
+    signalisations,
+  ]);
 
   const toggleSection = (section: keyof typeof sections) => {
     setSections((prevSections) => ({
@@ -87,7 +170,6 @@ const Form: React.FC = () => {
 
   const visibleSections = getVisibleSections();
 
-  // Référence pour le contenu à convertir en PDF
   const { toPDF, targetRef } = usePDF({ filename: "formulaire.pdf" });
 
   return (
@@ -106,7 +188,18 @@ const Form: React.FC = () => {
               isOpen={sections.infoProjet.open}
               onToggle={toggleSection}
             />
-            {sections.infoProjet.open && <InfoProjet />}
+            {sections.infoProjet.open && (
+              <InfoProjet
+                date={journalDate}
+                setDate={setJournalDate}
+                arrivee={journalArrivee}
+                setArrivee={setJournalArrivee}
+                depart={journalDepart}
+                setDepart={setJournalDepart}
+                weather={journalWeather}
+                setWeather={setJournalWeather}
+              />
+            )}
           </section>
         )}
 
@@ -121,7 +214,7 @@ const Form: React.FC = () => {
               onToggle={toggleSection}
             />
             {sections.infoEmployes.open && (
-              <InfoEmployes users={users} setUsers={setUsers} />
+              <InfoEmployes users={journalUsers} setUsers={setJournalUsers} />
             )}
           </section>
         )}
@@ -136,7 +229,21 @@ const Form: React.FC = () => {
               isOpen={sections.grilleActivites.open}
               onToggle={toggleSection}
             />
-            {sections.grilleActivites.open && <ActiviteProjet users={users} />}
+            {sections.grilleActivites.open && (
+              <ActiviteProjet
+                users={journalUsers}
+                activitesState={journalActivitesState}
+                setActivitesState={setJournalActivitesState}
+                savedBases={journalSavedBases}
+                setSavedBases={setJournalSavedBases}
+                savedLiaisons={journalSavedLiaisons}
+                setSavedLiaisons={setJournalSavedLiaisons}
+                userStats={journalUserStats}
+                setUserStats={setJournalUserStats}
+                savedBasesAttachment={savedBasesAttachment}
+                setSavedBasesAttachment={setSavedBasesAttachment}
+              />
+            )}
           </section>
         )}
 
@@ -150,7 +257,12 @@ const Form: React.FC = () => {
               isOpen={sections.materiaux.open}
               onToggle={toggleSection}
             />
-            {sections.materiaux.open && <MateriauxInfo />}
+            {sections.materiaux.open && (
+              <MateriauxInfo
+                materiaux={journalMateriaux}
+                setMateriaux={setJournalMateriaux}
+              />
+            )}
           </section>
         )}
 
@@ -164,7 +276,12 @@ const Form: React.FC = () => {
               isOpen={sections.sousTraitants.open}
               onToggle={toggleSection}
             />
-            {sections.sousTraitants.open && <SousTraitantSection />}
+            {sections.sousTraitants.open && (
+              <SousTraitantSection
+                sousTraitants={journalSousTraitants}
+                setSousTraitants={setJournalSousTraitants}
+              />
+            )}
           </section>
         )}
 

@@ -1,69 +1,77 @@
 import React, { useState } from "react";
 import { FaCubes, FaTimes, FaPlusCircle, FaBuilding } from "react-icons/fa";
-import { useAuth } from "../../context/AuthContext"; // Importez votre contexte
+import { useAuth } from "../../context/AuthContext";
 
-interface Materiau {
+interface SousTraitant {
   id: number;
   nom: string;
   quantite: number;
 }
 
-const initialMateriau: Materiau = {
-  id: 1,
-  nom: "",
-  quantite: 0,
-};
+interface SousTraitantSectionProps {
+  sousTraitants: SousTraitant[];
+  setSousTraitants: React.Dispatch<React.SetStateAction<SousTraitant[]>>;
+}
 
-const SousTraitantSection: React.FC = () => {
-  const { sousTraitants: contextSousTraitants } = useAuth(); // Récupérez les sous-traitants du contexte
-  const [materiaux, setMateriaux] = useState<Materiau[]>([initialMateriau]);
-  const [nextId, setNextId] = useState(2);
+const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
+  sousTraitants,
+  setSousTraitants,
+}) => {
+  const { sousTraitants: contextSousTraitants } = useAuth();
+  const [nextId, setNextId] = useState(sousTraitants.length + 1);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [materiauToDelete, setMateriauToDelete] = useState<number | null>(null);
+  const [sousTraitantToDelete, setSousTraitantToDelete] = useState<
+    number | null
+  >(null);
 
-  const handleAddMateriau = () => {
-    const newMateriau: Materiau = {
+  const handleAddSousTraitant = () => {
+    const newSousTraitant: SousTraitant = {
       id: nextId,
       nom: "",
       quantite: 0,
     };
-    setMateriaux((prevMateriaux) => [...prevMateriaux, newMateriau]);
+    setSousTraitants((prevSousTraitants) => [
+      ...prevSousTraitants,
+      newSousTraitant,
+    ]);
     setNextId(nextId + 1);
   };
 
   const handleChange = (
     id: number,
-    field: keyof Materiau,
+    field: keyof SousTraitant,
     value: string | number
   ) => {
-    const updatedMateriaux = materiaux.map((materiau) => {
-      if (materiau.id === id) {
-        return { ...materiau, [field]: value };
+    const updatedSousTraitants = sousTraitants.map((sousTraitant) => {
+      if (sousTraitant.id === id) {
+        return { ...sousTraitant, [field]: value };
       }
-      return materiau;
+      return sousTraitant;
     });
-    setMateriaux(updatedMateriaux);
+    setSousTraitants(updatedSousTraitants);
   };
 
-  const confirmDeleteMateriau = (id: number) => {
-    setMateriauToDelete(id);
+  const confirmDeleteSousTraitant = (id: number) => {
+    setSousTraitantToDelete(id);
     setShowConfirm(true);
   };
 
-  const handleDeleteMateriau = () => {
-    if (materiauToDelete !== null) {
-      setMateriaux((prevMateriaux) =>
-        prevMateriaux.filter((materiau) => materiau.id !== materiauToDelete)
+  const handleDeleteSousTraitant = () => {
+    if (sousTraitantToDelete !== null) {
+      setSousTraitants((prevSousTraitants) =>
+        prevSousTraitants.filter(
+          (sousTraitant) => sousTraitant.id !== sousTraitantToDelete
+        )
       );
       setShowConfirm(false);
-      setMateriauToDelete(null);
+      setSousTraitantToDelete(null);
     }
   };
 
-  const renderMateriaux = () => {
-    return materiaux.map((materiau, index) => (
+  const renderSousTraitants = () => {
+    return sousTraitants.map((sousTraitant, index) => (
       <div
-        key={materiau.id}
+        key={sousTraitant.id}
         className="border rounded p-4 mb-4 shadow-md flex flex-col space-y-4 relative"
       >
         <div className="grid grid-cols-12 gap-4 items-center">
@@ -72,14 +80,16 @@ const SousTraitantSection: React.FC = () => {
             Sous-traitant:
           </label>
           <select
-            value={materiau.nom}
-            onChange={(e) => handleChange(materiau.id, "nom", e.target.value)}
+            value={sousTraitant.nom}
+            onChange={(e) =>
+              handleChange(sousTraitant.id, "nom", e.target.value)
+            }
             className="col-span-6 shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           >
             <option value="">Sélectionner un sous-traitant</option>
-            {contextSousTraitants?.map((nom, index) => (
-              <option key={index} value={nom.nom}>
-                {nom.nom}
+            {contextSousTraitants?.map((st, index) => (
+              <option key={index} value={st.nom}>
+                {st.nom}
               </option>
             ))}
           </select>
@@ -88,10 +98,10 @@ const SousTraitantSection: React.FC = () => {
             <input
               type="number"
               placeholder="Quantité"
-              value={materiau.quantite}
+              value={sousTraitant.quantite}
               onChange={(e) =>
                 handleChange(
-                  materiau.id,
+                  sousTraitant.id,
                   "quantite",
                   parseFloat(e.target.value) || 0
                 )
@@ -101,7 +111,7 @@ const SousTraitantSection: React.FC = () => {
           </div>
           {index > 0 && (
             <button
-              onClick={() => confirmDeleteMateriau(materiau.id)}
+              onClick={() => confirmDeleteSousTraitant(sousTraitant.id)}
               className="absolute top-2 right-2 text-zinc-500 hover:text-red-700"
             >
               <FaTimes />
@@ -114,9 +124,9 @@ const SousTraitantSection: React.FC = () => {
 
   return (
     <div className="p-4 w-full space-y-4">
-      {renderMateriaux()}
+      {renderSousTraitants()}
       <button
-        onClick={handleAddMateriau}
+        onClick={handleAddSousTraitant}
         className="w-full py-2 px-4 bg-blue-500 text-white rounded shadow flex items-center justify-center"
       >
         <FaPlusCircle className="mr-2" />
@@ -136,7 +146,7 @@ const SousTraitantSection: React.FC = () => {
                 Annuler
               </button>
               <button
-                onClick={handleDeleteMateriau}
+                onClick={handleDeleteSousTraitant}
                 className="py-2 px-4 bg-red-500 text-white rounded shadow"
               >
                 Supprimer

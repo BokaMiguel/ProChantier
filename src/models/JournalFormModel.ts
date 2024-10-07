@@ -105,11 +105,16 @@ export interface Journal {
 }
 
 export const initialActivite: ActivitePlanif = {
-  id: 1, 
+  id: 1,
   activiteID: 0,
   quantite: 0,
   hrsDebut: "",
   hrsFin: "",
+  lieuID: null,
+  note: "",
+  date: "",
+  defaultEntrepriseId: null,
+  signalisationId: null
 };
 
 export const initialMateriau: Materiau = {
@@ -153,16 +158,18 @@ export interface SignalisationProjet {
 
 export interface ActivitePlanif {
   id: number;
-  activiteID: number;
-  lieuID?: number;
+  activiteID: number | null;
+  lieuID: number | null;
+  quantite: number;
+  note: string;
+  date: string;
   hrsDebut: string;
   hrsFin: string;
-  defaultEntrepriseId?: number;
+  defaultEntrepriseId: number | null;
+  signalisationId: number | null;
   isLab?: boolean;
-  signalisationId?: number;
-  note?: string;
-  date?: Date;
-  quantite?: number;
+  bases?: Localisation[];
+  liaisons?: LocalisationDistance[];
 }
 
 export interface Localisation {

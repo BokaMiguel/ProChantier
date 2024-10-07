@@ -66,14 +66,15 @@ const CreateActivityModal: React.FC<CreateActivityModalProps> = ({
     const activitePlanif: ActivitePlanif = {
       id: activity?.id || Date.now(),
       activiteID: activiteId!,
-      lieuID: lieuId ?? undefined,
+      lieuID: lieuId ?? null,
       hrsDebut: startHour,
       hrsFin: endHour,
-      defaultEntrepriseId: entrepriseId ?? undefined,
-      signalisationId: signalisationId ?? undefined,
+      defaultEntrepriseId: entrepriseId ?? null,
+      signalisationId: signalisationId ?? null,
       note: notes || "", // Note peut être vide
       isLab: activity?.isLab || false, // Assurez-vous que l'état du `checkbox` est correct
-      date: activity?.date || undefined, // Conserver la date si elle existe déjà
+      date: activity?.date || "",
+      quantite: 0,
     };
 
     onSave(activitePlanif);

@@ -405,7 +405,9 @@ const PlanningForm: React.FC = () => {
                         >
                           <div className="grid grid-cols-12 gap-2 items-center">
                             <div className="col-span-2">
-                              {getActivityName(activity.activiteID)}
+                              {activity.activiteID !== null
+                                ? getActivityName(activity.activiteID)
+                                : "Inconnu"}
                             </div>
                             <div className="col-span-2">
                               {activity.hrsDebut} - {activity.hrsFin}

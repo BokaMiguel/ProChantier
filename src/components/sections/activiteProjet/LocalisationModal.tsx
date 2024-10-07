@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { FaTrash, FaTimes, FaSave } from "react-icons/fa";
-import "./LocalisationModal.scss";
+import { Localisation } from "../../../models/JournalFormModel";
 
 interface LocalisationModalProps {
   showModal: boolean;
   closeModal: () => void;
-  savedLocalisations: string[];
-  setSavedLocalisations: (localisations: string[]) => void;
+  savedLocalisations: Localisation[];
+  setSavedLocalisations: (localisations: Localisation[]) => void;
   isLiaisonMode: boolean;
   setIsLiaisonMode: React.Dispatch<React.SetStateAction<boolean>>;
   clearAllLocalisations: () => void;
-  bases: string[];
+  bases: Localisation[];
+  usedBases: number[];
 }
 
 const LocalisationModal: React.FC<LocalisationModalProps> = ({
@@ -22,18 +23,19 @@ const LocalisationModal: React.FC<LocalisationModalProps> = ({
   setIsLiaisonMode,
   clearAllLocalisations,
   bases,
+  usedBases,
 }) => {
   const [selectedLocalisations, setSelectedLocalisations] =
-    useState<string[]>(savedLocalisations);
+    useState<Localisation[]>(savedLocalisations);
 
   useEffect(() => {
     setSelectedLocalisations(savedLocalisations);
   }, [savedLocalisations]);
 
-  const toggleLocalisation = (localisation: string) => {
+  const toggleLocalisation = (localisation: Localisation) => {
     setSelectedLocalisations((prevSelected) =>
-      prevSelected.includes(localisation)
-        ? prevSelected.filter((loc) => loc !== localisation)
+      prevSelected.some((loc) => loc.id === localisation.id)
+        ? prevSelected.filter((loc) => loc.id !== localisation.id)
         : [...prevSelected, localisation]
     );
   };
@@ -51,8 +53,14 @@ const LocalisationModal: React.FC<LocalisationModalProps> = ({
   if (!showModal) return null;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center modal-backdrop bg-black bg-opacity-50">
-      <div className="modal-content bg-white p-6 rounded shadow-lg w-full max-w-lg space-y-4">
+    <div
+      className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
+      style={{ zIndex: 10000 }}
+    >
+      <div
+        className="bg-white p-6 rounded shadow-lg w-full max-w-lg space-y-4"
+        style={{ zIndex: 10001 }}
+      >
         <h3 className="text-xl font-bold">Sélectionner une localisation</h3>
         <div className="flex justify-between items-center">
           <label className="flex items-center">
@@ -78,18 +86,21 @@ const LocalisationModal: React.FC<LocalisationModalProps> = ({
             Effacer tout
           </button>
         </div>
-        <div className="grid grid-cols-4 gap-2 mb-4">
+        <div className="grid grid-cols-4 gap-2 mb-4 max-h-60 overflow-y-auto">
           {bases.map((loc) => (
             <button
-              key={loc}
+              key={loc.id}
               onClick={() => toggleLocalisation(loc)}
               className={`py-2 px-4 rounded shadow ${
-                selectedLocalisations.includes(loc)
+                selectedLocalisations.some((selected) => selected.id === loc.id)
                   ? "bg-blue-500 text-white"
+                  : usedBases.includes(loc.id)
+                  ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                   : "bg-gray-200"
               }`}
+              disabled={usedBases.includes(loc.id)}
             >
-              {loc}
+              {loc.base}
             </button>
           ))}
         </div>

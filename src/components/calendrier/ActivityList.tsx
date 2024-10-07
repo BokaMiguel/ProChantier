@@ -82,7 +82,7 @@ const ActivityList: React.FC<ActivityListProps> = ({
           >
             <div className="w-full">
               <div className="font-semibold">
-                {getActivityName(activity.activiteID)}
+                {getActivityName(activity.activiteID ?? undefined)}
               </div>
               <div className="text-sm">
                 <span className="font-medium">Entreprise:</span>{" "}

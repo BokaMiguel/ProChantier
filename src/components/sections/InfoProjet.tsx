@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   FaSun,
   FaCloud,
@@ -15,14 +15,29 @@ import { fr } from "date-fns/locale";
 import { useAuth } from "../../context/AuthContext";
 import { useParams } from "react-router-dom";
 
-const InfoProjet: React.FC = () => {
+interface InfoProjetProps {
+  date: Date;
+  setDate: React.Dispatch<React.SetStateAction<Date>>;
+  arrivee: string;
+  setArrivee: React.Dispatch<React.SetStateAction<string>>;
+  depart: string;
+  setDepart: React.Dispatch<React.SetStateAction<string>>;
+  weather: string;
+  setWeather: React.Dispatch<React.SetStateAction<string>>;
+}
+
+const InfoProjet: React.FC<InfoProjetProps> = ({
+  date,
+  setDate,
+  arrivee,
+  setArrivee,
+  depart,
+  setDepart,
+  weather,
+  setWeather,
+}) => {
   const { idPlanif } = useParams<{ idPlanif: string }>();
   const { selectedProject, activitesPlanif } = useAuth();
-
-  const [date, setDate] = useState<Date>(new Date());
-  const [arrivee, setArrivee] = useState("06:30");
-  const [depart, setDepart] = useState("16:30");
-  const [weather, setWeather] = useState("");
 
   const handleDateChange = (date: Date | null) => {
     if (date) {

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { FaCubes, FaTimes, FaPlusCircle } from "react-icons/fa";
-import { useAuth } from "../../context/AuthContext"; // Importez votre contexte
+import { useAuth } from "../../context/AuthContext";
 
 interface Materiau {
   id: number;
@@ -8,16 +8,17 @@ interface Materiau {
   quantite: number;
 }
 
-const initialMateriau: Materiau = {
-  id: 1,
-  nom: "",
-  quantite: 0,
-};
+interface MateriauxInfoProps {
+  materiaux: Materiau[];
+  setMateriaux: React.Dispatch<React.SetStateAction<Materiau[]>>;
+}
 
-const MateriauxInfo: React.FC = () => {
-  const { materiaux: contextMateriaux } = useAuth(); // Récupérez les matériaux du contexte
-  const [materiaux, setMateriaux] = useState<Materiau[]>([initialMateriau]);
-  const [nextId, setNextId] = useState(2);
+const MateriauxInfo: React.FC<MateriauxInfoProps> = ({
+  materiaux,
+  setMateriaux,
+}) => {
+  const { materiaux: contextMateriaux } = useAuth();
+  const [nextId, setNextId] = useState(materiaux.length + 1);
   const [showConfirm, setShowConfirm] = useState(false);
   const [materiauToDelete, setMateriauToDelete] = useState<number | null>(null);
 
