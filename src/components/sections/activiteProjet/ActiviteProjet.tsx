@@ -11,8 +11,10 @@ import { useAuth } from "../../../context/AuthContext";
 import {
   ActivitePlanif,
   Employe,
+  JournalUserStats,
   Localisation,
   LocalisationDistance,
+  UserStat,
 } from "../../../models/JournalFormModel";
 import StatsGrid from "../StatsGrid";
 import LocalisationModal from "./LocalisationModal";
@@ -29,8 +31,8 @@ interface ActiviteProjetProps {
   setSavedLiaisons: React.Dispatch<
     React.SetStateAction<LocalisationDistance[]>
   >;
-  userStats: any[];
-  setUserStats: React.Dispatch<React.SetStateAction<any[]>>;
+  userStats: UserStat[];
+  setUserStats: (newUserStats: JournalUserStats) => void;
   savedBasesAttachment: string[];
   setSavedBasesAttachment: React.Dispatch<React.SetStateAction<string[]>>;
 }
@@ -41,6 +43,8 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
   setActivitesState,
   setSavedBases,
   setSavedLiaisons,
+  setUserStats,
+  userStats,
 }) => {
   const { idPlanif } = useParams<{ idPlanif: string }>();
   const {
@@ -436,6 +440,8 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
         }))}
         nextStep={false}
         activiteCount={activitesState.length}
+        setUserStats={setUserStats}
+        userStats={userStats}
       />
       {activitesState.length > 5 && (
         <StatsGrid
@@ -445,6 +451,8 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
           }))}
           nextStep={true}
           activiteCount={activitesState.length - 5}
+          setUserStats={setUserStats}
+          userStats={userStats}
         />
       )}
       {renderActivites()}
@@ -459,7 +467,7 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
             <h3 className="text-xl font-bold mb-4">Confirmer la suppression</h3>
-            <p>Êtes-vous sûr de vouloir supprimer cette activité?</p>
+            <p>Êtes-vous sûr de vouloir supprimer cette activité ?</p>
             <div className="flex justify-end space-x-4 mt-4">
               <button
                 onClick={() => setDeleteConfirm({ show: false, id: null })}
@@ -471,7 +479,7 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
                 onClick={confirmDeleteActivite}
                 className="py-2 px-4 bg-red-600 text-white rounded shadow"
               >
-                Supprimer
+                Confirmer
               </button>
             </div>
           </div>

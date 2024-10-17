@@ -233,3 +233,20 @@ export interface TabEquipeJournal {
   journalId: number; // FK vers Journal
   equipeId: number; // FK vers TabEquipes
 }
+
+export interface UserStat {
+  id: number;
+  nom: string;
+  act: number[];
+  ts: number;
+  td: number;
+}
+
+export interface JournalUserStats {
+  userStats: UserStat[];
+  totals: {
+    act: number[];
+    ts: number;
+    td: number;
+  };
+}

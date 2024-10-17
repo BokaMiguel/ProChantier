@@ -15,6 +15,7 @@ import {
   initialActivite,
   LocalisationDistance,
   Localisation,
+  JournalUserStats,
 } from "../../models/JournalFormModel";
 import { PDFDocument } from "../../helper/PDFGenerator";
 import { getDistancesForLieu } from "../../services/JournalService";
@@ -71,8 +72,14 @@ export default function Form() {
     []
   );
 
-  const [journalUserStats, setJournalUserStats] = useState<any[]>([]);
-
+  const [journalUserStats, setJournalUserStats] = useState<JournalUserStats>({
+    userStats: [],
+    totals: {
+      act: [],
+      ts: 0,
+      td: 0,
+    },
+  });
   const [journalMateriaux, setJournalMateriaux] = useState<any[]>([]);
   const [journalSousTraitants, setJournalSousTraitants] = useState<any[]>([]);
 
@@ -134,7 +141,6 @@ export default function Form() {
         setJournalArrivee(currentPlanif.hrsDebut || "");
         setJournalDepart(currentPlanif.hrsFin || "");
 
-        // Fetch distances for the current lieu
         if (lieu) {
           fetchDistances(lieu.id);
         }
@@ -148,6 +154,20 @@ export default function Form() {
     sousTraitants,
     signalisations,
   ]);
+
+  useEffect(() => {
+    // Update journalUserStats when journalUsers changes
+    setJournalUserStats((prevStats) => ({
+      ...prevStats,
+      userStats: journalUsers.map((user) => ({
+        id: user.id,
+        nom: `${user.prenom} ${user.nom}`,
+        act: Array(5).fill(0),
+        ts: 0,
+        td: 0,
+      })),
+    }));
+  }, [journalUsers]);
 
   const fetchDistances = async (lieuId: number) => {
     try {
@@ -174,10 +194,26 @@ export default function Form() {
     );
   };
 
-  const visibleSections = getVisibleSections();
+  const handleUserStatsChange = (newUserStats: JournalUserStats) => {
+    setJournalUserStats(newUserStats);
+  };
+
+  const logFormData = () => {
+    console.log("Form Data:");
+    console.log("Date:", journalDate);
+    console.log("Arrivée:", journalArrivee);
+    console.log("Départ:", journalDepart);
+    console.log("Météo:", journalWeather);
+    console.log("Utilisateurs:", journalUsers);
+    console.log("Activités:", journalActivitesState);
+    console.log("Matériaux:", journalMateriaux);
+    console.log("Sous-traitants:", journalSousTraitants);
+    console.log("Statistiques utilisateurs:", journalUserStats);
+  };
 
   const handleGeneratePDF = async () => {
-    // Fetch distances for all relevant LieuIDs
+    logFormData();
+
     const uniqueLieuIds = [
       ...new Set(
         journalActivitesState
@@ -194,7 +230,6 @@ export default function Form() {
 
     setDistances(flattenedDistances);
 
-    // Process activities and their distances
     const processedActivities = journalActivitesState.map((activity) => {
       const activityDistances = flattenedDistances.filter(
         (d) => d.LieuID === activity.lieuID
@@ -206,10 +241,6 @@ export default function Form() {
           activityBases.some((b) => b.id === d.BaseA) &&
           activityBases.some((b) => b.id === d.BaseB)
       );
-
-      console.log(`Activity ${activity.id} - LieuID: ${activity.lieuID}`);
-      console.log("Selected Bases:", activityBases);
-      console.log("Relevant Distances:", relevantDistances);
 
       return {
         ...activity,
@@ -241,6 +272,8 @@ export default function Form() {
       />
     </PDFViewer>
   );
+
+  const visibleSections = getVisibleSections();
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center py-4">
@@ -306,8 +339,8 @@ export default function Form() {
                   setSavedBases={setJournalSavedBases}
                   savedLiaisons={journalSavedLiaisons}
                   setSavedLiaisons={setJournalSavedLiaisons}
-                  userStats={journalUserStats}
-                  setUserStats={setJournalUserStats}
+                  userStats={journalUserStats.userStats}
+                  setUserStats={handleUserStatsChange}
                   savedBasesAttachment={savedBasesAttachment}
                   setSavedBasesAttachment={setSavedBasesAttachment}
                 />
@@ -353,7 +386,7 @@ export default function Form() {
             </section>
           )}
 
-          <div className="text-right mt-6 space-x-4">
+          <div className="text-right mt-6  space-x-4">
             <button
               onClick={handleGeneratePDF}
               className="inline-flex items-center px-4 py-2 bg-red-500 text-white rounded hover:bg-red-700 transition-colors duration-300"

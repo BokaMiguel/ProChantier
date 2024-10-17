@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { FaUser, FaClock, FaHourglassHalf } from "react-icons/fa";
 
 interface StatsGridProps {
@@ -8,37 +8,23 @@ interface StatsGridProps {
   }[];
   activiteCount: number;
   nextStep: boolean;
+  setUserStats: (newUserStats: any) => void;
+  userStats: {
+    id: number;
+    nom: string;
+    act: number[];
+    ts: number;
+    td: number;
+  }[];
 }
-
-interface UserStats {
-  id: number;
-  nom: string;
-  act: number[];
-  ts: number;
-  td: number;
-}
-
-const initialStats = (user: StatsGridProps["users"][0]): UserStats => ({
-  id: user.id,
-  nom: user.nom,
-  act: Array(5).fill(0),
-  ts: 0,
-  td: 0,
-});
 
 const StatsGrid: React.FC<StatsGridProps> = ({
   users,
   activiteCount,
   nextStep,
+  setUserStats,
+  userStats,
 }) => {
-  const [userStats, setUserStats] = useState<UserStats[]>(
-    users.map(initialStats)
-  );
-
-  useEffect(() => {
-    setUserStats(users.map(initialStats));
-  }, [users]);
-
   const handleActChange = (userId: number, index: number, value: number) => {
     const updatedUserStats = userStats.map((userStat) => {
       if (userStat.id === userId) {
@@ -49,28 +35,35 @@ const StatsGrid: React.FC<StatsGridProps> = ({
       }
       return userStat;
     });
-    setUserStats(updatedUserStats);
+    setUserStats({
+      userStats: updatedUserStats,
+      totals: calculateTotals(updatedUserStats),
+    });
   };
 
   const handleTdChange = (userId: number, value: number) => {
     const updatedUserStats = userStats.map((userStat) => {
       if (userStat.id === userId) {
+        const updatedTs = userStat.act.reduce((acc, curr) => acc + curr, 0);
         return {
           ...userStat,
           td: value,
-          ts: userStat.ts + userStat.td - value,
+          ts: updatedTs - value,
         };
       }
       return userStat;
     });
-    setUserStats(updatedUserStats);
+    setUserStats({
+      userStats: updatedUserStats,
+      totals: calculateTotals(updatedUserStats),
+    });
   };
 
-  const calculateTotals = () => {
-    const totals = userStats.reduce(
+  const calculateTotals = (stats: typeof userStats) => {
+    return stats.reduce(
       (acc, userStat) => {
         userStat.act.forEach((value, index) => {
-          acc.act[index] += value;
+          acc.act[index] = (acc.act[index] || 0) + value;
         });
         acc.ts += userStat.ts;
         acc.td += userStat.td;
@@ -78,10 +71,9 @@ const StatsGrid: React.FC<StatsGridProps> = ({
       },
       { act: Array(5).fill(0), ts: 0, td: 0 }
     );
-    return totals;
   };
 
-  const totals = calculateTotals();
+  const totals = calculateTotals(userStats);
   const actIndexOffset = nextStep ? 5 : 0;
 
   return (
