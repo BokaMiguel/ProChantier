@@ -182,7 +182,7 @@ export interface LocalisationDistance {
   id: number;
   baseA: number;
   baseB: number;
-  distance: number;
+  distanceInMeters: number;
 }
 
 export interface TabEquipes {

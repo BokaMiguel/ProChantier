@@ -273,7 +273,7 @@ export const deleteSousTraitantProjet = async (id: number) => {
   }
 };
 
-export const getDistancesForLieu = async (lieuId: number) => {
+export const getDistancesForLieu = async (lieuId: number | null) => {
   const response = await fetch(
     `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetDistancesForLieu/${lieuId}`,
     { method: "GET" }

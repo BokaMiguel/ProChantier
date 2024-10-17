@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { FaArrowRight, FaFilePdf } from "react-icons/fa";
-import { usePDF } from "react-to-pdf";
+import { PDFViewer, Font } from "@react-pdf/renderer";
 import InfoProjet from "../sections/InfoProjet";
 import InfoEmployes from "../sections/InfoEmployes";
 import ActiviteProjet from "../sections/activiteProjet/ActiviteProjet";
@@ -16,38 +16,31 @@ import {
   LocalisationDistance,
   Localisation,
 } from "../../models/JournalFormModel";
+import { PDFDocument } from "../../helper/PDFGenerator";
+import { getDistancesForLieu } from "../../services/JournalService";
 
-const Form: React.FC = () => {
+Font.register({
+  family: "Inter",
+  src: "https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff2",
+});
+
+export default function Form() {
   const {
-    selectedProject,
-    fetchEmployes,
-    fetchBases,
-    fetchLieux,
-    fetchFonctions,
-    fetchEquipements,
-    fetchSousTraitants,
-    fetchMateriaux,
-    employees,
-    fonctions,
     lieux,
-    equipements,
     sousTraitants,
-    materiaux,
-    bases,
     activitesPlanif,
+    bases,
     activites,
     signalisations,
   } = useAuth();
 
   const { type, idPlanif } = useParams<{ type: string; idPlanif: string }>();
 
-  // InfoProjet state
   const [journalDate, setJournalDate] = useState<Date>(new Date());
-  const [journalArrivee, setJournalArrivee] = useState("06:30");
-  const [journalDepart, setJournalDepart] = useState("16:30");
+  const [journalArrivee, setJournalArrivee] = useState("");
+  const [journalDepart, setJournalDepart] = useState("");
   const [journalWeather, setJournalWeather] = useState("");
 
-  // InfoEmployes state
   const [journalUsers, setJournalUsers] = useState<Employe[]>([
     {
       id: 1,
@@ -64,7 +57,6 @@ const Form: React.FC = () => {
     },
   ]);
 
-  // ActiviteProjet state
   const [journalActivitesState, setJournalActivitesState] = useState<
     ActivitePlanif[]
   >([initialActivite]);
@@ -79,12 +71,12 @@ const Form: React.FC = () => {
     []
   );
 
-  // UserStats state
   const [journalUserStats, setJournalUserStats] = useState<any[]>([]);
 
-  // MateriauxInfo and SousTraitantSection state
   const [journalMateriaux, setJournalMateriaux] = useState<any[]>([]);
   const [journalSousTraitants, setJournalSousTraitants] = useState<any[]>([]);
+
+  const [distances, setDistances] = useState<LocalisationDistance[]>([]);
 
   const [sections, setSections] = useState({
     infoProjet: { visible: true, open: true },
@@ -93,6 +85,9 @@ const Form: React.FC = () => {
     materiaux: { visible: true, open: true },
     sousTraitants: { visible: true, open: true },
   });
+
+  const [showPDF, setShowPDF] = useState(false);
+
   useEffect(() => {
     if (type === "entretien") {
       setSections((prevSections) => ({
@@ -113,9 +108,6 @@ const Form: React.FC = () => {
         (planif) => planif.id === Number(idPlanif)
       );
       if (currentPlanif) {
-        const relatedActivite = activites.find(
-          (activite) => activite.id === currentPlanif.activiteID
-        );
         const lieu = lieux?.find((l) => l.id === currentPlanif.lieuID);
         const entreprise = sousTraitants?.find(
           (st) => st.id === currentPlanif.defaultEntrepriseId
@@ -139,8 +131,13 @@ const Form: React.FC = () => {
         if (currentPlanif.date) {
           setJournalDate(new Date(currentPlanif.date));
         }
-        setJournalArrivee(currentPlanif.hrsDebut || "06:30");
-        setJournalDepart(currentPlanif.hrsFin || "16:30");
+        setJournalArrivee(currentPlanif.hrsDebut || "");
+        setJournalDepart(currentPlanif.hrsFin || "");
+
+        // Fetch distances for the current lieu
+        if (lieu) {
+          fetchDistances(lieu.id);
+        }
       }
     }
   }, [
@@ -151,6 +148,15 @@ const Form: React.FC = () => {
     sousTraitants,
     signalisations,
   ]);
+
+  const fetchDistances = async (lieuId: number) => {
+    try {
+      const distancesData = await getDistancesForLieu(lieuId);
+      setDistances(distancesData);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des distances:", error);
+    }
+  };
 
   const toggleSection = (section: keyof typeof sections) => {
     setSections((prevSections) => ({
@@ -170,137 +176,200 @@ const Form: React.FC = () => {
 
   const visibleSections = getVisibleSections();
 
-  const { toPDF, targetRef } = usePDF({ filename: "formulaire.pdf" });
+  const handleGeneratePDF = async () => {
+    // Fetch distances for all relevant LieuIDs
+    const uniqueLieuIds = [
+      ...new Set(
+        journalActivitesState
+          .map((a) => a.lieuID)
+          .filter((id): id is number => id !== null)
+      ),
+    ];
+    const allDistances = await Promise.all(
+      uniqueLieuIds.map((lieuId) => getDistancesForLieu(lieuId))
+    );
+    const flattenedDistances = allDistances.flat();
+
+    console.log("Flattened distances:", flattenedDistances);
+
+    setDistances(flattenedDistances);
+
+    // Process activities and their distances
+    const processedActivities = journalActivitesState.map((activity) => {
+      const activityDistances = flattenedDistances.filter(
+        (d) => d.LieuID === activity.lieuID
+      );
+      const activityBases = activity.bases || [];
+
+      const relevantDistances = activityDistances.filter(
+        (d) =>
+          activityBases.some((b) => b.id === d.BaseA) &&
+          activityBases.some((b) => b.id === d.BaseB)
+      );
+
+      console.log(`Activity ${activity.id} - LieuID: ${activity.lieuID}`);
+      console.log("Selected Bases:", activityBases);
+      console.log("Relevant Distances:", relevantDistances);
+
+      return {
+        ...activity,
+        processedDistances: relevantDistances,
+      };
+    });
+
+    setJournalActivitesState(processedActivities);
+    setShowPDF(true);
+  };
+
+  const PDFContent = () => (
+    <PDFViewer width="100%" height="1000px">
+      <PDFDocument
+        formData={{
+          journalDate,
+          journalArrivee,
+          journalDepart,
+          journalWeather,
+          journalUsers,
+          journalActivitesState,
+          journalMateriaux,
+          journalSousTraitants,
+        }}
+        activites={activites}
+        bases={bases || []}
+        distances={distances}
+        lieux={lieux}
+      />
+    </PDFViewer>
+  );
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center py-4">
-      <div
-        ref={targetRef}
-        className="w-full max-w-4xl bg-white rounded shadow-md p-6 space-y-6"
-      >
-        {sections.infoProjet.visible && (
-          <section>
-            <SectionHeader
-              title={`${
-                visibleSections.indexOf("infoProjet") + 1
-              }. Informations du Projet`}
-              sectionKey="infoProjet"
-              isOpen={sections.infoProjet.open}
-              onToggle={toggleSection}
-            />
-            {sections.infoProjet.open && (
-              <InfoProjet
-                date={journalDate}
-                setDate={setJournalDate}
-                arrivee={journalArrivee}
-                setArrivee={setJournalArrivee}
-                depart={journalDepart}
-                setDepart={setJournalDepart}
-                weather={journalWeather}
-                setWeather={setJournalWeather}
+      {!showPDF ? (
+        <div className="w-full max-w-4xl bg-white rounded shadow-md p-6 space-y-6">
+          {sections.infoProjet.visible && (
+            <section>
+              <SectionHeader
+                title={`${
+                  visibleSections.indexOf("infoProjet") + 1
+                }. Informations du Projet`}
+                sectionKey="infoProjet"
+                isOpen={sections.infoProjet.open}
+                onToggle={toggleSection}
               />
-            )}
-          </section>
-        )}
+              {sections.infoProjet.open && (
+                <InfoProjet
+                  date={journalDate}
+                  setDate={setJournalDate}
+                  arrivee={journalArrivee}
+                  setArrivee={setJournalArrivee}
+                  depart={journalDepart}
+                  setDepart={setJournalDepart}
+                  weather={journalWeather}
+                  setWeather={setJournalWeather}
+                />
+              )}
+            </section>
+          )}
 
-        {sections.infoEmployes.visible && (
-          <section>
-            <SectionHeader
-              title={`${
-                visibleSections.indexOf("infoEmployes") + 1
-              }. Informations des Employés`}
-              sectionKey="infoEmployes"
-              isOpen={sections.infoEmployes.open}
-              onToggle={toggleSection}
-            />
-            {sections.infoEmployes.open && (
-              <InfoEmployes users={journalUsers} setUsers={setJournalUsers} />
-            )}
-          </section>
-        )}
-
-        {sections.grilleActivites.visible && (
-          <section>
-            <SectionHeader
-              title={`${
-                visibleSections.indexOf("grilleActivites") + 1
-              }. Grille des Activités`}
-              sectionKey="grilleActivites"
-              isOpen={sections.grilleActivites.open}
-              onToggle={toggleSection}
-            />
-            {sections.grilleActivites.open && (
-              <ActiviteProjet
-                users={journalUsers}
-                activitesState={journalActivitesState}
-                setActivitesState={setJournalActivitesState}
-                savedBases={journalSavedBases}
-                setSavedBases={setJournalSavedBases}
-                savedLiaisons={journalSavedLiaisons}
-                setSavedLiaisons={setJournalSavedLiaisons}
-                userStats={journalUserStats}
-                setUserStats={setJournalUserStats}
-                savedBasesAttachment={savedBasesAttachment}
-                setSavedBasesAttachment={setSavedBasesAttachment}
+          {sections.infoEmployes.visible && (
+            <section>
+              <SectionHeader
+                title={`${
+                  visibleSections.indexOf("infoEmployes") + 1
+                }. Informations des Employés`}
+                sectionKey="infoEmployes"
+                isOpen={sections.infoEmployes.open}
+                onToggle={toggleSection}
               />
-            )}
-          </section>
-        )}
+              {sections.infoEmployes.open && (
+                <InfoEmployes users={journalUsers} setUsers={setJournalUsers} />
+              )}
+            </section>
+          )}
 
-        {sections.materiaux.visible && (
-          <section>
-            <SectionHeader
-              title={`${
-                visibleSections.indexOf("materiaux") + 1
-              }. Matériaux/Outillage`}
-              sectionKey="materiaux"
-              isOpen={sections.materiaux.open}
-              onToggle={toggleSection}
-            />
-            {sections.materiaux.open && (
-              <MateriauxInfo
-                materiaux={journalMateriaux}
-                setMateriaux={setJournalMateriaux}
+          {sections.grilleActivites.visible && (
+            <section>
+              <SectionHeader
+                title={`${
+                  visibleSections.indexOf("grilleActivites") + 1
+                }. Grille des Activités`}
+                sectionKey="grilleActivites"
+                isOpen={sections.grilleActivites.open}
+                onToggle={toggleSection}
               />
-            )}
-          </section>
-        )}
+              {sections.grilleActivites.open && (
+                <ActiviteProjet
+                  users={journalUsers}
+                  activitesState={journalActivitesState}
+                  setActivitesState={setJournalActivitesState}
+                  savedBases={journalSavedBases}
+                  setSavedBases={setJournalSavedBases}
+                  savedLiaisons={journalSavedLiaisons}
+                  setSavedLiaisons={setJournalSavedLiaisons}
+                  userStats={journalUserStats}
+                  setUserStats={setJournalUserStats}
+                  savedBasesAttachment={savedBasesAttachment}
+                  setSavedBasesAttachment={setSavedBasesAttachment}
+                />
+              )}
+            </section>
+          )}
 
-        {sections.sousTraitants.visible && (
-          <section>
-            <SectionHeader
-              title={`${
-                visibleSections.indexOf("sousTraitants") + 1
-              }. Sous-Traitants`}
-              sectionKey="sousTraitants"
-              isOpen={sections.sousTraitants.open}
-              onToggle={toggleSection}
-            />
-            {sections.sousTraitants.open && (
-              <SousTraitantSection
-                sousTraitants={journalSousTraitants}
-                setSousTraitants={setJournalSousTraitants}
+          {sections.materiaux.visible && (
+            <section>
+              <SectionHeader
+                title={`${
+                  visibleSections.indexOf("materiaux") + 1
+                }. Matériaux/Outillage`}
+                sectionKey="materiaux"
+                isOpen={sections.materiaux.open}
+                onToggle={toggleSection}
               />
-            )}
-          </section>
-        )}
+              {sections.materiaux.open && (
+                <MateriauxInfo
+                  materiaux={journalMateriaux}
+                  setMateriaux={setJournalMateriaux}
+                />
+              )}
+            </section>
+          )}
 
-        <div className="text-right mt-6 space-x-4">
-          <button
-            onClick={() => toPDF()}
-            className="inline-flex items-center px-4 py-2 bg-red-500 text-white rounded hover:bg-red-700 transition-colors duration-300"
-          >
-            Générer PDF
-            <FaFilePdf className="ml-2" />
-          </button>
-          <button className="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700 transition-colors duration-300">
-            Envoyer le formulaire
-            <FaArrowRight className="ml-2" />
-          </button>
+          {sections.sousTraitants.visible && (
+            <section>
+              <SectionHeader
+                title={`${
+                  visibleSections.indexOf("sousTraitants") + 1
+                }. Sous-Traitants`}
+                sectionKey="sousTraitants"
+                isOpen={sections.sousTraitants.open}
+                onToggle={toggleSection}
+              />
+              {sections.sousTraitants.open && (
+                <SousTraitantSection
+                  sousTraitants={journalSousTraitants}
+                  setSousTraitants={setJournalSousTraitants}
+                />
+              )}
+            </section>
+          )}
+
+          <div className="text-right mt-6 space-x-4">
+            <button
+              onClick={handleGeneratePDF}
+              className="inline-flex items-center px-4 py-2 bg-red-500 text-white rounded hover:bg-red-700 transition-colors duration-300"
+            >
+              Générer PDF
+              <FaFilePdf className="ml-2" />
+            </button>
+            <button className="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700 transition-colors duration-300">
+              Envoyer le formulaire
+              <FaArrowRight className="ml-2" />
+            </button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <PDFContent />
+      )}
     </div>
   );
-};
-
-export default Form;
+}
