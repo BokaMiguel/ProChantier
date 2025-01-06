@@ -66,8 +66,8 @@ const JournalDetails: React.FC<JournalDetailsProps> = ({
                   <td className="px-4 py-2 border">
                     {employe.prenom + " " + employe.nom}
                   </td>
-                  <td className="px-4 py-2 border">{employe.fonction.nom}</td>
-                  <td className="px-4 py-2 border">{employe.equipement.nom}</td>
+                  <td className="px-4 py-2 border">{employe.fonction?.nom || 'N/A'}</td>
+                  <td className="px-4 py-2 border">{employe.equipement?.nom || 'N/A'}</td>
                 </tr>
               ))}
             </tbody>
@@ -166,7 +166,7 @@ const JournalDetails: React.FC<JournalDetailsProps> = ({
               </tr>
             </thead>
             <tbody>
-              {journal.materiaux.map((materiau) => (
+              {journal.materiaux?.map((materiau) => (
                 <tr key={materiau.id}>
                   <td className="px-4 py-2 border">{materiau.nom}</td>
                   <td className="px-4 py-2 border">{materiau.quantite}</td>
@@ -200,7 +200,7 @@ const JournalDetails: React.FC<JournalDetailsProps> = ({
               </tr>
             </thead>
             <tbody>
-              {journal.sousTraitants.map((sousTraitant) => (
+              {journal.sousTraitants?.map((sousTraitant) => (
                 <tr key={sousTraitant.id}>
                   <td className="px-4 py-2 border">{sousTraitant.nom}</td>
                   <td className="px-4 py-2 border">{sousTraitant.quantite}</td>

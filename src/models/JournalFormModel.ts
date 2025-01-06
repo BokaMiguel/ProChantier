@@ -1,9 +1,10 @@
+// Types de base
 export interface Employe {
   id: number;
   nom: string;
   prenom: string;
-  fonction: Fonction;
-  equipement: Equipement;
+  fonction: Fonction | null;
+  equipement: Equipement | null;
 }
 
 export interface Fonction {
@@ -16,18 +17,68 @@ export interface Equipement {
   nom: string;
 }
 
-export interface Lieu {
+// Types pour les statistiques
+export interface UserStat {
   id: number;
   nom: string;
-  projetId: number;
+  act: number[];
+  ts: number;
+  td: number;
 }
 
+export interface JournalUserStats {
+  userStats: UserStat[];
+  totals: {
+    act: number[];
+    ts: number;
+    td: number;
+  };
+}
+
+// Types pour les activités et localisations
 export interface Activite {
   id: number;
   nom: string;
   projetId: number;
 }
 
+export interface Lieu {
+  id: number;
+  nom: string;
+  projetId: number;
+}
+
+export interface ActivitePlanif {
+  id: number;
+  activiteID: number | null;
+  lieuID: number | null;
+  quantite: number;
+  note: string;
+  date: string;
+  hrsDebut: string;
+  hrsFin: string;
+  defaultEntrepriseId: number | null;
+  signalisationId: number | null;
+  isLab?: boolean;
+  bases?: Localisation[];
+  liaisons?: LocalisationDistance[];
+}
+
+// Types pour la localisation
+export interface Localisation {
+  id: number;
+  base: string;
+  lieuId: number;
+}
+
+export interface LocalisationDistance {
+  id: number;
+  baseA: number;
+  baseB: number;
+  distanceInMeters: number;
+}
+
+// Types pour les matériaux et sous-traitants
 export interface Materiau {
   id: number;
   nom: string;
@@ -40,37 +91,16 @@ export interface SousTraitant {
   quantite?: number;
 }
 
-export interface ProjectInfo {
-  type: number;
-  nomProjet: string;
-  date: Date;
-  arrivee: string;
-  depart: string;
-  weather: Meteo;
+// Types pour la météo et le statut
+export interface Meteo {
+  id: number;
+  name: string;
 }
 
 export interface Statut {
   id: number;
   name: string;
 }
-
-export const statuts: Statut[] = [
-  { id: 1, name: 'En attente' },
-  { id: 2, name: 'En cours' },
-  { id: 3, name: 'Terminé' }
-];
-
-export interface Meteo {
-  id: number;
-  name: string;
-}
-
-export type ExpandedSections = {
-  activites: boolean;
-  materiaux: boolean;
-  sousTraitants: boolean;
-  employes: boolean;
-};
 
 export const meteo: Meteo[] = [
   { id: 1, name: 'Soleil' },
@@ -80,15 +110,24 @@ export const meteo: Meteo[] = [
   { id: 5, name: 'Chaleur' }
 ];
 
-export const initialMeteo: Meteo = {
-  id: 1,
-  name: "Soleil",
-};
+export const statuts: Statut[] = [
+  { id: 1, name: 'En attente' },
+  { id: 2, name: 'En cours' },
+  { id: 3, name: 'Terminé' }
+];
 
-export const initialStatut: Statut = {
-  id: 2,
-  name: 'En cours'
-};
+export const initialMeteo: Meteo = { id: 1, name: "Soleil" };
+export const initialStatut: Statut = { id: 2, name: 'En cours' };
+
+// Types pour le journal
+export interface ProjectInfo {
+  type: number;
+  nomProjet: string;
+  date: Date;
+  arrivee: string;
+  depart: string;
+  weather: Meteo;
+}
 
 export interface Journal {
   id: number;
@@ -101,20 +140,32 @@ export interface Journal {
   employes: Employe[];
   materiaux: Materiau[];
   sousTraitants: SousTraitant[];
+  userStats?: UserStat[];
   statut: Statut;
 }
 
+export type ExpandedSections = {
+  activites: boolean;
+  materiaux: boolean;
+  sousTraitants: boolean;
+  employes: boolean;
+};
+
+// Valeurs initiales
 export const initialActivite: ActivitePlanif = {
   id: 1,
-  activiteID: 0,
+  activiteID: null,
+  lieuID: null,
   quantite: 0,
+  note: "",
+  date: new Date().toISOString().split('T')[0],
   hrsDebut: "",
   hrsFin: "",
-  lieuID: null,
-  note: "",
-  date: "",
   defaultEntrepriseId: null,
-  signalisationId: null
+  signalisationId: null,
+  isLab: false,
+  bases: [],
+  liaisons: []
 };
 
 export const initialMateriau: Materiau = {
@@ -147,6 +198,7 @@ export const initialJournal: Journal = {
   employes: [],
   materiaux: [initialMateriau],
   sousTraitants: [initialSousTraitant],
+  userStats: [],
   statut: initialStatut
 };
 
@@ -154,35 +206,6 @@ export interface SignalisationProjet {
   id: number;
   idProjet: number;
   nom: string;
-}
-
-export interface ActivitePlanif {
-  id: number;
-  activiteID: number | null;
-  lieuID: number | null;
-  quantite: number;
-  note: string;
-  date: string;
-  hrsDebut: string;
-  hrsFin: string;
-  defaultEntrepriseId: number | null;
-  signalisationId: number | null;
-  isLab?: boolean;
-  bases?: Localisation[];
-  liaisons?: LocalisationDistance[];
-}
-
-export interface Localisation {
-  id: number;
-  base: string;
-  lieuId: number;
-}
-
-export interface LocalisationDistance {
-  id: number;
-  baseA: number;
-  baseB: number;
-  distanceInMeters: number;
 }
 
 export interface TabEquipes {
@@ -232,21 +255,4 @@ export interface TabLocalisationActivites {
 export interface TabEquipeJournal {
   journalId: number; // FK vers Journal
   equipeId: number; // FK vers TabEquipes
-}
-
-export interface UserStat {
-  id: number;
-  nom: string;
-  act: number[];
-  ts: number;
-  td: number;
-}
-
-export interface JournalUserStats {
-  userStats: UserStat[];
-  totals: {
-    act: number[];
-    ts: number;
-    td: number;
-  };
 }

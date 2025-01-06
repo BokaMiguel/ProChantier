@@ -8,7 +8,8 @@ interface SectionHeaderProps {
     | "grilleActivites"
     | "infoEmployes"
     | "materiaux"
-    | "sousTraitants";
+    | "sousTraitants"
+    | "notes";
   isOpen: boolean;
   onToggle: (
     key:
@@ -17,6 +18,7 @@ interface SectionHeaderProps {
       | "infoEmployes"
       | "materiaux"
       | "sousTraitants"
+      | "notes"
   ) => void;
 }
 

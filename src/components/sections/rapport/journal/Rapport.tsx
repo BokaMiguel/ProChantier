@@ -334,7 +334,7 @@ const Rapport: React.FC = () => {
                     {getMeteoIcon(journal.projetInfo.weather.name)}
                   </td>
                   <td className="px-4 py-2 border text-center">
-                    {getStatutIcon(journal.statut)}
+                    {journal.statut && getStatutIcon(journal.statut)}
                   </td>
                   <td className="px-4 py-2 border text-center">
                     <ActionButtons

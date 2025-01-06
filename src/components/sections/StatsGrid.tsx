@@ -29,12 +29,25 @@ const StatsGrid: React.FC<StatsGridProps> = ({
     const updatedUserStats = userStats.map((userStat) => {
       if (userStat.id === userId) {
         const updatedAct = [...userStat.act];
-        updatedAct[index] = value;
-        const updatedTs = updatedAct.reduce((acc, curr) => acc + curr, 0);
-        return { ...userStat, act: updatedAct, ts: updatedTs - userStat.td };
+        const actualIndex = nextStep ? index + 5 : index;
+        updatedAct[actualIndex] = value;
+        
+        // Calculer le total des heures pour le groupe d'activités actuel uniquement
+        const startIndex = nextStep ? 5 : 0;
+        const endIndex = nextStep ? 10 : 5;
+        const groupTotal = updatedAct
+          .slice(startIndex, endIndex)
+          .reduce((acc, curr) => acc + curr, 0);
+        
+        return { 
+          ...userStat, 
+          act: updatedAct, 
+          ts: groupTotal - userStat.td 
+        };
       }
       return userStat;
     });
+    
     setUserStats({
       userStats: updatedUserStats,
       totals: calculateTotals(updatedUserStats),
@@ -44,15 +57,22 @@ const StatsGrid: React.FC<StatsGridProps> = ({
   const handleTdChange = (userId: number, value: number) => {
     const updatedUserStats = userStats.map((userStat) => {
       if (userStat.id === userId) {
-        const updatedTs = userStat.act.reduce((acc, curr) => acc + curr, 0);
+        // Calculer le total des heures pour le groupe d'activités actuel uniquement
+        const startIndex = nextStep ? 5 : 0;
+        const endIndex = nextStep ? 10 : 5;
+        const groupTotal = userStat.act
+          .slice(startIndex, endIndex)
+          .reduce((acc, curr) => acc + curr, 0);
+          
         return {
           ...userStat,
           td: value,
-          ts: updatedTs - value,
+          ts: groupTotal - value,
         };
       }
       return userStat;
     });
+    
     setUserStats({
       userStats: updatedUserStats,
       totals: calculateTotals(updatedUserStats),
@@ -60,12 +80,24 @@ const StatsGrid: React.FC<StatsGridProps> = ({
   };
 
   const calculateTotals = (stats: typeof userStats) => {
+    const startIndex = nextStep ? 5 : 0;
+    const endIndex = nextStep ? 10 : 5;
+    
     return stats.reduce(
       (acc, userStat) => {
-        userStat.act.forEach((value, index) => {
-          acc.act[index] = (acc.act[index] || 0) + value;
-        });
-        acc.ts += userStat.ts;
+        // Calculer les totaux uniquement pour le groupe d'activités actuel
+        for (let i = startIndex; i < endIndex; i++) {
+          const displayIndex = i - startIndex;
+          acc.act[displayIndex] = (acc.act[displayIndex] || 0) + userStat.act[i];
+        }
+        
+        // Ajouter uniquement les heures TS et TD du groupe actuel
+        const groupTotal = userStat.act
+          .slice(startIndex, endIndex)
+          .reduce((acc, curr) => acc + curr, 0);
+        const groupTs = groupTotal - userStat.td;
+        
+        acc.ts += groupTs;
         acc.td += userStat.td;
         return acc;
       },
@@ -106,7 +138,7 @@ const StatsGrid: React.FC<StatsGridProps> = ({
                   index >= activiteCount ? "text-gray-300" : "text-black"
                 }`}
               >
-                ACT {index + 1 + actIndexOffset}
+                ACT {index + 1 + (nextStep ? 5 : 0)}
               </th>
             ))}
             <th className="py-2 px-4 bg-gray-100 border-b border-r">TS</th>
@@ -119,7 +151,7 @@ const StatsGrid: React.FC<StatsGridProps> = ({
             .map((userStat) => (
               <tr key={userStat.id}>
                 <td className="py-2 px-4 border-b border-r">{userStat.nom}</td>
-                {userStat.act.map((value, index) => (
+                {userStat.act.slice(nextStep ? 5 : 0, nextStep ? 10 : 5).map((value, index) => (
                   <td key={index} className="py-2 px-4 border-b border-r">
                     <input
                       type="number"

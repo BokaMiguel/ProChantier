@@ -33,6 +33,7 @@ export default function Form() {
     bases,
     activites,
     signalisations,
+    selectedProject,
   } = useAuth();
 
   const { type, idPlanif } = useParams<{ type: string; idPlanif: string }>();
@@ -41,6 +42,7 @@ export default function Form() {
   const [journalArrivee, setJournalArrivee] = useState("");
   const [journalDepart, setJournalDepart] = useState("");
   const [journalWeather, setJournalWeather] = useState("");
+  const [journalNotes, setJournalNotes] = useState("");
 
   const [journalUsers, setJournalUsers] = useState<Employe[]>([
     {
@@ -61,16 +63,12 @@ export default function Form() {
   const [journalActivitesState, setJournalActivitesState] = useState<
     ActivitePlanif[]
   >([initialActivite]);
-  const [journalSavedBases, setJournalSavedBases] = useState<Localisation[]>(
-    []
-  );
+  const [journalSavedBases, setJournalSavedBases] = useState<Localisation[]>([]);
   const [journalSavedLiaisons, setJournalSavedLiaisons] = useState<
     LocalisationDistance[]
   >([]);
 
-  const [savedBasesAttachment, setSavedBasesAttachment] = useState<string[]>(
-    []
-  );
+  const [savedBasesAttachment, setSavedBasesAttachment] = useState<string[]>([]);
 
   const [journalUserStats, setJournalUserStats] = useState<JournalUserStats>({
     userStats: [],
@@ -86,11 +84,12 @@ export default function Form() {
   const [distances, setDistances] = useState<LocalisationDistance[]>([]);
 
   const [sections, setSections] = useState({
-    infoProjet: { visible: true, open: true },
-    infoEmployes: { visible: true, open: true },
-    grilleActivites: { visible: true, open: true },
-    materiaux: { visible: true, open: true },
-    sousTraitants: { visible: true, open: true },
+    infoProjet: { open: true, visible: true },
+    infoEmployes: { open: true, visible: true },
+    grilleActivites: { open: true, visible: true },
+    materiaux: { open: true, visible: true },
+    sousTraitants: { open: true, visible: true },
+    notes: { open: true, visible: true },
   });
 
   const [showPDF, setShowPDF] = useState(false);
@@ -162,7 +161,7 @@ export default function Form() {
       userStats: journalUsers.map((user) => ({
         id: user.id,
         nom: `${user.prenom} ${user.nom}`,
-        act: Array(5).fill(0),
+        act: Array(10).fill(0),
         ts: 0,
         td: 0,
       })),
@@ -189,9 +188,9 @@ export default function Form() {
   };
 
   const getVisibleSections = () => {
-    return Object.keys(sections).filter(
-      (section) => sections[section as keyof typeof sections].visible
-    );
+    return Object.entries(sections)
+      .filter(([_, value]) => value.visible)
+      .map(([key]) => key);
   };
 
   const handleUserStatsChange = (newUserStats: JournalUserStats) => {
@@ -256,7 +255,7 @@ export default function Form() {
     <PDFViewer width="100%" height="1000px">
       <PDFDocument
         formData={{
-          journalDate,
+          journalDate: journalDate.toISOString().split('T')[0],
           journalArrivee,
           journalDepart,
           journalWeather,
@@ -264,11 +263,14 @@ export default function Form() {
           journalActivitesState,
           journalMateriaux,
           journalSousTraitants,
-        }}
+          userStats: journalUserStats.userStats,
+          notes: journalNotes,
+          projetId: selectedProject?.NumeroProjet?.toString() || '' }}
         activites={activites}
         bases={bases || []}
         distances={distances}
         lieux={lieux}
+        journalPlanifId={Number(idPlanif)}
       />
     </PDFViewer>
   );
@@ -383,6 +385,21 @@ export default function Form() {
                   setSousTraitants={setJournalSousTraitants}
                 />
               )}
+            </section>
+          )}
+
+          {sections.notes.visible && (
+            <section className="mb-6">
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-semibold mb-4">Notes / Remarques journalières</h2>
+                <textarea
+                  className="w-full p-2 border rounded-md"
+                  rows={4}
+                  value={journalNotes}
+                  onChange={(e) => setJournalNotes(e.target.value)}
+                  placeholder="Entrez vos notes ou remarques pour la journée..."
+                />
+              </div>
             </section>
           )}
 

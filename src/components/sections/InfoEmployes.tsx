@@ -143,7 +143,7 @@ const InfoEmployes: React.FC<{
             ))}
         </select>
         <select
-          value={user.fonction.nom}
+          value={user.fonction?.nom || ""}
           onChange={(e) => handleChange(user.id, "fonction", e.target.value)}
           className="col-span-3 border rounded px-2 py-1 w-full"
         >
@@ -155,7 +155,7 @@ const InfoEmployes: React.FC<{
           ))}
         </select>
         <select
-          value={user.equipement.nom}
+          value={user.equipement?.nom || ""}
           onChange={(e) => handleChange(user.id, "equipement", e.target.value)}
           className="col-span-3 border rounded px-2 py-1 w-full"
         >

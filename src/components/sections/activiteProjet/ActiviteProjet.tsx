@@ -89,18 +89,37 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
   };
 
   useEffect(() => {
-    if (idPlanif && activitesPlanif && activites) {
+    if (idPlanif && activitesPlanif && activites && lieux && bases) {
       const currentPlanif = activitesPlanif.find(
-        (planif) => planif.id === Number(idPlanif)
+        (planif) => planif.id === parseInt(idPlanif)
       );
+
       if (currentPlanif) {
-        const lieu = lieux?.find((l) => l.id === currentPlanif.lieuID);
+        const lieu = lieux.find((l) => l.id === currentPlanif.lieuID);
         const entreprise = sousTraitants?.find(
           (st) => st.id === currentPlanif.defaultEntrepriseId
         );
         const signalisation = signalisations?.find(
           (sig) => sig.id === currentPlanif.signalisationId
         );
+
+        // Initialize user stats
+        const initialUserStats = users.map((user) => ({
+          id: user.id,
+          nom: user.nom,
+          act: Array(10).fill(0),
+          ts: 0,
+          td: 0,
+        }));
+
+        setUserStats({
+          userStats: initialUserStats,
+          totals: {
+            act: Array(5).fill(0),
+            ts: 0,
+            td: 0,
+          },
+        });
 
         setActivitesState([
           {
@@ -127,7 +146,6 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
     bases,
     sousTraitants,
     signalisations,
-    setActivitesState,
   ]);
 
   useEffect(() => {
@@ -179,7 +197,13 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
   const handleBasesChange = (newBases: Localisation[], activiteId: number) => {
     setActivitesState((prevState) =>
       prevState.map((activite) =>
-        activite.id === activiteId ? { ...activite, bases: newBases } : activite
+        activite.id === activiteId
+          ? {
+              ...activite,
+              bases: newBases,
+              quantite: newBases.length,
+            }
+          : activite
       )
     );
     setSavedBases(newBases);
@@ -193,7 +217,11 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
     setActivitesState((prevState) =>
       prevState.map((activite) =>
         activite.id === activiteId
-          ? { ...activite, liaisons: newLiaisons }
+          ? {
+              ...activite,
+              liaisons: newLiaisons,
+              quantite: newLiaisons.length,
+            }
           : activite
       )
     );
@@ -256,9 +284,7 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
   const getUsedLiaisons = (currentActiviteId: number): number[] => {
     return activitesState
       .filter((activite) => activite.id !== currentActiviteId)
-      .flatMap(
-        (activite) => activite.liaisons?.map((liaison) => liaison.id) || []
-      );
+      .flatMap((activite) => activite.liaisons?.map((liaison) => liaison.id) || []);
   };
 
   const renderActivites = () => {
@@ -306,8 +332,8 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
             ))}
           </select>
 
-          <div className="grid grid-cols-12 gap-4 items-center">
-            <label className="col-span-2 flex items-center">
+          <div className="grid grid-cols-12 gap-4 items-center mb-4">
+            <label className="col-span-2 flex items-center whitespace-nowrap">
               <FaMapSigns className="mr-2" />
               Lieu:
             </label>
@@ -326,8 +352,8 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
                 </option>
               ))}
             </select>
-            <div className="col-span-3 flex items-center">
-              <FaCubes className="mr-2" />
+            <div className="col-span-3 flex items-center gap-2">
+              <FaCubes className="flex-shrink-0" />
               <input
                 type="number"
                 placeholder="Quantité"
@@ -339,7 +365,7 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
                     parseFloat(e.target.value) || 0
                   )
                 }
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className="flex-1 shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               />
             </div>
           </div>
