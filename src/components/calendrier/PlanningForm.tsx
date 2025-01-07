@@ -19,6 +19,7 @@ import {
   FaSave,
   FaFileImport,
   FaPencilAlt,
+  FaClipboardList,
 } from "react-icons/fa";
 import { format, startOfWeek, endOfWeek, addDays, parse } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -296,230 +297,231 @@ const PlanningForm: React.FC = () => {
   };
 
   return (
-    <div className="p-4 bg-gray-100 min-h-screen">
-      <h1 className="text-2xl font-bold mb-4 text-center bg-blue-800 text-white p-4 rounded flex items-center justify-center">
-        Planification des Travaux
-      </h1>
-      <div className="flex flex-col md:flex-row md:justify-between items-center mb-4">
-        <div className="flex items-center mb-4 md:mb-0">
-          <label className="text-lg font-semibold mr-2">Semaine :</label>
-          <DatePicker
-            calendarStartDay={0}
-            selected={selectedDate}
-            onChange={handleDateChange}
-            dateFormat="dd/MM/yyyy"
-            className="shadow appearance-none border rounded w-full md:w-64 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            locale={fr}
-          />
-        </div>
-        <div className="text-lg font-semibold">
-          Semaine du {format(start, "dd MMMM", { locale: fr })} au{" "}
-          {format(end, "dd MMMM", { locale: fr })}
-        </div>
-      </div>
-      <DragDropContext onDragEnd={onDragEnd}>
-        <div className="space-y-2">
-          {daysOfWeek.map((day, index) => (
-            <Droppable key={day} droppableId={day} direction="vertical">
-              {(provided) => (
-                <div
-                  {...provided.droppableProps}
-                  ref={provided.innerRef}
-                  className="bg-white p-2 rounded shadow-md"
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <h2 className="font-bold text-lg flex items-center">
-                      <FaCalendarDay className="inline mr-2" />
-                      {day} -{" "}
-                      {format(addDays(start, index), "dd MMMM yyyy", {
-                        locale: fr,
-                      })}
-                    </h2>
-                    <div className="flex space-x-2">
-                      <button
-                        className="bg-blue-500 text-white p-2 rounded flex items-center"
-                        onClick={() => {
-                          setActivityToEdit(null);
-                          setSelectedDay(day);
-                          setShowModal(true);
-                        }}
-                      >
-                        <FaPlus className="mr-1" />
-                        Créer une activité
-                      </button>
-                      <button
-                        className="border border-blue-500 text-blue-500 p-2 rounded flex items-center"
-                        onClick={() => {
-                          setSelectedDay(day);
-                          setShowImportModal(true);
-                        }}
-                      >
-                        <FaFileImport className="mr-1" />
-                        Importer des activités
-                      </button>
-                    </div>
-                  </div>
-                  <div
-                    className="grid grid-cols-12 gap-2 border-b border-gray-300 mb-2 pb-2 bg-gray-200"
-                    style={{ paddingTop: "5px" }}
-                  >
-                    <div className="font-bold flex items-center justify-center col-span-2">
-                      Nom
-                    </div>
-                    <div className="font-bold flex items-center justify-center col-span-2">
-                      <FaClock className="mr-1" />
-                      Plage Horaire
-                    </div>
-                    <div className="font-bold flex items-center justify-center col-span-2">
-                      <FaBuilding className="mr-1" />
-                      Entreprise
-                    </div>
-                    <div className="font-bold flex items-center justify-center col-auto">
-                      <FaMapMarkerAlt className="mr-1" />
-                      Lieu
-                    </div>
-                    <div className="font-bold flex items-center justify-center col-span-2">
-                      <FaSign className="mr-2" /> Signalisation
-                    </div>
-                    <div className="font-bold flex items-center justify-center col-auto">
-                      <FaFlask className="mr-1" />
-                      Lab
-                    </div>
-                    <div className="font-bold flex items-center justify-center col-auto">
-                      <FaCog className="mr-1" />
-                      Actions
-                    </div>
-                  </div>
-                  {activities[day].map((activity, index) => (
-                    <Draggable
-                      key={activity.id}
-                      draggableId={activity.id.toString()}
-                      index={index}
-                    >
-                      {(provided) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          className="bg-gray-50 p-2 mb-2 rounded shadow"
-                        >
-                          <div className="grid grid-cols-12 gap-2 items-center">
-                            <div className="col-span-2">
-                              {activity.activiteID !== null
-                                ? getActivityName(activity.activiteID)
-                                : "Inconnu"}
-                            </div>
-                            <div className="col-span-2">
-                              {activity.hrsDebut} - {activity.hrsFin}
-                            </div>
-                            <div className="col-span-2">
-                              {getEntrepriseName(activity.defaultEntrepriseId!)}
-                            </div>
-                            <div className="col-auto">
-                              {getLieuName(activity.lieuID!)}
-                            </div>
-                            <div className="col-span-2">
-                              {getSignalisationName(activity.signalisationId!)}
-                            </div>
-                            <div className="col-auto">
-                              <input
-                                type="checkbox"
-                                checked={activity.isLab}
-                                onChange={() =>
-                                  handleCheckboxChange(activity.id.toString())
-                                }
-                                className="mr-2"
-                              />
-                            </div>
-                            <div
-                              className="col-auto flex gap-2 justify-end"
-                              style={{ marginRight: "10%" }}
-                            >
-                              {activity.note && (
-                                <FaPencilAlt className="text-yellow-500" />
-                              )}
-                              <button
-                                onClick={() => handleEditActivity(activity)}
-                                className="text-blue-500"
-                              >
-                                <FaEdit />
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleDeleteActivity(day, activity.id)
-                                }
-                                className="text-red-500"
-                              >
-                                <FaTrash />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          ))}
-        </div>
-      </DragDropContext>
-
-      {showModal && (
-        <CreateActivityModal
-          activity={activityToEdit}
-          onClose={() => setShowModal(false)}
-          onSave={handleSaveActivity}
-          isOpen={showModal}
-        />
-      )}
-
-      {showImportModal && (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center">
-          <div className="bg-white p-4 rounded shadow-md max-w-4xl w-full max-h-screen overflow-y-auto">
-            <ActivityList
-              onSelectActivity={handleImportActivities}
-              selectedActivities={selectedActivities}
-              onToggleActivity={handleToggleActivity}
-            />
-            <div className="flex justify-between items-center mt-4">
-              <span>{selectedActivities.size} activités sélectionnées</span>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() =>
-                    handleImportActivities(
-                      Array.from(selectedActivities).map((id) =>
-                        activitesPlanif?.find((activity) => activity.id === id)
-                      ) as ActivitePlanif[]
-                    )
-                  }
-                  className="bg-blue-500 text-white p-2 rounded flex items-center justify-center"
-                >
-                  <FaFileImport className="mr-2" />
-                  Importer les activités
-                </button>
-                <button
-                  onClick={() => setShowImportModal(false)}
-                  className="bg-red-500 text-white p-2 rounded flex items-center justify-center"
-                >
-                  Fermer
-                </button>
+    <div className="bg-white rounded-lg shadow-lg">
+      {/* En-tête sticky avec DatePicker et boutons */}
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg shadow-sm">
+        <div className="flex flex-col gap-4 p-4 bg-gray-50">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <DatePicker
+                  selected={selectedDate}
+                  onChange={handleDateChange}
+                  dateFormat="dd/MM/yyyy"
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                  locale={fr}
+                />
+                <FaCalendarDay className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               </div>
+              <div className="text-sm font-medium text-gray-600">
+                Semaine du {format(start, "d MMMM", { locale: fr })} au{" "}
+                {format(end, "d MMMM yyyy", { locale: fr })}
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setShowModal(true);
+                  setSelectedDay(format(selectedDate, "EEEE", { locale: fr }));
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+              >
+                <FaPlus className="text-sm" />
+                Créer une activité
+              </button>
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+              >
+                <FaFileImport className="text-sm" />
+                Importer des activités
+              </button>
+              <button
+                onClick={handleSavePlanning}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
+              >
+                <FaSave className="text-sm" />
+                Enregistrer la planification
+              </button>
             </div>
           </div>
         </div>
-      )}
-
-      <div className="flex justify-end mt-8">
-        <button
-          onClick={handleSavePlanning}
-          className="bg-green-600 text-white p-3 rounded flex items-center"
-        >
-          <FaSave className="mr-2" />
-          Enregistrer la planification
-        </button>
       </div>
+
+      {/* Contenu principal */}
+      <div className="p-4">
+        <DragDropContext onDragEnd={onDragEnd}>
+          <div className="grid grid-cols-1 gap-4">
+            {daysOfWeek.map((day, dayIndex) => {
+              const currentDate = addDays(start, dayIndex);
+              const formattedDate = format(currentDate, "dd/MM/yyyy");
+
+              return (
+                <Droppable key={day} droppableId={day}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`bg-white rounded-lg border ${
+                        snapshot.isDraggingOver ? "border-blue-300 bg-blue-50" : "border-gray-200"
+                      }`}
+                    >
+                      {/* En-tête du jour */}
+                      <div className="flex items-center justify-between p-4 bg-blue-600 text-white rounded-t-lg">
+                        <div className="flex items-center gap-2">
+                          <FaCalendarDay />
+                          <span className="font-semibold">{day}</span>
+                          <span className="text-sm text-blue-200">- {formattedDate}</span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setShowModal(true);
+                            setSelectedDay(day);
+                          }}
+                          className="p-2 hover:bg-blue-700 rounded-full transition-colors duration-200"
+                        >
+                          <FaPlus className="text-white" />
+                        </button>
+                      </div>
+
+                      {/* Headers des colonnes */}
+                      <div className="grid grid-cols-12 gap-4 bg-gray-50 px-4 py-2 border-b border-gray-200 text-sm font-medium text-gray-600">
+                        <div className="col-span-3 flex items-center gap-2">
+                          <FaClipboardList size={14} className="text-blue-500" />
+                          <span>Activité</span>
+                        </div>
+                        <div className="col-span-2 flex items-center gap-2">
+                          <FaClock size={14} className="text-blue-500" />
+                          <span>Horaire</span>
+                        </div>
+                        <div className="col-span-2 flex items-center gap-2">
+                          <FaBuilding size={14} className="text-blue-500" />
+                          <span>Entreprise</span>
+                        </div>
+                        <div className="col-span-2 flex items-center gap-2">
+                          <FaMapMarkerAlt size={14} className="text-blue-500" />
+                          <span>Lieu</span>
+                        </div>
+                        <div className="col-span-2 flex items-center gap-2">
+                          <FaSign size={14} className="text-blue-500" />
+                          <span>Signalisation</span>
+                        </div>
+                        <div className="col-span-1 flex justify-end items-center gap-2">
+                          <FaCog size={14} className="text-blue-500" />
+                        </div>
+                      </div>
+
+                      {/* Liste des activités */}
+                      <div className="p-4 space-y-2">
+                        {activities[day]?.map((activity, index) => (
+                          <Draggable
+                            key={activity.id.toString()}
+                            draggableId={activity.id.toString()}
+                            index={index}
+                          >
+                            {(provided) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className="grid grid-cols-12 gap-4 items-center bg-white p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-sm transition-all duration-200"
+                              >
+                                <div className="col-span-3">
+                                  <div className="font-medium text-gray-900">
+                                    {activity.activiteID !== null
+                                      ? getActivityName(activity.activiteID)
+                                      : "Inconnu"}
+                                  </div>
+                                  {activity.note && (
+                                    <span className="inline-flex items-center gap-1 text-xs text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded mt-1">
+                                      <FaPencilAlt size={10} />
+                                      Note
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="col-span-2 text-gray-700">
+                                  {activity.hrsDebut} - {activity.hrsFin}
+                                </div>
+
+                                <div className="col-span-2 text-gray-700 truncate" title={getEntrepriseName(activity.defaultEntrepriseId!)}>
+                                  {getEntrepriseName(activity.defaultEntrepriseId!)}
+                                </div>
+
+                                <div className="col-span-2 text-gray-700 truncate" title={getLieuName(activity.lieuID!)}>
+                                  {getLieuName(activity.lieuID!)}
+                                </div>
+
+                                <div className="col-span-2 text-gray-700 truncate" title={getSignalisationName(activity.signalisationId!)}>
+                                  {getSignalisationName(activity.signalisationId!)}
+                                </div>
+
+                                <div className="col-span-1 flex items-center justify-end gap-1">
+                                  <div className="flex items-center" title="Laboratoire requis">
+                                    <input
+                                      type="checkbox"
+                                      checked={activity.isLab}
+                                      onChange={() => handleCheckboxChange(activity.id.toString())}
+                                      className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                      id={`lab-${activity.id}`}
+                                    />
+                                    <FaFlask className="ml-1 text-gray-500" size={14} />
+                                  </div>
+                                  <button
+                                    onClick={() => handleEditActivity(activity)}
+                                    className="p-1 text-gray-600 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors duration-200"
+                                    title="Modifier l'activité"
+                                  >
+                                    <FaPencilAlt size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteActivity(day, activity.id)}
+                                    className="p-1 text-gray-600 hover:text-red-600 rounded-full hover:bg-red-50 transition-colors duration-200"
+                                    title="Supprimer l'activité"
+                                  >
+                                    <FaTrash size={14} />
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                        {activities[day]?.length === 0 && (
+                          <div className="text-center py-8 text-gray-500">
+                            Aucune activité planifiée
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </Droppable>
+              );
+            })}
+          </div>
+        </DragDropContext>
+      </div>
+
+      {showModal && (
+        <CreateActivityModal
+          isOpen={showModal}
+          onClose={() => {
+            setShowModal(false);
+            setActivityToEdit(null);
+          }}
+          onSave={handleSaveActivity}
+          activity={activityToEdit}
+        />
+      )}
+      {showImportModal && (
+        <ActivityList
+          selectedActivities={selectedActivities}
+          onToggleActivity={handleToggleActivity}
+          onImport={handleImportActivities}
+          onClose={() => setShowImportModal(false)}
+        />
+      )}
     </div>
   );
 };

@@ -265,7 +265,8 @@ export default function Form() {
           journalSousTraitants,
           userStats: journalUserStats.userStats,
           notes: journalNotes,
-          projetId: selectedProject?.NumeroProjet?.toString() || '' }}
+          projetId: selectedProject?.NumeroProjet?.toString() || ''
+        }}
         activites={activites}
         bases={bases || []}
         distances={distances}
@@ -389,17 +390,26 @@ export default function Form() {
           )}
 
           {sections.notes.visible && (
-            <section className="mb-6">
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold mb-4">Notes / Remarques journalières</h2>
-                <textarea
-                  className="w-full p-2 border rounded-md"
-                  rows={4}
-                  value={journalNotes}
-                  onChange={(e) => setJournalNotes(e.target.value)}
-                  placeholder="Entrez vos notes ou remarques pour la journée..."
-                />
-              </div>
+            <section>
+              <SectionHeader
+                title={`${
+                  visibleSections.indexOf("notes") + 1
+                }. Notes et Remarques`}
+                sectionKey="notes"
+                isOpen={sections.notes.open}
+                onToggle={toggleSection}
+              />
+              {sections.notes.open && (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <textarea
+                    id="notes"
+                    className="w-full min-h-[150px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                    value={journalNotes}
+                    onChange={(e) => setJournalNotes(e.target.value)}
+                    placeholder="Entrez vos observations, commentaires ou points importants de la journée..."
+                  />
+                </div>
+              )}
             </section>
           )}
 
@@ -411,7 +421,9 @@ export default function Form() {
               Générer PDF
               <FaFilePdf className="ml-2" />
             </button>
-            <button className="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700 transition-colors duration-300">
+            <button
+              className="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700 transition-colors duration-300"
+            >
               Envoyer le formulaire
               <FaArrowRight className="ml-2" />
             </button>
