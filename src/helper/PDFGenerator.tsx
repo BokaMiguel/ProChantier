@@ -7,6 +7,8 @@ import {
   StyleSheet,
   Font,
   Image,
+  Svg,
+  Path,
 } from "@react-pdf/renderer";
 import {
   Activite,
@@ -41,10 +43,21 @@ const styles = StyleSheet.create({
     padding: 30,
     position: "relative",
   },
-  signaturePage: {
-    flexDirection: "column",
-    backgroundColor: "#FFFFFF",
-    padding: 30,
+  container: {
+    margin: "0 auto",
+    width: "90%",
+    maxWidth: "800px",
+  },
+  signatureLine: {
+    marginTop: 30,
+    borderTopWidth: 1,
+    borderTopStyle: "solid",
+    borderTopColor: "#000000",
+    width: "50%",
+    marginLeft: "auto",
+    marginRight: "auto",
+    textAlign: "center",
+    paddingTop: 5,
   },
   header: {
     flexDirection: "column",
@@ -78,7 +91,22 @@ const styles = StyleSheet.create({
     color: "#2c3e50",
     backgroundColor: "#e8ecf3",
     padding: 8,
+    paddingLeft: 15,
+    paddingRight: 15,
     borderRadius: 4,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  sectionHeaderIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 15,
+  },
+  sectionHeaderText: {
+    fontSize: 16,
+    fontFamily: "Helvetica-Bold",
+    color: "#2c3e50",
+    marginLeft: 15,
   },
   sectionContent: {
     paddingLeft: 8,
@@ -308,11 +336,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     fontFamily: "Helvetica-Bold",
   },
-  signatureLine: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#000',
-    marginTop: 40,
-  },
   dateBox: {
     marginTop: 40,
   },
@@ -340,6 +363,13 @@ const styles = StyleSheet.create({
   },
   detailRow: {
     marginBottom: 4,
+  },
+  activityTitle: {
+    fontSize: 14,
+    fontFamily: "Helvetica-Bold",
+    marginBottom: 5,
+    backgroundColor: "#FFD700",
+    padding: 2,
   },
 });
 
@@ -373,7 +403,88 @@ interface ProcessedActivitePlanif extends ActivitePlanif {
   processedDistances?: LocalisationDistance[];
 }
 
+// Fonction utilitaire pour formater la date
+const formatDateForFileName = (date: string): string => {
+  return new Date(date).toLocaleDateString("fr-FR").split("/").join("-");
+};
+
 const Separator = () => <View style={styles.separator} />;
+
+const InfoIcon = () => (
+  <Svg viewBox="0 0 24 24" width={20} height={20}>
+    <Path
+      d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"
+      fill="#2c3e50"
+    />
+  </Svg>
+);
+
+const EmployeesIcon = () => (
+  <Svg viewBox="0 0 24 24" width={20} height={20}>
+    <Path
+      d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
+      fill="#2c3e50"
+    />
+  </Svg>
+);
+
+const ActivitiesIcon = () => (
+  <Svg viewBox="0 0 24 24" width={20} height={20}>
+    <Path
+      d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"
+      fill="#2c3e50"
+    />
+  </Svg>
+);
+
+const TimeIcon = () => (
+  <Svg viewBox="0 0 24 24" width={20} height={20}>
+    <Path
+      d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"
+      fill="#2c3e50"
+    />
+  </Svg>
+);
+
+const NotesIcon = () => (
+  <Svg viewBox="0 0 24 24" width={20} height={20}>
+    <Path
+      d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 14h-3v3h-2v-3H8v-2h3v-3h2v3h3v2zm-3-7V3.5L18.5 9H13z"
+      fill="#2c3e50"
+    />
+  </Svg>
+);
+
+const SignatureIcon = () => (
+  <Svg viewBox="0 0 24 24" width={20} height={20}>
+    <Path
+      d="M22 2v16H6V2h16m2-2H4v20h20V0zM12 11.95h4V9.5h-4v2.45zm0 4.5h4v-2.45h-4v2.45zm0-9h4V5h-4v2.45zm-5.5 9h4v-2.45h-4v2.45zm0-4.5h4V9.5h-4v2.45zm0-4.5h4V5h-4v2.45z"
+      fill="#2c3e50"
+    />
+  </Svg>
+);
+
+const MaterialsIcon = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24">
+    <Path
+      d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"
+      fill="#2c3e50"
+    />
+    <Path
+      d="M7 7h10v2H7zm0 4h10v2H7zm0 4h7v2H7z"
+      fill="#2c3e50"
+    />
+  </Svg>
+);
+
+const ContractorsIcon = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24">
+    <Path
+      d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
+      fill="#2c3e50"
+    />
+  </Svg>
+);
 
 export const PDFDocument: React.FC<PDFDocumentProps> = ({
   formData,
@@ -383,11 +494,6 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
   lieux,
   journalPlanifId,
 }) => {
-  // Générer un ID de journal formaté à 7 chiffres
-  const generateJournalId = (id: number): string => {
-    return id.toString().padStart(7, "0");
-  };
-
   const formatDate = (date: string) => {
     const options: Intl.DateTimeFormatOptions = {
       weekday: "long",
@@ -396,6 +502,13 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
       day: "numeric",
     };
     return new Date(date).toLocaleDateString("fr-FR", options);
+  };
+
+  const generateFileName = () => {
+    const date = formatDateForFileName(formData.journalDate);
+    const projetId = formData.projetId || "NOPROJ";
+    const journalId = journalPlanifId.toString().padStart(7, "0");
+    return `${date}_${projetId}_${journalId}`;
   };
 
   const filteredUsers = formData.journalUsers.filter(
@@ -414,96 +527,168 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
   });
 
   return (
-    <Document>
+    <Document
+      author="Journal de Chantier"
+      creator="Journal de Chantier App"
+      producer="Journal de Chantier PDF Generator"
+      title={generateFileName()}
+    >
       {/* Première page : En-tête et informations générales */}
       <Page size="A4" style={styles.page}>
-        {/* En-tête */}
-        <View style={styles.header}>
-          <Image style={styles.logo} src="/logo512.png" />
-        </View>
-
-        {/* Informations du Journal */}
-        <View style={styles.section}>
-          <Text style={styles.sectionHeader}>Informations du Journal</Text>
-          <View style={styles.sectionContent}>
-            <View style={{ flexDirection: "row", marginBottom: 10 }}>
-              <Text style={styles.label}>N° Journal : </Text>
-              <Text style={styles.text}>
-                {generateJournalId(journalPlanifId)}
-              </Text>
-            </View>
-            <View style={{ flexDirection: "row", marginBottom: 10 }}>
-              <Text style={styles.label}>N° Projet : </Text>
-              <Text style={styles.text}>
-                {formData.projetId || "Non spécifié"}
-              </Text>
-            </View>
-            <View style={{ flexDirection: "row", marginBottom: 10 }}>
-              <Text style={styles.label}>Date : </Text>
-              <Text style={styles.text}>
-                {formatDate(formData.journalDate)}
-              </Text>
-            </View>
-            <View style={{ flexDirection: "row", marginBottom: 10 }}>
-              <Text style={styles.label}>Arrivée : </Text>
-              <Text style={styles.text}>{formData.journalArrivee}</Text>
-            </View>
-            <View style={{ flexDirection: "row", marginBottom: 10 }}>
-              <Text style={styles.label}>Départ : </Text>
-              <Text style={styles.text}>{formData.journalDepart}</Text>
-            </View>
-            <View style={{ flexDirection: "row", marginBottom: 10 }}>
-              <Text style={styles.label}>Météo : </Text>
-              <Text style={styles.text}>
-                {formData.journalWeather || "Aucune information météo"}
-              </Text>
-            </View>
+        <View style={styles.container}>
+          {/* En-tête */}
+          <View style={styles.header}>
+            <Image style={styles.logo} src="/logo512.png" />
           </View>
-        </View>
 
-        {/* Informations des Employés */}
-        <View style={styles.section}>
-          <Text style={styles.sectionHeader}>Informations des Employés</Text>
-          <View style={styles.sectionContent}>
-            {filteredUsers.length > 0 ? (
-              <View style={styles.table}>
-                <View style={styles.tableRow}>
-                  <Text style={styles.tableColHeader}>Nom</Text>
-                  <Text style={styles.tableColHeader}>Fonction</Text>
-                  <Text style={styles.tableColHeader}>Équipement</Text>
-                </View>
-                {filteredUsers.map((user, index) => (
-                  <View key={index} style={styles.tableRow}>
-                    <Text style={styles.tableCol}>
-                      {user.prenom} {user.nom}
-                    </Text>
-                    <Text style={styles.tableCol}>
-                      {user.fonction?.nom || "N/A"}
-                    </Text>
-                    <Text style={styles.tableCol}>
-                      {user.equipement?.nom || "N/A"}
-                    </Text>
-                  </View>
-                ))}
+          {/* Informations du Journal */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <InfoIcon />
+              <Text style={styles.sectionHeaderText}>Informations du Journal</Text>
+            </View>
+            <View style={styles.sectionContent}>
+              <View style={{ flexDirection: "row", marginBottom: 10 }}>
+                <Text style={styles.label}>N° Journal : </Text>
+                <Text style={styles.text}>
+                  {journalPlanifId.toString().padStart(7, "0")}
+                </Text>
               </View>
-            ) : (
-              <Text style={styles.emptySection}>Aucun employé enregistré</Text>
-            )}
+              <View style={{ flexDirection: "row", marginBottom: 10 }}>
+                <Text style={styles.label}>N° Projet : </Text>
+                <Text style={styles.text}>
+                  {formData.projetId || "Non spécifié"}
+                </Text>
+              </View>
+              <View style={{ flexDirection: "row", marginBottom: 10 }}>
+                <Text style={styles.label}>Date : </Text>
+                <Text style={styles.text}>
+                  {formatDate(formData.journalDate)}
+                </Text>
+              </View>
+              <View style={{ flexDirection: "row", marginBottom: 10 }}>
+                <Text style={styles.label}>Arrivée : </Text>
+                <Text style={styles.text}>{formData.journalArrivee}</Text>
+              </View>
+              <View style={{ flexDirection: "row", marginBottom: 10 }}>
+                <Text style={styles.label}>Départ : </Text>
+                <Text style={styles.text}>{formData.journalDepart}</Text>
+              </View>
+              <View style={{ flexDirection: "row", marginBottom: 10 }}>
+                <Text style={styles.label}>Météo : </Text>
+                <Text style={styles.text}>
+                  {formData.journalWeather || "Aucune information météo"}
+                </Text>
+              </View>
+            </View>
           </View>
-        </View>
 
-        <Text
-          style={styles.pageNumber}
-          render={({ pageNumber, totalPages }) => `Page ${pageNumber} / ${totalPages}`}
-          fixed
-        />
+          {/* Informations des Employés */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <EmployeesIcon />
+              <Text style={styles.sectionHeaderText}>Informations des Employés</Text>
+            </View>
+            <View style={styles.sectionContent}>
+              {filteredUsers.length > 0 ? (
+                <View style={styles.table}>
+                  <View style={styles.tableRow}>
+                    <Text style={styles.tableColHeader}>Nom</Text>
+                    <Text style={styles.tableColHeader}>Fonction</Text>
+                    <Text style={styles.tableColHeader}>Équipement</Text>
+                  </View>
+                  {filteredUsers.map((user, index) => (
+                    <View key={index} style={styles.tableRow}>
+                      <Text style={styles.tableCol}>
+                        {user.prenom} {user.nom}
+                      </Text>
+                      <Text style={styles.tableCol}>
+                        {user.fonction?.nom || "N/A"}
+                      </Text>
+                      <Text style={styles.tableCol}>
+                        {user.equipement?.nom || "N/A"}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.emptySection}>Aucun employé enregistré</Text>
+              )}
+            </View>
+          </View>
+
+          {/* Section des matériaux et outillages */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <MaterialsIcon />
+              <Text style={styles.sectionHeaderText}>Matériaux et Outillages</Text>
+            </View>
+            <View style={styles.sectionContent}>
+              {formData.journalMateriaux && formData.journalMateriaux.length > 0 ? (
+                <View style={styles.table}>
+                  <View style={styles.tableRow}>
+                    <Text style={styles.tableColHeader}>Nom</Text>
+                    <Text style={styles.tableColHeader}>Quantité</Text>
+                  </View>
+                  {formData.journalMateriaux.map((materiau, index) => (
+                    <View key={index} style={styles.tableRow}>
+                      <Text style={styles.tableCol}>{materiau.nom}</Text>
+                      <Text style={styles.tableCol}>
+                        {materiau.quantite !== undefined ? materiau.quantite : 'N/A'}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.emptySection}>Aucun matériau enregistré</Text>
+              )}
+            </View>
+          </View>
+
+          {/* Section des sous-traitants */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <ContractorsIcon />
+              <Text style={styles.sectionHeaderText}>Sous-Traitants</Text>
+            </View>
+            <View style={styles.sectionContent}>
+              {formData.journalSousTraitants && formData.journalSousTraitants.length > 0 ? (
+                <View style={styles.table}>
+                  <View style={styles.tableRow}>
+                    <Text style={styles.tableColHeader}>Nom</Text>
+                    <Text style={styles.tableColHeader}>Quantité</Text>
+                  </View>
+                  {formData.journalSousTraitants.map((sousTraitant, index) => (
+                    <View key={index} style={styles.tableRow}>
+                      <Text style={styles.tableCol}>{sousTraitant.nom}</Text>
+                      <Text style={styles.tableCol}>
+                        {sousTraitant.quantite !== undefined ? sousTraitant.quantite : 'N/A'}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.emptySection}>Aucun sous-traitant enregistré</Text>
+              )}
+            </View>
+          </View>
+
+          <Text
+            style={styles.pageNumber}
+            render={({ pageNumber, totalPages }) => `Page ${pageNumber} / ${totalPages}`}
+            fixed
+          />
+        </View>
       </Page>
 
       {/* Page des activités */}
       <Page size="A4" style={styles.page}>
         {/* Section des activités */}
         <View style={styles.section}>
-          <Text style={styles.sectionHeader}>Activités</Text>
+          <View style={styles.sectionHeader}>
+            <ActivitiesIcon />
+            <Text style={styles.sectionHeaderText}>Activités</Text>
+          </View>
           <View style={styles.sectionContent}>
             {processedActivities.length > 0 ? (
               processedActivities
@@ -528,7 +713,7 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
 
                   return (
                     <View key={index} style={styles.section}>
-                      <Text style={styles.activityHeader}>
+                      <Text style={styles.activityTitle}>
                         {`${index + 1}. ${activiteDetails?.nom || "Activité non spécifiée"}`}
                       </Text>
                       <View style={styles.activityDetails}>
@@ -587,7 +772,10 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
       {/* Page des heures d'activités */}
       <Page size="A4" style={styles.page}>
         <View style={styles.section}>
-          <Text style={styles.sectionHeader}>Heures d'activités</Text>
+          <View style={styles.sectionHeader}>
+            <TimeIcon />
+            <Text style={styles.sectionHeaderText}>Heures d'activités</Text>
+          </View>
           
           {/* Tableau pour les activités 1-5 */}
           <Text style={styles.tableTitle}>Heures par activité (Activités 1-5)</Text>
@@ -718,14 +906,20 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
         {/* Notes journalières */}
         {formData.notes ? (
           <View style={styles.notesSection}>
-            <Text style={styles.sectionHeader}>Note journalière</Text>
+            <View style={styles.sectionHeader}>
+              <NotesIcon />
+              <Text style={styles.sectionHeaderText}>Note journalière</Text>
+            </View>
             <View style={styles.noteContent}>
               <Text style={styles.text}>{formData.notes}</Text>
             </View>
           </View>
         ) : (
           <View style={styles.notesSection}>
-            <Text style={styles.sectionHeader}>Note journalière</Text>
+            <View style={styles.sectionHeader}>
+              <NotesIcon />
+              <Text style={styles.sectionHeaderText}>Note journalière</Text>
+            </View>
             <View style={styles.noteContent}>
               <Text style={[styles.text, { color: "#666" }]}>Aucune note journalière</Text>
             </View>
@@ -733,7 +927,10 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
         )}
 
         <View style={styles.section}>
-          <Text style={styles.sectionHeader}>Signatures</Text>
+          <View style={styles.sectionHeader}>
+            <SignatureIcon />
+            <Text style={styles.sectionHeaderText}>Signatures</Text>
+          </View>
           <View style={styles.signatureGrid}>
             <View style={styles.signatureRow}>
               {/* Signature Contremaître */}
@@ -771,4 +968,12 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
       </Page>
     </Document>
   );
+};
+
+// Fonction pour générer le nom du fichier PDF
+export const getPDFFileName = (formData: PDFDocumentProps["formData"], journalPlanifId: number): string => {
+  const date = formatDateForFileName(formData.journalDate);
+  const projetId = formData.projetId || "NOPROJ";
+  const journalId = journalPlanifId.toString().padStart(7, "0");
+  return `${date}_${projetId}_${journalId}`;
 };

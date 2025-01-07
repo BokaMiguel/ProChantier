@@ -77,6 +77,17 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
 
   const handleToggleLiaisonMode = (mode: boolean) => {
     setIsLiaisonMode(mode);
+    setActivitesState((prevState) =>
+      prevState.map((activite) => ({
+        ...activite,
+        quantite: mode
+          ? activite.liaisons?.reduce(
+              (total, liaison) => total + (liaison.distanceInMeters || 0),
+              0
+            ) || 0
+          : activite.bases?.length || 0,
+      }))
+    );
   };
 
   const fetchDistances = async (lieuId: number) => {
@@ -159,6 +170,94 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
     });
   }, [activitesState]);
 
+  const getUsedBases = (currentActiviteId: number): number[] => {
+    return activitesState
+      .filter((activite) =>
+        activite.id !== currentActiviteId &&
+        activite.activiteID ===
+          activitesState.find((a) => a.id === currentActiviteId)?.activiteID &&
+        activite.lieuID ===
+          activitesState.find((a) => a.id === currentActiviteId)?.lieuID
+      )
+      .flatMap((activite) => activite.bases?.map((base) => base.id) || []);
+  };
+
+  const getUsedLiaisons = (currentActiviteId: number): number[] => {
+    return activitesState
+      .filter((activite) =>
+        activite.id !== currentActiviteId &&
+        activite.activiteID ===
+          activitesState.find((a) => a.id === currentActiviteId)?.activiteID &&
+        activite.lieuID ===
+          activitesState.find((a) => a.id === currentActiviteId)?.lieuID
+      )
+      .flatMap((activite) =>
+        activite.liaisons?.map((liaison) => liaison.id) || []
+      );
+  };
+
+  const calculateQuantity = (activite: ActivitePlanif) => {
+    if (isLiaisonMode && activite.liaisons && activite.liaisons.length > 0) {
+      return activite.liaisons.reduce(
+        (total, liaison) => total + (liaison.distanceInMeters || 0),
+        0
+      );
+    } else if (!isLiaisonMode && activite.bases && activite.bases.length > 0) {
+      return activite.bases.length;
+    }
+    return 0;
+  };
+
+  const handleLiaisonsChange = (
+    newLiaisons: LocalisationDistance[],
+    activiteId: number
+  ) => {
+    setActivitesState((prevState) =>
+      prevState.map((activite) =>
+        activite.id === activiteId
+          ? {
+              ...activite,
+              liaisons: newLiaisons,
+              quantite: isLiaisonMode
+                ? newLiaisons.reduce(
+                    (total, liaison) => total + (liaison.distanceInMeters || 0),
+                    0
+                  )
+                : activite.quantite,
+            }
+          : activite
+      )
+    );
+  };
+
+  const handleBasesChange = (newBases: Localisation[], activiteId: number) => {
+    setActivitesState((prevState) =>
+      prevState.map((activite) =>
+        activite.id === activiteId
+          ? {
+              ...activite,
+              bases: newBases,
+              quantite: !isLiaisonMode ? newBases.length : activite.quantite,
+            }
+          : activite
+      )
+    );
+  };
+
+  const handleUpdateLiaisons = (activiteId: number, newLiaisons: LocalisationDistance[]) => {
+    handleLiaisonsChange(newLiaisons, activiteId);
+    setSavedLiaisons(newLiaisons);
+  };
+
+  const handleUpdateBases = (activiteId: number, newBases: Localisation[]) => {
+    handleBasesChange(newBases, activiteId);
+    setSavedBases(newBases);
+  };
+
+  const handleModalClose = () => {
+    setShowModal(false);
+  };
+
   const handleChange = (
     id: number,
     field: keyof ActivitePlanif,
@@ -178,6 +277,10 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
             }
           }
 
+          if (field === "bases" || field === "liaisons") {
+            updatedActivite.quantite = calculateQuantity(updatedActivite);
+          }
+
           return updatedActivite;
         }
         return activite;
@@ -194,46 +297,11 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
     setShowModal(false);
   };
 
-  const handleBasesChange = (newBases: Localisation[], activiteId: number) => {
-    setActivitesState((prevState) =>
-      prevState.map((activite) =>
-        activite.id === activiteId
-          ? {
-              ...activite,
-              bases: newBases,
-              quantite: newBases.length,
-            }
-          : activite
-      )
-    );
-    setSavedBases(newBases);
-    closeModal();
-  };
-
-  const handleLiaisonsChange = (
-    newLiaisons: LocalisationDistance[],
-    activiteId: number
-  ) => {
-    setActivitesState((prevState) =>
-      prevState.map((activite) =>
-        activite.id === activiteId
-          ? {
-              ...activite,
-              liaisons: newLiaisons,
-              quantite: newLiaisons.length,
-            }
-          : activite
-      )
-    );
-    setSavedLiaisons(newLiaisons);
-    closeModal();
-  };
-
   const clearAllLocalisations = (activiteId: number) => {
     setActivitesState((prevState) =>
       prevState.map((activite) =>
         activite.id === activiteId
-          ? { ...activite, bases: [], liaisons: [] }
+          ? { ...activite, bases: [], liaisons: [], quantite: 0 }
           : activite
       )
     );
@@ -273,18 +341,6 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
         liaisons: [],
       } as ActivitePlanif,
     ]);
-  };
-
-  const getUsedBases = (currentActiviteId: number): number[] => {
-    return activitesState
-      .filter((activite) => activite.id !== currentActiviteId)
-      .flatMap((activite) => activite.bases?.map((base) => base.id) || []);
-  };
-
-  const getUsedLiaisons = (currentActiviteId: number): number[] => {
-    return activitesState
-      .filter((activite) => activite.id !== currentActiviteId)
-      .flatMap((activite) => activite.liaisons?.map((liaison) => liaison.id) || []);
   };
 
   const renderActivites = () => {
@@ -417,38 +473,32 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
           </div>
           {activite.lieuID && (
             <>
-              {isLiaisonMode ? (
-                <LocalisationLiaisonModal
-                  showModal={showModal && currentActiviteId === activite.id}
-                  closeModal={closeModal}
-                  savedLiaisons={activite.liaisons || []}
-                  setSavedLiaisons={(liaisons) =>
-                    handleLiaisonsChange(liaisons, activite.id)
-                  }
-                  distances={distances}
-                  onToggleLiaisonMode={handleToggleLiaisonMode}
-                  isLiaisonMode={isLiaisonMode}
-                  clearAllLocalisations={() =>
-                    clearAllLocalisations(activite.id)
-                  }
-                  usedLiaisons={usedLiaisons}
-                />
-              ) : (
-                <LocalisationModal
-                  showModal={showModal && currentActiviteId === activite.id}
-                  closeModal={closeModal}
-                  savedLocalisations={activite.bases || []}
-                  setSavedLocalisations={(bases) =>
-                    handleBasesChange(bases, activite.id)
-                  }
-                  isLiaisonMode={isLiaisonMode}
-                  setIsLiaisonMode={setIsLiaisonMode}
-                  clearAllLocalisations={() =>
-                    clearAllLocalisations(activite.id)
-                  }
-                  bases={lieuBases}
-                  usedBases={usedBases}
-                />
+              {showModal && currentActiviteId === activite.id && (
+                isLiaisonMode ? (
+                  <LocalisationLiaisonModal
+                    showModal={showModal && currentActiviteId === activite.id}
+                    closeModal={handleModalClose}
+                    savedLiaisons={activite.liaisons || []}
+                    setSavedLiaisons={(liaisons: LocalisationDistance[]) => handleUpdateLiaisons(activite.id, liaisons)}
+                    onToggleLiaisonMode={handleToggleLiaisonMode}
+                    distances={distances}
+                    isLiaisonMode={isLiaisonMode}
+                    clearAllLocalisations={() => clearAllLocalisations(activite.id)}
+                    usedLiaisons={usedLiaisons}
+                  />
+                ) : (
+                  <LocalisationModal
+                    showModal={showModal && currentActiviteId === activite.id}
+                    closeModal={handleModalClose}
+                    savedLocalisations={activite.bases || []}
+                    setSavedLocalisations={(bases: Localisation[]) => handleUpdateBases(activite.id, bases)}
+                    isLiaisonMode={isLiaisonMode}
+                    setIsLiaisonMode={setIsLiaisonMode}
+                    clearAllLocalisations={() => clearAllLocalisations(activite.id)}
+                    bases={lieuBases}
+                    usedBases={usedBases}
+                  />
+                )
               )}
             </>
           )}
