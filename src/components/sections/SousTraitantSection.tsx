@@ -20,9 +20,7 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
   const { sousTraitants: contextSousTraitants } = useAuth();
   const [nextId, setNextId] = useState(sousTraitants.length + 1);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [sousTraitantToDelete, setSousTraitantToDelete] = useState<
-    number | null
-  >(null);
+  const [sousTraitantToDelete, setSousTraitantToDelete] = useState<number | null>(null);
 
   const handleAddSousTraitant = () => {
     const newSousTraitant: SousTraitant = {
@@ -30,10 +28,7 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
       nom: "",
       quantite: 0,
     };
-    setSousTraitants((prevSousTraitants) => [
-      ...prevSousTraitants,
-      newSousTraitant,
-    ]);
+    setSousTraitants((prevSousTraitants) => [...prevSousTraitants, newSousTraitant]);
     setNextId(nextId + 1);
   };
 
@@ -59,95 +54,105 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
   const handleDeleteSousTraitant = () => {
     if (sousTraitantToDelete !== null) {
       setSousTraitants((prevSousTraitants) =>
-        prevSousTraitants.filter(
-          (sousTraitant) => sousTraitant.id !== sousTraitantToDelete
-        )
+        prevSousTraitants.filter((sousTraitant) => sousTraitant.id !== sousTraitantToDelete)
       );
       setShowConfirm(false);
       setSousTraitantToDelete(null);
     }
   };
 
-  const renderSousTraitants = () => {
-    return sousTraitants.map((sousTraitant, index) => (
-      <div
-        key={sousTraitant.id}
-        className="border rounded p-4 mb-4 shadow-md flex flex-col space-y-4 relative"
-      >
-        <div className="grid grid-cols-12 gap-4 items-center">
-          <label className="col-span-3 flex items-center">
-            <FaBuilding className="mr-2" />
-            Sous-traitant:
-          </label>
-          <select
-            value={sousTraitant.nom}
-            onChange={(e) =>
-              handleChange(sousTraitant.id, "nom", e.target.value)
-            }
-            className="col-span-6 shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+  return (
+    <div className="bg-white rounded-lg shadow-lg p-6">
+      <div className="space-y-6">
+        {sousTraitants.map((sousTraitant, index) => (
+          <div
+            key={sousTraitant.id}
+            className="bg-white rounded-lg border border-gray-200 p-6 relative transition-all duration-200 hover:shadow-md"
           >
-            <option value="">Sélectionner un sous-traitant</option>
-            {contextSousTraitants?.map((st, index) => (
-              <option key={index} value={st.nom}>
-                {st.nom}
-              </option>
-            ))}
-          </select>
-          <div className="col-span-2 flex items-center">
-            <FaCubes className="mr-2" />
-            <input
-              type="number"
-              placeholder="Quantité"
-              value={sousTraitant.quantite}
-              onChange={(e) =>
-                handleChange(
-                  sousTraitant.id,
-                  "quantite",
-                  parseFloat(e.target.value) || 0
-                )
-              }
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            />
-          </div>
-          {index > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+              <div className="md:col-span-8">
+                <label className="block text-gray-700 text-sm font-semibold mb-2 flex items-center">
+                  <span className="bg-blue-100 p-2 rounded-full mr-2">
+                    <FaBuilding className="text-blue-600" />
+                  </span>
+                  Sous-traitant
+                </label>
+                <select
+                  value={sousTraitant.nom}
+                  onChange={(e) =>
+                    handleChange(sousTraitant.id, "nom", e.target.value)
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                >
+                  <option value="">Sélectionner un sous-traitant</option>
+                  {contextSousTraitants?.map((st, index) => (
+                    <option key={index} value={st.nom}>
+                      {st.nom}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="md:col-span-4">
+                <label className="block text-gray-700 text-sm font-semibold mb-2 flex items-center">
+                  <span className="bg-blue-100 p-2 rounded-full mr-2">
+                    <FaCubes className="text-blue-600" />
+                  </span>
+                  Quantité
+                </label>
+                <input
+                  type="number"
+                  value={sousTraitant.quantite}
+                  onChange={(e) =>
+                    handleChange(
+                      sousTraitant.id,
+                      "quantite",
+                      parseFloat(e.target.value) || 0
+                    )
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                  min="0"
+                  step="1"
+                />
+              </div>
+            </div>
+
             <button
               onClick={() => confirmDeleteSousTraitant(sousTraitant.id)}
-              className="absolute top-2 right-2 text-zinc-500 hover:text-red-700"
+              className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors duration-200"
+              title="Supprimer le sous-traitant"
             >
-              <FaTimes />
+              <FaTimes className="w-5 h-5" />
             </button>
-          )}
-        </div>
-      </div>
-    ));
-  };
+          </div>
+        ))}
 
-  return (
-    <div className="p-4 w-full space-y-4">
-      {renderSousTraitants()}
-      <button
-        onClick={handleAddSousTraitant}
-        className="w-full py-2 px-4 bg-blue-500 text-white rounded shadow flex items-center justify-center"
-      >
-        <FaPlusCircle className="mr-2" />
-        Ajouter un sous-traitant
-      </button>
+        <button
+          onClick={handleAddSousTraitant}
+          className="w-full mt-4 py-3 px-4 bg-blue-50 text-blue-600 rounded-lg border-2 border-blue-100 hover:bg-blue-100 transition-all duration-200 flex items-center justify-center font-medium"
+        >
+          <FaPlusCircle className="mr-2" />
+          Ajouter un sous-traitant
+        </button>
+      </div>
 
       {showConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
-            <h3 className="text-xl font-bold mb-4">Confirmer la Suppression</h3>
-            <p>Êtes-vous sûr de vouloir supprimer ce sous-traitant?</p>
-            <div className="flex justify-end space-x-4 mt-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm mx-4">
+            <h3 className="text-lg font-semibold mb-4">Confirmation</h3>
+            <p className="text-gray-600 mb-6">
+              Êtes-vous sûr de vouloir supprimer ce sous-traitant ?
+            </p>
+            <div className="flex justify-end space-x-4">
               <button
                 onClick={() => setShowConfirm(false)}
-                className="py-2 px-4 bg-gray-500 text-white rounded shadow"
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-200"
               >
                 Annuler
               </button>
               <button
                 onClick={handleDeleteSousTraitant}
-                className="py-2 px-4 bg-red-500 text-white rounded shadow"
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors duration-200"
               >
                 Supprimer
               </button>

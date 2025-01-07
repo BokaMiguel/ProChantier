@@ -48,16 +48,10 @@ const styles = StyleSheet.create({
     width: "90%",
     maxWidth: "800px",
   },
-  signatureLine: {
-    marginTop: 30,
-    borderTopWidth: 1,
-    borderTopStyle: "solid",
-    borderTopColor: "#000000",
-    width: "50%",
-    marginLeft: "auto",
-    marginRight: "auto",
-    textAlign: "center",
-    paddingTop: 5,
+  separator: {
+    marginVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#000000",
   },
   header: {
     flexDirection: "column",
@@ -132,10 +126,16 @@ const styles = StyleSheet.create({
     marginRight: 5,
     marginLeft: 15,
   },
-  separator: {
-    marginVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#000000",
+  signatureLine: {
+    marginTop: 30,
+    borderTopWidth: 1,
+    borderTopStyle: "solid",
+    borderTopColor: "#000000",
+    width: "50%",
+    marginLeft: "auto",
+    marginRight: "auto",
+    textAlign: "center",
+    paddingTop: 5,
   },
   table: {
     display: "flex",
@@ -215,38 +215,49 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     marginTop: 10,
   },
-  signatureSection: {
-    marginTop: 50,
-    marginBottom: 30,
+  signatureContainer: {
+    marginTop: 30,
+    padding: 20,
   },
-  dateField: {
+  signatureGridLayout: {
+    flexDirection: "column",
+    gap: 40,
+  },
+  signatureRowLayout: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
     marginBottom: 20,
   },
-  dateText: {
-    fontSize: 12,
-    marginRight: 10,
-  },
-  dateInput: {
-    borderBottomWidth: 1,
-    borderBottomColor: "#000000",
-    width: "60%",
-    textAlign: "center",
-  },
   signatureBoxContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 20,
+    width: "30%",
   },
-  signatureBoxNew: {
-    marginBottom: 40,
+  signatureNameLabel: {
+    fontSize: 10,
+    color: "#2c3e50",
+    marginBottom: 2,
   },
-  signatureText: {
-    fontSize: 12,
-    fontWeight: "bold",
-    textAlign: "center",
+  signatureNameField: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#000",
+    marginBottom: 15,
+    height: 20,
+  },
+  signatureField: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#000",
+    marginVertical: 25,
+    height: 40,
+  },
+  signatureDateLabel: {
+    fontSize: 10,
+    color: "#2c3e50",
+    marginBottom: 2,
+  },
+  signatureDateLine: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#000",
+    marginVertical: 5,
+    height: 20,
   },
   tableContainer: {
     marginTop: 20,
@@ -431,7 +442,7 @@ const EmployeesIcon = () => (
 const ActivitiesIcon = () => (
   <Svg viewBox="0 0 24 24" width={20} height={20}>
     <Path
-      d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"
+      d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"
       fill="#2c3e50"
     />
   </Svg>
@@ -456,9 +467,9 @@ const NotesIcon = () => (
 );
 
 const SignatureIcon = () => (
-  <Svg viewBox="0 0 24 24" width={20} height={20}>
+  <Svg width="20" height="20" viewBox="0 0 24 24">
     <Path
-      d="M22 2v16H6V2h16m2-2H4v20h20V0zM12 11.95h4V9.5h-4v2.45zm0 4.5h4v-2.45h-4v2.45zm0-9h4V5h-4v2.45zm-5.5 9h4v-2.45h-4v2.45zm0-4.5h4V9.5h-4v2.45zm0-4.5h4V5h-4v2.45z"
+      d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM21.41 6.34l-3.75-3.75-2.53 2.54 3.75 3.75 2.53-2.54z"
       fill="#2c3e50"
     />
   </Svg>
@@ -926,35 +937,41 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
           </View>
         )}
 
-        <View style={styles.section}>
+        <View style={styles.signatureContainer}>
           <View style={styles.sectionHeader}>
             <SignatureIcon />
             <Text style={styles.sectionHeaderText}>Signatures</Text>
           </View>
-          <View style={styles.signatureGrid}>
-            <View style={styles.signatureRow}>
-              {/* Signature Contremaître */}
-              <View style={styles.signatureCell}>
-                <View style={styles.signatureBoxNew}>
-                  <Text style={styles.signatureLabel}>Signature Contremaître</Text>
-                  <Text style={styles.signatureLine}></Text>
-                </View>
-                <View style={styles.dateBox}>
-                  <Text style={styles.dateLabel}>Date</Text>
-                  <Text style={styles.dateLine}></Text>
-                </View>
+          <View style={styles.signatureGridLayout}>
+            {/* Première rangée */}
+            <View style={styles.signatureRowLayout}>
+              <View style={styles.signatureBoxContainer}>
+                <Text style={styles.signatureNameLabel}>Nom complet</Text>
+                <View style={styles.signatureNameField} />
               </View>
+              <View style={styles.signatureBoxContainer}>
+                <Text style={styles.signatureNameLabel}>Signature</Text>
+                <View style={styles.signatureField} />
+              </View>
+              <View style={styles.signatureBoxContainer}>
+                <Text style={styles.signatureDateLabel}>Date</Text>
+                <View style={styles.signatureDateLine} />
+              </View>
+            </View>
 
-              {/* Signature Client */}
-              <View style={styles.signatureCell}>
-                <View style={styles.signatureBoxNew}>
-                  <Text style={styles.signatureLabel}>Signature Client</Text>
-                  <Text style={styles.signatureLine}></Text>
-                </View>
-                <View style={styles.dateBox}>
-                  <Text style={styles.dateLabel}>Date</Text>
-                  <Text style={styles.dateLine}></Text>
-                </View>
+            {/* Deuxième rangée */}
+            <View style={styles.signatureRowLayout}>
+              <View style={styles.signatureBoxContainer}>
+                <Text style={styles.signatureNameLabel}>Nom complet</Text>
+                <View style={styles.signatureNameField} />
+              </View>
+              <View style={styles.signatureBoxContainer}>
+                <Text style={styles.signatureNameLabel}>Signature</Text>
+                <View style={styles.signatureField} />
+              </View>
+              <View style={styles.signatureBoxContainer}>
+                <Text style={styles.signatureDateLabel}>Date</Text>
+                <View style={styles.signatureDateLine} />
               </View>
             </View>
           </View>

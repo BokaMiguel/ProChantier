@@ -109,50 +109,59 @@ const StatsGrid: React.FC<StatsGridProps> = ({
   const actIndexOffset = nextStep ? 5 : 0;
 
   return (
-    <div className="p-4">
-      <table className="min-w-full bg-white border rounded shadow-md">
+    <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+      <table className="min-w-full">
         <thead>
           <tr>
-            <th className="py-2 px-4 bg-gray-200 border-b border-r">
-              <div className="flex items-center justify-center">
-                <FaUser className="mr-2" /> Nom
+            <th className="py-3 px-4 bg-gradient-to-r from-blue-100 to-blue-200 border-b">
+              <div className="flex items-center justify-center text-gray-800 font-semibold">
+                <span className="bg-blue-200 p-2 rounded-full mr-2">
+                  <FaUser className="text-blue-700" />
+                </span>
+                Nom
               </div>
             </th>
-            <th className="py-2 px-4 bg-gray-200 border-b border-r" colSpan={5}>
-              <div className="flex items-center justify-center">
-                <FaHourglassHalf className="mr-2" /> Durée par Activité
+            <th className="py-3 px-4 bg-gradient-to-r from-blue-100 to-blue-200 border-b" colSpan={5}>
+              <div className="flex items-center justify-center text-gray-800 font-semibold">
+                <span className="bg-blue-200 p-2 rounded-full mr-2">
+                  <FaHourglassHalf className="text-blue-700" />
+                </span>
+                Durée par Activité
               </div>
             </th>
-            <th className="py-2 px-4 bg-gray-200 border-b" colSpan={2}>
-              <div className="flex items-center justify-center">
-                <FaClock className="mr-2" /> Heures Totales
+            <th className="py-3 px-4 bg-gradient-to-r from-blue-100 to-blue-200 border-b" colSpan={2}>
+              <div className="flex items-center justify-center text-gray-800 font-semibold">
+                <span className="bg-blue-200 p-2 rounded-full mr-2">
+                  <FaClock className="text-blue-700" />
+                </span>
+                Heures Totales
               </div>
             </th>
           </tr>
-          <tr>
-            <th className="py-2 px-4 bg-gray-100 border-b border-r"></th>
+          <tr className="bg-blue-50">
+            <th className="py-2 px-4 border-b font-semibold text-gray-700"></th>
             {Array.from({ length: 5 }).map((_, index) => (
               <th
                 key={index}
-                className={`py-2 px-4 border-b border-r ${
-                  index >= activiteCount ? "text-gray-300" : "text-black"
+                className={`py-2 px-4 border-b font-semibold ${
+                  index >= activiteCount ? "text-gray-400" : "text-gray-700"
                 }`}
               >
                 ACT {index + 1 + (nextStep ? 5 : 0)}
               </th>
             ))}
-            <th className="py-2 px-4 bg-gray-100 border-b border-r">TS</th>
-            <th className="py-2 px-4 bg-gray-100 border-b">TD</th>
+            <th className="py-2 px-4 border-b font-semibold text-gray-700">TS</th>
+            <th className="py-2 px-4 border-b font-semibold text-gray-700">TD</th>
           </tr>
         </thead>
         <tbody>
           {userStats
             .filter((userStat) => userStat.nom.trim() !== "")
             .map((userStat) => (
-              <tr key={userStat.id}>
-                <td className="py-2 px-4 border-b border-r">{userStat.nom}</td>
+              <tr key={userStat.id} className="hover:bg-gray-50 transition-colors duration-150">
+                <td className="py-2 px-4 border-b">{userStat.nom}</td>
                 {userStat.act.slice(nextStep ? 5 : 0, nextStep ? 10 : 5).map((value, index) => (
-                  <td key={index} className="py-2 px-4 border-b border-r">
+                  <td key={index} className="py-2 px-4 border-b">
                     <input
                       type="number"
                       step="0.25"
@@ -166,14 +175,14 @@ const StatsGrid: React.FC<StatsGridProps> = ({
                           parseFloat(e.target.value) || 0
                         )
                       }
-                      className={`border rounded px-2 py-1 w-full ${
-                        index >= activiteCount ? "text-gray-300" : "text-black"
+                      className={`w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ${
+                        index >= activiteCount ? "text-gray-300 bg-gray-50" : "text-gray-700"
                       }`}
                       disabled={index >= activiteCount}
                     />
                   </td>
                 ))}
-                <td className="py-2 px-4 border-b border-r">
+                <td className="py-2 px-4 border-b">
                   <input
                     type="number"
                     step="0.25"
@@ -181,7 +190,7 @@ const StatsGrid: React.FC<StatsGridProps> = ({
                     max="24"
                     value={userStat.ts}
                     readOnly
-                    className="border rounded px-2 py-1 w-full bg-gray-100"
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
                   />
                 </td>
                 <td className="py-2 px-4 border-b">
@@ -197,20 +206,20 @@ const StatsGrid: React.FC<StatsGridProps> = ({
                         parseFloat(e.target.value) || 0
                       )
                     }
-                    className="border rounded px-2 py-1 w-full"
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-700"
                   />
                 </td>
               </tr>
             ))}
-          <tr className="font-bold">
-            <td className="py-2 px-4 border-b border-r">Totaux</td>
+          <tr className="bg-gray-50 font-semibold text-gray-700">
+            <td className="py-3 px-4 border-t">Totaux</td>
             {totals.act.map((total, index) => (
-              <td key={index} className="py-2 px-4 border-b border-r">
+              <td key={index} className="py-3 px-4 border-t text-center">
                 {total}
               </td>
             ))}
-            <td className="py-2 px-4 border-b border-r">{totals.ts}</td>
-            <td className="py-2 px-4 border-b">{totals.td}</td>
+            <td className="py-3 px-4 border-t text-center">{totals.ts}</td>
+            <td className="py-3 px-4 border-t text-center">{totals.td}</td>
           </tr>
         </tbody>
       </table>

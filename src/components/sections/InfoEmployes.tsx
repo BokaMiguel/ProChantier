@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FaUser, FaBriefcase, FaToolbox, FaTimes } from "react-icons/fa";
+import { FaUser, FaBriefcase, FaToolbox, FaTimes, FaPlusCircle } from "react-icons/fa";
 import { Employe } from "../../models/JournalFormModel";
 import { useAuth } from "../../context/AuthContext";
 
@@ -7,7 +7,7 @@ const InfoEmployes: React.FC<{
   users: Employe[];
   setUsers: React.Dispatch<React.SetStateAction<Employe[]>>;
 }> = ({ users, setUsers }) => {
-  const [showModal, setShowModal] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [userIdToDelete, setUserIdToDelete] = useState<number | null>(null);
 
   const { employees, fonctions, equipements } = useAuth();
@@ -85,7 +85,7 @@ const InfoEmployes: React.FC<{
   };
 
   const handleDeleteUser = (id: number) => {
-    setShowModal(true);
+    setShowConfirm(true);
     setUserIdToDelete(id);
   };
 
@@ -104,7 +104,7 @@ const InfoEmployes: React.FC<{
       );
       setUsers(updatedUsers);
     }
-    setShowModal(false);
+    setShowConfirm(false);
     setUserIdToDelete(null);
   };
 
@@ -115,97 +115,122 @@ const InfoEmployes: React.FC<{
     }
   }, [users, employees]);
 
-  const renderUserRows = () => {
-    return users.map((user) => (
-      <div key={user.id} className="grid grid-cols-10 gap-4 mb-4 items-center">
-        <select
-          value={user.nom && user.prenom ? `${user.prenom} ${user.nom}` : ""}
-          onChange={(e) => handleChange(user.id, "nom", e.target.value)}
-          className="col-span-3 border rounded px-2 py-1 w-full"
-        >
-          <option value=""></option>
-          {employees
-            ?.filter(
-              (emp) =>
-                !users.some(
-                  (u) =>
-                    u.id !== user.id &&
-                    u.nom === emp.nom &&
-                    u.prenom === emp.prenom &&
-                    u.nom !== "" &&
-                    u.prenom !== ""
-                )
-            )
-            .map((emp, index) => (
-              <option key={index} value={`${emp.prenom} ${emp.nom}`}>
-                {`${emp.prenom} ${emp.nom}`}
-              </option>
-            ))}
-        </select>
-        <select
-          value={user.fonction?.nom || ""}
-          onChange={(e) => handleChange(user.id, "fonction", e.target.value)}
-          className="col-span-3 border rounded px-2 py-1 w-full"
-        >
-          <option value=""></option>
-          {fonctions?.map((f) => (
-            <option key={f.id} value={f.nom}>
-              {f.nom}
-            </option>
-          ))}
-        </select>
-        <select
-          value={user.equipement?.nom || ""}
-          onChange={(e) => handleChange(user.id, "equipement", e.target.value)}
-          className="col-span-3 border rounded px-2 py-1 w-full"
-        >
-          <option value=""></option>
-          {equipements?.map((e) => (
-            <option key={e.id} value={e.nom}>
-              {e.nom}
-            </option>
-          ))}
-        </select>
-        <button
-          onClick={() => handleDeleteUser(user.id)}
-          className="col-span-1 hover:text-red-700 flex items-center justify-center"
-        >
-          <FaTimes />
-        </button>
-      </div>
-    ));
-  };
-
   return (
-    <div className="p-4 w-full">
-      <div className="grid grid-cols-10 gap-4 mb-4 font-bold">
-        <div className="col-span-3 flex items-center justify-center">
-          <FaUser className="mr-2" /> Nom
-        </div>
-        <div className="col-span-3 flex items-center justify-center">
-          <FaBriefcase className="mr-2" /> Fonction
-        </div>
-        <div className="col-span-3 flex items-center justify-center">
-          <FaToolbox className="mr-2" /> Équipement
-        </div>
-        <div className="col-span-1"></div>
-      </div>
-      {renderUserRows()}
-      {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded shadow-lg">
-            <h3 className="text-xl font-bold mb-4">Confirmer la Suppression</h3>
-            <p>Êtes-vous sûr de vouloir supprimer cet utilisateur?</p>
-            <div className="flex justify-end mt-4">
+    <div className="bg-white rounded-lg shadow-lg p-6">
+      <div className="space-y-6">
+        {users.map((user, index) => (
+          <div
+            key={user.id}
+            className="bg-white rounded-lg border border-gray-200 p-6 transition-all duration-200 hover:shadow-md"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+              <div className="md:col-span-5">
+                <label className="block text-gray-700 text-sm font-semibold mb-2 flex items-center">
+                  <span className="bg-blue-100 p-2 rounded-full mr-2">
+                    <FaUser className="text-blue-600" />
+                  </span>
+                  Employé
+                </label>
+                <select
+                  value={`${user.prenom} ${user.nom}`}
+                  onChange={(e) => handleChange(user.id, "nom", e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                >
+                  <option value="">Sélectionner un employé</option>
+                  {employees?.map((employee) => (
+                    <option
+                      key={employee.id}
+                      value={`${employee.prenom} ${employee.nom}`}
+                    >
+                      {`${employee.prenom} ${employee.nom}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="md:col-span-4">
+                <label className="block text-gray-700 text-sm font-semibold mb-2 flex items-center">
+                  <span className="bg-blue-100 p-2 rounded-full mr-2">
+                    <FaBriefcase className="text-blue-600" />
+                  </span>
+                  Fonction
+                </label>
+                <select
+                  value={user.fonction?.nom || ""}
+                  onChange={(e) => handleChange(user.id, "fonction", e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                >
+                  <option value="">Sélectionner une fonction</option>
+                  {fonctions?.map((fonction) => (
+                    <option key={fonction.id} value={fonction.nom}>
+                      {fonction.nom}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="md:col-span-3">
+                <label className="block text-gray-700 text-sm font-semibold mb-2 flex items-center">
+                  <span className="bg-blue-100 p-2 rounded-full mr-2">
+                    <FaToolbox className="text-blue-600" />
+                  </span>
+                  Équipement
+                </label>
+                <select
+                  value={user.equipement?.nom || ""}
+                  onChange={(e) => handleChange(user.id, "equipement", e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                >
+                  <option value="">Sélectionner un équipement</option>
+                  {equipements?.map((equipement) => (
+                    <option key={equipement.id} value={equipement.nom}>
+                      {equipement.nom}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {users.length > 1 && (
               <button
-                onClick={() => setShowModal(false)}
-                className="bg-gray-500 text-white py-2 px-4 rounded mr-2"
+                onClick={() => handleDeleteUser(user.id)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors duration-200"
+                title="Supprimer l'employé"
+              >
+                <FaTimes className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+        ))}
+
+        {employees && users.length < employees.length && (
+          <button
+            onClick={handleAddUser}
+            className="w-full mt-4 py-3 px-4 bg-blue-50 text-blue-600 rounded-lg border-2 border-blue-100 hover:bg-blue-100 transition-all duration-200 flex items-center justify-center font-medium"
+          >
+            <FaPlusCircle className="mr-2" />
+            Ajouter un employé
+          </button>
+        )}
+      </div>
+
+      {showConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm mx-4">
+            <h3 className="text-lg font-semibold mb-4">Confirmation</h3>
+            <p className="text-gray-600 mb-6">
+              Êtes-vous sûr de vouloir supprimer cet employé ?
+            </p>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-200"
               >
                 Annuler
               </button>
               <button
                 onClick={confirmDeleteUser}
-                className="bg-red-500 text-white py-2 px-4 rounded"
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors duration-200"
               >
                 Supprimer
               </button>

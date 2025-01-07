@@ -7,6 +7,7 @@ import {
   FaThermometerThreeQuarters,
   FaCalendarAlt,
   FaClock,
+  FaBuilding,
 } from "react-icons/fa";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -50,98 +51,134 @@ const InfoProjet: React.FC<InfoProjetProps> = ({
   );
 
   return (
-    <div className="bg-white rounded-lg overflow-hidden">
+    <div className="bg-white rounded-lg shadow-lg overflow-hidden">
       <div className="p-6 space-y-6">
-        <div className="grid grid-cols-2 gap-6">
-          <div>
-            <label className="block text-gray-700 text-sm font-bold mb-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="relative">
+            <label className="block text-gray-700 text-sm font-semibold mb-2 flex items-center">
+              <span className="bg-blue-100 p-2 rounded-full mr-2">
+                <FaBuilding className="text-blue-600" />
+              </span>
               Projet #
             </label>
             <input
               type="text"
               value={selectedProject?.NumeroProjet || ""}
               readOnly
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
             />
           </div>
-          <div>
-            <label className="block text-gray-700 text-sm font-bold mb-2">
-              <FaCalendarAlt className="inline-block mr-2" />
+          <div className="relative">
+            <label className="block text-gray-700 text-sm font-semibold mb-2 flex items-center">
+              <span className="bg-blue-100 p-2 rounded-full mr-2">
+                <FaCalendarAlt className="text-blue-600" />
+              </span>
               Date
             </label>
-            <DatePicker
-              calendarStartDay={0}
-              selected={
-                currentActivity?.date ? new Date(currentActivity.date) : date
-              }
-              onChange={handleDateChange}
-              dateFormat="dd/MM/yyyy"
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              locale={fr}
-            />
-            {date && (
-              <div className="mt-1 text-gray-600 text-sm">
-                {format(
-                  currentActivity?.date ? new Date(currentActivity.date) : date,
-                  "EEEE d MMMM yyyy",
-                  { locale: fr }
-                )}
-              </div>
-            )}
+            <div className="flex flex-col relative">
+              <DatePicker
+                calendarStartDay={0}
+                selected={currentActivity?.date ? new Date(currentActivity.date) : date}
+                onChange={handleDateChange}
+                dateFormat="dd/MM/yyyy"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                locale={fr}
+                wrapperClassName="relative z-50"
+                calendarClassName="absolute left-0 mt-2 bg-white shadow-lg rounded-lg border border-gray-200"
+                shouldCloseOnSelect={true}
+                showPopperArrow={false}
+              />
+              {date && (
+                <div className="mt-2 text-gray-600 text-sm text-center">
+                  {format(currentActivity?.date ? new Date(currentActivity.date) : date, "EEEE d MMMM yyyy", { locale: fr })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-6">
-          <div>
-            <label className="block text-gray-700 text-sm font-bold mb-2">
-              <FaClock className="inline-block mr-2" />
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="relative">
+            <label className="block text-gray-700 text-sm font-semibold mb-2 flex items-center">
+              <span className="bg-blue-100 p-2 rounded-full mr-2">
+                <FaClock className="text-blue-600" />
+              </span>
               Hrs Arrivée
             </label>
             <input
               type="time"
               value={currentActivity?.hrsDebut || arrivee}
               onChange={(e) => setArrivee(e.target.value)}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
             />
           </div>
-          <div>
-            <label className="block text-gray-700 text-sm font-bold mb-2">
-              <FaClock className="inline-block mr-2" />
+          <div className="relative">
+            <label className="block text-gray-700 text-sm font-semibold mb-2 flex items-center">
+              <span className="bg-blue-100 p-2 rounded-full mr-2">
+                <FaClock className="text-blue-600" />
+              </span>
               Hrs Départ
             </label>
             <input
               type="time"
               value={currentActivity?.hrsFin || depart}
               onChange={(e) => setDepart(e.target.value)}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
             />
           </div>
-        </div>
-        <div>
-          <label className="block text-gray-700 text-sm font-bold mb-2 text-center">
-            Types de Journée
-          </label>
-          <div className="flex flex-wrap justify-center gap-2">
-            {[
-              { name: "Soleil", icon: FaSun },
-              { name: "Nuage", icon: FaCloud },
-              { name: "Pluie", icon: FaCloudRain },
-              { name: "Neige", icon: FaSnowflake },
-              { name: "Chaleur+", icon: FaThermometerThreeQuarters },
-            ].map((type) => (
+          <div className="relative">
+            <label className="block text-gray-700 text-sm font-semibold mb-2 flex items-center">
+              <span className="bg-blue-100 p-2 rounded-full mr-2">
+                <FaThermometerThreeQuarters className="text-blue-600" />
+              </span>
+              Météo
+            </label>
+            <div className="grid grid-cols-4 gap-2">
               <button
-                key={type.name}
                 type="button"
-                className={`flex items-center space-x-2 py-2 px-4 rounded ${
-                  weather === type.name
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                onClick={() => setWeather("Ensoleillé")}
+                className={`p-2 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                  weather === "Ensoleillé"
+                    ? "bg-yellow-100 text-yellow-600 ring-2 ring-yellow-500"
+                    : "bg-gray-100 text-gray-600 hover:bg-yellow-50"
                 }`}
-                onClick={() => setWeather(type.name)}
               >
-                <type.icon />
-                <span>{type.name}</span>
+                <FaSun />
               </button>
-            ))}
+              <button
+                type="button"
+                onClick={() => setWeather("Nuageux")}
+                className={`p-2 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                  weather === "Nuageux"
+                    ? "bg-gray-200 text-gray-600 ring-2 ring-gray-500"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                <FaCloud />
+              </button>
+              <button
+                type="button"
+                onClick={() => setWeather("Pluvieux")}
+                className={`p-2 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                  weather === "Pluvieux"
+                    ? "bg-blue-100 text-blue-600 ring-2 ring-blue-500"
+                    : "bg-gray-100 text-gray-600 hover:bg-blue-50"
+                }`}
+              >
+                <FaCloudRain />
+              </button>
+              <button
+                type="button"
+                onClick={() => setWeather("Neigeux")}
+                className={`p-2 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                  weather === "Neigeux"
+                    ? "bg-blue-50 text-blue-600 ring-2 ring-blue-500"
+                    : "bg-gray-100 text-gray-600 hover:bg-blue-50"
+                }`}
+              >
+                <FaSnowflake />
+              </button>
+            </div>
           </div>
         </div>
       </div>
