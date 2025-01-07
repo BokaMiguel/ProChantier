@@ -227,6 +227,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 20,
+    alignItems: "flex-end",
   },
   signatureBoxContainer: {
     width: "30%",
@@ -234,30 +235,27 @@ const styles = StyleSheet.create({
   signatureNameLabel: {
     fontSize: 10,
     color: "#2c3e50",
-    marginBottom: 2,
+    marginBottom: 5,
   },
   signatureNameField: {
     borderBottomWidth: 1,
     borderBottomColor: "#000",
-    marginBottom: 15,
-    height: 20,
+    height: 25,
   },
   signatureField: {
     borderBottomWidth: 1,
     borderBottomColor: "#000",
-    marginVertical: 25,
-    height: 40,
+    height: 25,
   },
   signatureDateLabel: {
     fontSize: 10,
     color: "#2c3e50",
-    marginBottom: 2,
+    marginBottom: 5,
   },
   signatureDateLine: {
     borderBottomWidth: 1,
     borderBottomColor: "#000",
-    marginVertical: 5,
-    height: 20,
+    height: 25,
   },
   tableContainer: {
     marginTop: 20,
