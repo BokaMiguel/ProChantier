@@ -1,25 +1,20 @@
 import React from "react";
 import { FaChevronDown, FaChevronUp } from "react-icons/fa";
 
+export type SectionKey =
+  | "materiaux"
+  | "sousTraitants"
+  | "infoProjet"
+  | "infoEmployes"
+  | "grilleActivites"
+  | "notes"
+  | "signature";
+
 interface SectionHeaderProps {
   title: string;
-  sectionKey:
-    | "infoProjet"
-    | "grilleActivites"
-    | "infoEmployes"
-    | "materiaux"
-    | "sousTraitants"
-    | "notes";
+  sectionKey: SectionKey;
   isOpen: boolean;
-  onToggle: (
-    key:
-      | "infoProjet"
-      | "grilleActivites"
-      | "infoEmployes"
-      | "materiaux"
-      | "sousTraitants"
-      | "notes"
-  ) => void;
+  onToggle: (section: SectionKey) => void;
 }
 
 const SectionHeader: React.FC<SectionHeaderProps> = ({
@@ -52,7 +47,7 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
         transform transition-transform duration-300
         ${isOpen ? 'rotate-180' : 'rotate-0'}
       `}>
-        <FaChevronDown className="w-5 h-5" />
+        {isOpen ? <FaChevronUp className="w-5 h-5" /> : <FaChevronDown className="w-5 h-5" />}
       </div>
     </header>
   );

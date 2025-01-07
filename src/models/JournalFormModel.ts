@@ -40,6 +40,7 @@ export interface Activite {
   id: number;
   nom: string;
   projetId: number;
+  type?: "liaison" | "normal";
 }
 
 export interface Lieu {
@@ -142,6 +143,44 @@ export interface Journal {
   sousTraitants: SousTraitant[];
   userStats?: UserStat[];
   statut: Statut;
+  signatureData?: SignatureData;
+}
+
+export interface SignatureData {
+  signature: string;
+  signataire: string;
+  date: Date;
+}
+
+export interface JournalFormData {
+  id: number;
+  projetInfo: ProjectInfo;
+  entreprise: string;
+  localisation: string;
+  plageHoraire: string;
+  notes: string;
+  activites: ActivitePlanif[];
+  employes: Employe[];
+  materiaux: Materiau[];
+  sousTraitants: SousTraitant[];
+  userStats?: UserStat[];
+  statut: Statut;
+  signatureData?: SignatureData;
+}
+
+export interface PDFData {
+  journalDate: string;
+  journalArrivee: string;
+  journalDepart: string;
+  journalWeather: string;
+  journalUsers: Employe[];
+  journalActivitesState: ActivitePlanif[];
+  journalMateriaux: Materiau[];
+  journalSousTraitants: SousTraitant[];
+  userStats: UserStat[];
+  notes: string;
+  projetId?: string;
+  signatureData?: SignatureData | null;
 }
 
 export type ExpandedSections = {
@@ -149,6 +188,22 @@ export type ExpandedSections = {
   materiaux: boolean;
   sousTraitants: boolean;
   employes: boolean;
+};
+
+export type SectionKey = 
+  | "materiaux"
+  | "sousTraitants"
+  | "infoProjet"
+  | "infoEmployes"
+  | "grilleActivites"
+  | "notes"
+  | "signature";
+
+export type Sections = {
+  [K in SectionKey]: {
+    open: boolean;
+    visible: boolean;
+  };
 };
 
 // Valeurs initiales
@@ -199,7 +254,8 @@ export const initialJournal: Journal = {
   materiaux: [initialMateriau],
   sousTraitants: [initialSousTraitant],
   userStats: [],
-  statut: initialStatut
+  statut: initialStatut,
+  signatureData: undefined
 };
 
 export interface SignalisationProjet {

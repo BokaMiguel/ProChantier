@@ -8,6 +8,7 @@ import ActiviteProjet from "../sections/activiteProjet/ActiviteProjet";
 import SousTraitantSection from "../sections/SousTraitantSection";
 import MateriauxInfo from "../sections/MeteriauxInfo";
 import SectionHeader from "../sections/sectionHeader/SectionHeader";
+import SignatureSection from "../sections/signature/SignatureSection";
 import { useAuth } from "../../context/AuthContext";
 import {
   Employe,
@@ -16,6 +17,7 @@ import {
   LocalisationDistance,
   Localisation,
   JournalUserStats,
+  SignatureData,
 } from "../../models/JournalFormModel";
 import { PDFDocument } from "../../helper/PDFGenerator";
 import { getDistancesForLieu } from "../../services/JournalService";
@@ -24,6 +26,49 @@ Font.register({
   family: "Inter",
   src: "https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff2",
 });
+
+type SectionKey =
+  | "materiaux"
+  | "sousTraitants"
+  | "infoProjet"
+  | "infoEmployes"
+  | "grilleActivites"
+  | "notes"
+  | "signature";
+
+interface PDFContentProps {
+  journalDate: string;
+  journalArrivee: string;
+  journalDepart: string;
+  journalWeather: string;
+  journalUsers: Employe[];
+  journalActivitesState: ActivitePlanif[];
+  journalMateriaux: any[];
+  journalSousTraitants: any[];
+  userStats: JournalUserStats["userStats"];
+  notes: string;
+  projetId?: string;
+  signatureData?: SignatureData | null;
+}
+
+type Sections = {
+  [key in SectionKey]: { open: boolean; visible: boolean };
+};
+
+type PDFData = {
+  journalDate: Date;
+  journalArrivee: string;
+  journalDepart: string;
+  journalWeather: string;
+  journalUsers: Employe[];
+  journalActivitesState: ActivitePlanif[];
+  journalMateriaux: any[];
+  journalSousTraitants: any[];
+  userStats: { id: number; nom: string; act: number[]; ts: number; td: number }[];
+  notes: string;
+  projetId: string;
+  signatureData: { signature: string; signataire: string; date: Date } | null;
+};
 
 export default function Form() {
   const {
@@ -83,16 +128,23 @@ export default function Form() {
 
   const [distances, setDistances] = useState<LocalisationDistance[]>([]);
 
-  const [sections, setSections] = useState({
+  const [sections, setSections] = useState<Sections>({
     infoProjet: { open: true, visible: true },
     infoEmployes: { open: true, visible: true },
     grilleActivites: { open: true, visible: true },
     materiaux: { open: true, visible: true },
     sousTraitants: { open: true, visible: true },
     notes: { open: true, visible: true },
+    signature: { open: true, visible: true },
   });
 
   const [showPDF, setShowPDF] = useState(false);
+  const [pdfEnabled, setPdfEnabled] = useState(false);
+  const [signatureData, setSignatureData] = useState<{
+    signature: string;
+    signataire: string;
+    date: Date;
+  } | null>(null);
 
   useEffect(() => {
     if (type === "entretien") {
@@ -177,7 +229,7 @@ export default function Form() {
     }
   };
 
-  const toggleSection = (section: keyof typeof sections) => {
+  const toggleSection = (section: SectionKey) => {
     setSections((prevSections) => ({
       ...prevSections,
       [section]: {
@@ -187,11 +239,9 @@ export default function Form() {
     }));
   };
 
-  const getVisibleSections = () => {
-    return Object.entries(sections)
-      .filter(([_, value]) => value.visible)
-      .map(([key]) => key);
-  };
+  const visibleSections = Object.keys(sections).filter(
+    (key) => sections[key as SectionKey].visible
+  ) as SectionKey[];
 
   const handleUserStatsChange = (newUserStats: JournalUserStats) => {
     setJournalUserStats(newUserStats);
@@ -212,6 +262,21 @@ export default function Form() {
 
   const handleGeneratePDF = async () => {
     logFormData();
+
+    const pdfData: PDFData = {
+      journalDate,
+      journalArrivee,
+      journalDepart,
+      journalWeather,
+      journalUsers,
+      journalActivitesState,
+      journalMateriaux,
+      journalSousTraitants,
+      userStats: journalUserStats.userStats,
+      notes: journalNotes,
+      projetId: selectedProject?.NumeroProjet?.toString() || '',
+      signatureData
+    };
 
     const uniqueLieuIds = [
       ...new Set(
@@ -265,7 +330,8 @@ export default function Form() {
           journalSousTraitants,
           userStats: journalUserStats.userStats,
           notes: journalNotes,
-          projetId: selectedProject?.NumeroProjet?.toString() || ''
+          projetId: selectedProject?.NumeroProjet?.toString() || '',
+          signatureData,
         }}
         activites={activites}
         bases={bases || []}
@@ -275,8 +341,6 @@ export default function Form() {
       />
     </PDFViewer>
   );
-
-  const visibleSections = getVisibleSections();
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center py-4">
@@ -413,16 +477,47 @@ export default function Form() {
             </section>
           )}
 
-          <div className="text-right mt-6  space-x-4">
+          {sections.signature.visible && (
+            <section>
+              <SectionHeader
+                title={`${
+                  visibleSections.indexOf("signature") + 1
+                }. Signature`}
+                sectionKey="signature"
+                isOpen={sections.signature.open}
+                onToggle={toggleSection}
+              />
+              {sections.signature.open && (
+                <SignatureSection
+                  onSignatureComplete={(data) => {
+                    setSignatureData(data);
+                    setPdfEnabled(true);
+                  }}
+                />
+              )}
+            </section>
+          )}
+
+          <div className="text-right mt-6 space-x-4">
             <button
               onClick={handleGeneratePDF}
-              className="inline-flex items-center px-4 py-2 bg-red-500 text-white rounded hover:bg-red-700 transition-colors duration-300"
+              disabled={!pdfEnabled}
+              className={`inline-flex items-center px-4 py-2 ${
+                pdfEnabled
+                  ? "bg-red-500 hover:bg-red-700"
+                  : "bg-gray-400 cursor-not-allowed"
+              } text-white rounded transition-colors duration-300`}
             >
               Générer PDF
               <FaFilePdf className="ml-2" />
             </button>
             <button
-              className="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700 transition-colors duration-300"
+              disabled={!pdfEnabled}
+              className={`inline-flex items-center px-4 py-2 ${
+                pdfEnabled
+                  ? "bg-blue-500 hover:bg-blue-700"
+                  : "bg-gray-400 cursor-not-allowed"
+              } text-white rounded transition-colors duration-300`}
             >
               Envoyer le formulaire
               <FaArrowRight className="ml-2" />

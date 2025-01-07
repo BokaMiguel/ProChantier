@@ -20,6 +20,7 @@ import {
   LocalisationDistance,
   Lieu,
   UserStat,
+  SignatureData,
 } from "../models/JournalFormModel";
 
 Font.register({
@@ -400,6 +401,7 @@ interface PDFDocumentProps {
     };
     notes: string;
     projetId?: string;
+    signatureData?: SignatureData | null;
   };
   activites: Activite[] | null;
   bases: Localisation[];
@@ -458,7 +460,7 @@ const TimeIcon = () => (
 const NotesIcon = () => (
   <Svg viewBox="0 0 24 24" width={20} height={20}>
     <Path
-      d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 14h-3v3h-2v-3H8v-2h3v-3h2v3h3v2zm-3-7V3.5L18.5 9H13z"
+      d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 14H8v-2h6v2zm0-4H8v-2h6v2zM8 9h6V7H8v2z"
       fill="#2c3e50"
     />
   </Svg>

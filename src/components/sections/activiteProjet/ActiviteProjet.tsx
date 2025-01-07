@@ -1,10 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   FaMapMarkerAlt,
-  FaCubes,
+  FaHardHat,
   FaMapSigns,
   FaTimes,
   FaPlusCircle,
+  FaComment,
+  FaRuler,
+  FaHashtag,
 } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
@@ -376,148 +379,196 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
           const usedBases = getUsedBases(activite.id);
           const usedLiaisons = getUsedLiaisons(activite.id);
 
+          const selectedActivity = activites?.find(
+            (act) => act.id === activite.activiteID
+          );
+
+          const isLiaison = selectedActivity?.type === "liaison";
+
           return (
             <div
               key={activite.id}
-              className="bg-white rounded-lg border border-gray-200 p-6 relative transition-all duration-200 hover:shadow-md space-y-4"
+              className="bg-white rounded-lg shadow-md p-6 mb-8 relative"
             >
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-                  <span className="bg-blue-100 p-2 rounded-full mr-2">
-                    <FaMapSigns className="text-blue-600" />
-                  </span>
-                  {index + 1}.{" "}
-                  <span className="text-blue-600 ml-2">
-                    {activites?.find((act) => act.id === activite.activiteID)?.nom ||
-                      "Sélectionner une activité"}
-                  </span>
-                </h3>
-                {index > 0 && (
-                  <button
-                    onClick={() => requestDeleteActivite(activite.id)}
-                    className="text-gray-400 hover:text-red-500 transition-colors duration-200"
-                    title="Supprimer l'activité"
-                  >
-                    <FaTimes className="w-5 h-5" />
-                  </button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                <div className="md:col-span-12">
-                  <select
-                    value={activite.activiteID || ""}
-                    onChange={(e) =>
-                      handleChange(activite.id, "activiteID", parseInt(e.target.value))
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                  >
-                    <option value="">Sélectionner une activité</option>
-                    {activites?.map((act) => (
-                      <option key={act.id} value={act.id}>
-                        {act.nom}
-                      </option>
-                    ))}
-                  </select>
+              <div className="grid grid-cols-1 gap-6">
+                {/* Header avec le nom de l'activité */}
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                    {index + 1}.{" "}
+                    <span className="text-blue-600 ml-2">
+                      {activites?.find((act) => act.id === activite.activiteID)?.nom ||
+                        "Nouvelle activité"}
+                    </span>
+                  </h3>
+                  {index > 0 && (
+                    <button
+                      onClick={() => requestDeleteActivite(activite.id)}
+                      className="text-gray-400 hover:text-red-500 transition-colors duration-200"
+                      title="Supprimer l'activité"
+                    >
+                      <FaTimes className="w-5 h-5" />
+                    </button>
+                  )}
                 </div>
 
-                <div className="md:col-span-8">
-                  <label className="block text-gray-700 text-sm font-semibold mb-2 flex items-center">
-                    <span className="bg-blue-100 p-2 rounded-full mr-2">
-                      <FaMapSigns className="text-blue-600" />
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                  <div className="md:col-span-4">
+                    <div className="flex items-center mb-2">
+                      <span className="bg-blue-100 p-2 rounded-full">
+                        <FaHardHat className="text-blue-600 w-4 h-4" />
+                      </span>
+                      <label className="text-gray-700 text-sm font-semibold ml-2">
+                        Activité
+                      </label>
+                    </div>
+                    <select
+                      value={activite.activiteID || ""}
+                      onChange={(e) =>
+                        handleChange(
+                          activite.id,
+                          "activiteID",
+                          parseInt(e.target.value)
+                        )
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                    >
+                      <option value="">Sélectionner une activité</option>
+                      {activites?.map((act) => (
+                        <option key={act.id} value={act.id}>
+                          {act.nom}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="md:col-span-4">
+                    <div className="flex items-center mb-2">
+                      <span className="bg-blue-100 p-2 rounded-full">
+                        <FaMapSigns className="text-blue-600 w-4 h-4" />
+                      </span>
+                      <label className="text-gray-700 text-sm font-semibold ml-2">
+                        Lieu
+                      </label>
+                    </div>
+                    <select
+                      value={activite.lieuID || ""}
+                      onChange={(e) =>
+                        handleChange(
+                          activite.id,
+                          "lieuID",
+                          parseInt(e.target.value)
+                        )
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                    >
+                      <option value="">Sélectionner un lieu</option>
+                      {lieux?.map((lieu) => (
+                        <option key={lieu.id} value={lieu.id}>
+                          {lieu.nom}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="md:col-span-4">
+                    <div className="flex items-center mb-2">
+                      <span className="bg-blue-100 p-2 rounded-full">
+                        {activite.liaisons?.length ? (
+                          <FaRuler className="text-blue-600 w-4 h-4" />
+                        ) : (
+                          <FaHashtag className="text-blue-600 w-4 h-4" />
+                        )}
+                      </span>
+                      <label className="text-gray-700 text-sm font-semibold ml-2">
+                        {activite.liaisons?.length ? "Distance (m)" : "Quantité"}
+                      </label>
+                    </div>
+                    <input
+                      type="number"
+                      value={activite.quantite || ""}
+                      onChange={(e) =>
+                        handleChange(
+                          activite.id,
+                          "quantite",
+                          parseFloat(e.target.value)
+                        )
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                      placeholder={activite.liaisons?.length ? "Distance en mètres" : "Quantité"}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <div className="flex items-center mb-2">
+                    <span className="bg-blue-100 p-2 rounded-full">
+                      <FaMapMarkerAlt className="text-blue-600 w-4 h-4" />
                     </span>
-                    Lieu
-                  </label>
-                  <select
-                    value={activite.lieuID || ""}
-                    onChange={(e) => {
-                      const selectedLieuId = parseInt(e.target.value);
-                      handleChange(activite.id, "lieuID", selectedLieuId || null);
+                    <label className="text-gray-700 text-sm font-semibold ml-2">
+                      Bases et liaisons
+                    </label>
+                  </div>
+                  <div
+                    onClick={() => {
+                      if (activite.lieuID) {
+                        openModal(activite.id);
+                      }
+                    }}
+                    className={`w-full min-h-[80px] p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ${
+                      activite.lieuID ? "cursor-pointer hover:bg-gray-50" : "cursor-not-allowed bg-gray-50"
+                    }`}
+                  >
+                    {activite.lieuID ? (
+                      <div className="flex flex-wrap gap-2">
+                        {activite.bases?.map((base, index) => (
+                          <span
+                            key={`base-${index}`}
+                            className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm"
+                          >
+                            {base.base}
+                          </span>
+                        ))}
+                        {activite.liaisons?.map((liaison, index) => (
+                          <span
+                            key={`liaison-${index}`}
+                            className="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm"
+                          >
+                            {liaison.baseA} → {liaison.baseB}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-gray-500">Veuillez d'abord sélectionner un lieu</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <div className="flex items-center mb-2">
+                    <span className="bg-blue-100 p-2 rounded-full">
+                      <FaComment className="text-blue-600 w-4 h-4" />
+                    </span>
+                    <label className="text-gray-700 text-sm font-semibold ml-2">
+                      Commentaire
+                    </label>
+                  </div>
+                  <textarea
+                    ref={(el) => (notesRef.current[activite.id] = el)}
+                    value={activite.note || ""}
+                    onChange={(e) =>
+                      handleChange(activite.id, "note", e.target.value)
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        addNewActivity();
+                      }
                     }}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                  >
-                    <option value="">Sélectionner un lieu</option>
-                    {lieux?.map((lieu) => (
-                      <option key={lieu.id} value={lieu.id}>
-                        {lieu.nom}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="md:col-span-4">
-                  <label className="block text-gray-700 text-sm font-semibold mb-2 flex items-center">
-                    <span className="bg-blue-100 p-2 rounded-full mr-2">
-                      <FaCubes className="text-blue-600" />
-                    </span>
-                    Quantité
-                  </label>
-                  <input
-                    type="number"
-                    value={activite.quantite || 0}
-                    onChange={(e) =>
-                      handleChange(
-                        activite.id,
-                        "quantite",
-                        parseFloat(e.target.value) || 0
-                      )
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                    min="0"
-                    step="1"
+                    rows={2}
+                    placeholder="Ajouter un commentaire..."
                   />
                 </div>
-              </div>
-
-              <div className="space-y-4">
-                <label className="block text-gray-700 text-sm font-semibold mb-2 flex items-center">
-                  <span className="bg-blue-100 p-2 rounded-full mr-2">
-                    <FaMapMarkerAlt className="text-blue-600" />
-                  </span>
-                  Localisation
-                </label>
-                <textarea
-                  placeholder="Sélectionner des bases ou liaisons"
-                  value={
-                    activite.lieuID
-                      ? [
-                          ...(activite.bases?.map((base) => base.base) || []),
-                          ...(activite.liaisons?.map(
-                            (liaison) => `${liaison.baseA} @ ${liaison.baseB}`
-                          ) || []),
-                        ].join(", ")
-                      : "Veuillez d'abord sélectionner un lieu"
-                  }
-                  readOnly
-                  onClick={() => {
-                    if (activite.lieuID) {
-                      openModal(activite.id);
-                    }
-                  }}
-                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none ${
-                    activite.lieuID ? "cursor-pointer hover:bg-gray-50" : "cursor-not-allowed bg-gray-50"
-                  }`}
-                  rows={2}
-                />
-              </div>
-
-              <div className="space-y-4">
-                <label className="block text-gray-700 text-sm font-semibold mb-2 flex items-center">
-                  <span className="bg-blue-100 p-2 rounded-full mr-2">
-                    <FaMapMarkerAlt className="text-blue-600" />
-                  </span>
-                  Notes / Remarques
-                </label>
-                <textarea
-                  ref={(el) => (notesRef.current[activite.id] = el)}
-                  placeholder="Écrire une note ou une remarque."
-                  value={activite.note || ""}
-                  onChange={(e) =>
-                    handleChange(activite.id, "note", e.target.value)
-                  }
-                  rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
-                />
               </div>
 
               {activite.lieuID && (
