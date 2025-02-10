@@ -12,15 +12,16 @@ import SignatureSection from "../sections/signature/SignatureSection";
 import { useAuth } from "../../context/AuthContext";
 import {
   Employe,
-  ActivitePlanif,
-  initialActivite,
+  PlanifChantier,
+  PlanifActivites,
+  initialPlanifChantier,
   LocalisationDistance,
   Localisation,
   JournalUserStats,
   SignatureData,
 } from "../../models/JournalFormModel";
 import { PDFDocument } from "../../helper/PDFGenerator";
-import { getDistancesForLieu } from "../../services/JournalService";
+import { getDistancesForLieu, getPlanifChantier, getPlanifActivites } from "../../services/JournalService";
 
 Font.register({
   family: "Inter",
@@ -42,7 +43,8 @@ interface PDFContentProps {
   journalDepart: string;
   journalWeather: string;
   journalUsers: Employe[];
-  journalActivitesState: ActivitePlanif[];
+  planifChantier: PlanifChantier;
+  planifActivites: PlanifActivites[];
   journalMateriaux: any[];
   journalSousTraitants: any[];
   userStats: JournalUserStats["userStats"];
@@ -61,7 +63,8 @@ type PDFData = {
   journalDepart: string;
   journalWeather: string;
   journalUsers: Employe[];
-  journalActivitesState: ActivitePlanif[];
+  planifChantier: PlanifChantier;
+  planifActivites: PlanifActivites[];
   journalMateriaux: any[];
   journalSousTraitants: any[];
   userStats: { id: number; nom: string; act: number[]; ts: number; td: number }[];
@@ -74,8 +77,6 @@ export default function Form() {
   const {
     lieux,
     sousTraitants,
-    activitesPlanif,
-    bases,
     activites,
     signalisations,
     selectedProject,
@@ -105,14 +106,11 @@ export default function Form() {
     },
   ]);
 
-  const [journalActivitesState, setJournalActivitesState] = useState<
-    ActivitePlanif[]
-  >([initialActivite]);
+  const [planifChantier, setPlanifChantier] = useState<PlanifChantier>(initialPlanifChantier);
+  const [planifActivites, setPlanifActivites] = useState<PlanifActivites[]>([]);
+  
   const [journalSavedBases, setJournalSavedBases] = useState<Localisation[]>([]);
-  const [journalSavedLiaisons, setJournalSavedLiaisons] = useState<
-    LocalisationDistance[]
-  >([]);
-
+  const [journalSavedLiaisons, setJournalSavedLiaisons] = useState<LocalisationDistance[]>([]);
   const [savedBasesAttachment, setSavedBasesAttachment] = useState<string[]>([]);
 
   const [journalUserStats, setJournalUserStats] = useState<JournalUserStats>({
@@ -123,9 +121,9 @@ export default function Form() {
       td: 0,
     },
   });
+  
   const [journalMateriaux, setJournalMateriaux] = useState<any[]>([]);
   const [journalSousTraitants, setJournalSousTraitants] = useState<any[]>([]);
-
   const [distances, setDistances] = useState<LocalisationDistance[]>([]);
 
   const [sections, setSections] = useState<Sections>({
@@ -161,64 +159,35 @@ export default function Form() {
   }, [type]);
 
   useEffect(() => {
-    if (idPlanif && activitesPlanif && activites) {
-      const currentPlanif = activitesPlanif.find(
-        (planif) => planif.id === Number(idPlanif)
-      );
-      if (currentPlanif) {
-        const lieu = lieux?.find((l) => l.id === currentPlanif.lieuID);
-        const entreprise = sousTraitants?.find(
-          (st) => st.id === currentPlanif.defaultEntrepriseId
-        );
-        const signalisation = signalisations?.find(
-          (sig) => sig.id === currentPlanif.signalisationId
-        );
+    if (idPlanif) {
+      const fetchPlanifData = async () => {
+        try {
+          const planifData = await getPlanifChantier(Number(idPlanif));
+          if (planifData) {
+            setPlanifChantier(planifData);
+            
+            // Mettre à jour les champs du journal
+            setJournalDate(new Date(planifData.date));
+            setJournalArrivee(planifData.hrsDebut);
+            setJournalDepart(planifData.hrsFin);
+            
+            // Récupérer les activités associées
+            const activitesData = await getPlanifActivites(Number(idPlanif));
+            setPlanifActivites(activitesData);
 
-        setJournalActivitesState([
-          {
-            ...currentPlanif,
-            lieuID: lieu?.id ?? null,
-            note: currentPlanif.note || "",
-            defaultEntrepriseId: entreprise?.id ?? null,
-            signalisationId: signalisation?.id ?? null,
-          },
-        ]);
-        setJournalSavedBases([]);
-        setJournalSavedLiaisons([]);
-
-        if (currentPlanif.date) {
-          setJournalDate(new Date(currentPlanif.date));
+            // Si un lieu est défini, récupérer les distances
+            if (planifData.lieuID) {
+              fetchDistances(planifData.lieuID);
+            }
+          }
+        } catch (error) {
+          console.error("Erreur lors de la récupération des données de planification:", error);
         }
-        setJournalArrivee(currentPlanif.hrsDebut || "");
-        setJournalDepart(currentPlanif.hrsFin || "");
+      };
 
-        if (lieu) {
-          fetchDistances(lieu.id);
-        }
-      }
+      fetchPlanifData();
     }
-  }, [
-    idPlanif,
-    activitesPlanif,
-    activites,
-    lieux,
-    sousTraitants,
-    signalisations,
-  ]);
-
-  useEffect(() => {
-    // Update journalUserStats when journalUsers changes
-    setJournalUserStats((prevStats) => ({
-      ...prevStats,
-      userStats: journalUsers.map((user) => ({
-        id: user.id,
-        nom: `${user.prenom} ${user.nom}`,
-        act: Array(10).fill(0),
-        ts: 0,
-        td: 0,
-      })),
-    }));
-  }, [journalUsers]);
+  }, [idPlanif]);
 
   const fetchDistances = async (lieuId: number) => {
     try {
@@ -247,73 +216,25 @@ export default function Form() {
     setJournalUserStats(newUserStats);
   };
 
-  const logFormData = () => {
-    console.log("Form Data:");
-    console.log("Date:", journalDate);
-    console.log("Arrivée:", journalArrivee);
-    console.log("Départ:", journalDepart);
-    console.log("Météo:", journalWeather);
-    console.log("Utilisateurs:", journalUsers);
-    console.log("Activités:", journalActivitesState);
-    console.log("Matériaux:", journalMateriaux);
-    console.log("Sous-traitants:", journalSousTraitants);
-    console.log("Statistiques utilisateurs:", journalUserStats);
-  };
-
-  const handleGeneratePDF = async () => {
-    logFormData();
-
+  const handlePDFGeneration = () => {
     const pdfData: PDFData = {
       journalDate,
       journalArrivee,
       journalDepart,
       journalWeather,
       journalUsers,
-      journalActivitesState,
+      planifChantier,
+      planifActivites,
       journalMateriaux,
       journalSousTraitants,
       userStats: journalUserStats.userStats,
       notes: journalNotes,
-      projetId: selectedProject?.NumeroProjet?.toString() || '',
-      signatureData
+      projetId: selectedProject?.ID.toString() || "",
+      signatureData,
     };
 
-    const uniqueLieuIds = [
-      ...new Set(
-        journalActivitesState
-          .map((a) => a.lieuID)
-          .filter((id): id is number => id !== null)
-      ),
-    ];
-    const allDistances = await Promise.all(
-      uniqueLieuIds.map((lieuId) => getDistancesForLieu(lieuId))
-    );
-    const flattenedDistances = allDistances.flat();
-
-    console.log("Flattened distances:", flattenedDistances);
-
-    setDistances(flattenedDistances);
-
-    const processedActivities = journalActivitesState.map((activity) => {
-      const activityDistances = flattenedDistances.filter(
-        (d) => d.LieuID === activity.lieuID
-      );
-      const activityBases = activity.bases || [];
-
-      const relevantDistances = activityDistances.filter(
-        (d) =>
-          activityBases.some((b) => b.id === d.BaseA) &&
-          activityBases.some((b) => b.id === d.BaseB)
-      );
-
-      return {
-        ...activity,
-        processedDistances: relevantDistances,
-      };
-    });
-
-    setJournalActivitesState(processedActivities);
     setShowPDF(true);
+    setPdfEnabled(true);
   };
 
   const PDFContent = () => (
@@ -325,16 +246,17 @@ export default function Form() {
           journalDepart,
           journalWeather,
           journalUsers,
-          journalActivitesState,
+          planifChantier,
+          planifActivites,
           journalMateriaux,
           journalSousTraitants,
           userStats: journalUserStats.userStats,
           notes: journalNotes,
-          projetId: selectedProject?.NumeroProjet?.toString() || '',
+          projetId: selectedProject?.ID.toString() || "",
           signatureData,
         }}
         activites={activites}
-        bases={bases || []}
+        bases={[]}
         distances={distances}
         lieux={lieux}
         journalPlanifId={Number(idPlanif)}
@@ -400,8 +322,8 @@ export default function Form() {
               {sections.grilleActivites.open && (
                 <ActiviteProjet
                   users={journalUsers}
-                  activitesState={journalActivitesState}
-                  setActivitesState={setJournalActivitesState}
+                  activitesState={planifActivites}
+                  setActivitesState={setPlanifActivites}
                   savedBases={journalSavedBases}
                   setSavedBases={setJournalSavedBases}
                   savedLiaisons={journalSavedLiaisons}
@@ -500,7 +422,7 @@ export default function Form() {
 
           <div className="text-right mt-6 space-x-4">
             <button
-              onClick={handleGeneratePDF}
+              onClick={handlePDFGeneration}
               disabled={!pdfEnabled}
               className={`inline-flex items-center px-4 py-2 ${
                 pdfEnabled

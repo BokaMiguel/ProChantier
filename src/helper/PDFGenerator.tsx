@@ -11,15 +11,11 @@ import {
   Path,
 } from "@react-pdf/renderer";
 import {
-  Activite,
-  ActivitePlanif,
   Employe,
-  Materiau,
-  SousTraitant,
-  Localisation,
+  PlanifChantier,
+  PlanifActivites,
   LocalisationDistance,
-  Lieu,
-  UserStat,
+  Localisation,
   SignatureData,
 } from "../models/JournalFormModel";
 
@@ -218,45 +214,49 @@ const styles = StyleSheet.create({
   },
   signatureContainer: {
     marginTop: 30,
-    padding: 20,
   },
   signatureGridLayout: {
-    flexDirection: "column",
-    gap: 40,
+    marginTop: 20,
+    border: "1px solid #e5e7eb",
+    borderRadius: 8,
+    padding: 20,
   },
   signatureRowLayout: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 20,
-    alignItems: "flex-end",
+    marginBottom: 30,
+    gap: 20,
   },
   signatureBoxContainer: {
-    width: "30%",
+    flex: 1,
   },
   signatureNameLabel: {
-    fontSize: 10,
-    color: "#2c3e50",
-    marginBottom: 5,
+    fontSize: 12,
+    color: "#374151",
+    marginBottom: 8,
+    fontWeight: "bold",
   },
   signatureNameField: {
+    height: 30,
     borderBottomWidth: 1,
-    borderBottomColor: "#000",
-    height: 25,
+    borderBottomColor: "#d1d5db",
   },
   signatureField: {
-    borderBottomWidth: 1,
-    borderBottomColor: "#000",
-    height: 25,
+    height: 50,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 4,
   },
   signatureDateLabel: {
-    fontSize: 10,
-    color: "#2c3e50",
-    marginBottom: 5,
+    fontSize: 12,
+    color: "#374151",
+    marginBottom: 8,
+    fontWeight: "bold",
   },
   signatureDateLine: {
+    height: 30,
     borderBottomWidth: 1,
-    borderBottomColor: "#000",
-    height: 25,
+    borderBottomColor: "#d1d5db",
   },
   tableContainer: {
     marginTop: 20,
@@ -384,39 +384,35 @@ const styles = StyleSheet.create({
 });
 
 interface PDFDocumentProps {
-  formData: {
-    journalDate: string;
+  data: {
+    journalDate: Date;
     journalArrivee: string;
     journalDepart: string;
     journalWeather: string;
     journalUsers: Employe[];
-    journalActivitesState: ActivitePlanif[];
-    journalMateriaux?: Materiau[];
-    journalSousTraitants?: SousTraitant[];
-    userStats?: UserStat[];
-    totals?: {
-      act: number[];
-      ts: number;
-      td: number;
-    };
+    planifChantier: PlanifChantier;
+    planifActivites: PlanifActivites[];
+    journalMateriaux: any[];
+    journalSousTraitants: any[];
+    userStats: { id: number; nom: string; act: number[]; ts: number; td: number }[];
     notes: string;
-    projetId?: string;
-    signatureData?: SignatureData | null;
+    projetId: string;
+    signatureData: SignatureData | null;
   };
-  activites: Activite[] | null;
+  activites: any[];
   bases: Localisation[];
   distances: LocalisationDistance[];
-  lieux: Lieu[] | null;
+  lieux: any[];
   journalPlanifId: number;
 }
 
-interface ProcessedActivitePlanif extends ActivitePlanif {
+interface ProcessedActivitePlanif extends PlanifActivites {
   processedDistances?: LocalisationDistance[];
 }
 
 // Fonction utilitaire pour formater la date
-const formatDateForFileName = (date: string): string => {
-  return new Date(date).toLocaleDateString("fr-FR").split("/").join("-");
+const formatDateForFileName = (date: Date): string => {
+  return date.toLocaleDateString("fr-FR").split("/").join("-");
 };
 
 const Separator = () => <View style={styles.separator} />;
@@ -498,44 +494,67 @@ const ContractorsIcon = () => (
 );
 
 export const PDFDocument: React.FC<PDFDocumentProps> = ({
-  formData,
+  data,
   activites,
   bases,
   distances,
   lieux,
   journalPlanifId,
 }) => {
-  const formatDate = (date: string) => {
+  const formatDate = (date: Date) => {
     const options: Intl.DateTimeFormatOptions = {
       weekday: "long",
       year: "numeric",
       month: "long",
       day: "numeric",
     };
-    return new Date(date).toLocaleDateString("fr-FR", options);
+    return date.toLocaleDateString("fr-FR", options);
   };
 
   const generateFileName = () => {
-    const date = formatDateForFileName(formData.journalDate);
-    const projetId = formData.projetId || "NOPROJ";
+    const date = formatDateForFileName(data.journalDate);
+    const projetId = data.projetId || "NOPROJ";
     const journalId = journalPlanifId.toString().padStart(7, "0");
     return `${date}_${projetId}_${journalId}`;
   };
 
-  const filteredUsers = formData.journalUsers.filter(
+  const filteredUsers = data.journalUsers.filter(
     (user) => user.prenom !== "" || user.nom !== ""
   );
 
-  const processedActivities = formData.journalActivitesState.map((activite) => {
-    const activityDistances = distances.filter(
-      (d) => d.baseA === activite.lieuID || d.baseB === activite.lieuID
-    );
+  const renderActivitesTable = () => {
+    if (!data.planifChantier || !data.planifActivites) return null;
 
-    return {
-      ...activite,
-      processedDistances: activityDistances,
-    } as ProcessedActivitePlanif;
-  });
+    const activitesNames = data.planifActivites.map(pa => {
+      const activite = activites?.find(a => a.id === pa.activiteID);
+      return activite ? activite.nom : "Inconnu";
+    }).join(", ");
+
+    const lieu = lieux?.find(l => l.id === data.planifChantier.lieuID);
+    const lieuNom = lieu ? lieu.nom : "Inconnu";
+
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Activités</Text>
+        <View style={styles.table}>
+          <View style={styles.tableRow}>
+            <View style={styles.tableCol}>
+              <Text style={styles.tableHeader}>Lieu</Text>
+              <Text style={styles.tableCell}>{lieuNom}</Text>
+            </View>
+            <View style={styles.tableCol}>
+              <Text style={styles.tableHeader}>Activités</Text>
+              <Text style={styles.tableCell}>{activitesNames}</Text>
+            </View>
+            <View style={styles.tableCol}>
+              <Text style={styles.tableHeader}>Note</Text>
+              <Text style={styles.tableCell}>{data.planifChantier.note || ""}</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  };
 
   return (
     <Document
@@ -568,27 +587,27 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
               <View style={{ flexDirection: "row", marginBottom: 10 }}>
                 <Text style={styles.label}>N° Projet : </Text>
                 <Text style={styles.text}>
-                  {formData.projetId || "Non spécifié"}
+                  {data.projetId || "Non spécifié"}
                 </Text>
               </View>
               <View style={{ flexDirection: "row", marginBottom: 10 }}>
                 <Text style={styles.label}>Date : </Text>
                 <Text style={styles.text}>
-                  {formatDate(formData.journalDate)}
+                  {formatDate(data.journalDate)}
                 </Text>
               </View>
               <View style={{ flexDirection: "row", marginBottom: 10 }}>
                 <Text style={styles.label}>Arrivée : </Text>
-                <Text style={styles.text}>{formData.journalArrivee}</Text>
+                <Text style={styles.text}>{data.journalArrivee}</Text>
               </View>
               <View style={{ flexDirection: "row", marginBottom: 10 }}>
                 <Text style={styles.label}>Départ : </Text>
-                <Text style={styles.text}>{formData.journalDepart}</Text>
+                <Text style={styles.text}>{data.journalDepart}</Text>
               </View>
               <View style={{ flexDirection: "row", marginBottom: 10 }}>
                 <Text style={styles.label}>Météo : </Text>
                 <Text style={styles.text}>
-                  {formData.journalWeather || "Aucune information météo"}
+                  {data.journalWeather || "Aucune information météo"}
                 </Text>
               </View>
             </View>
@@ -635,13 +654,13 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
               <Text style={styles.sectionHeaderText}>Matériaux et Outillages</Text>
             </View>
             <View style={styles.sectionContent}>
-              {formData.journalMateriaux && formData.journalMateriaux.length > 0 ? (
+              {data.journalMateriaux && data.journalMateriaux.length > 0 ? (
                 <View style={styles.table}>
                   <View style={styles.tableRow}>
                     <Text style={styles.tableColHeader}>Nom</Text>
                     <Text style={styles.tableColHeader}>Quantité</Text>
                   </View>
-                  {formData.journalMateriaux.map((materiau, index) => (
+                  {data.journalMateriaux.map((materiau, index) => (
                     <View key={index} style={styles.tableRow}>
                       <Text style={styles.tableCol}>{materiau.nom}</Text>
                       <Text style={styles.tableCol}>
@@ -663,13 +682,13 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
               <Text style={styles.sectionHeaderText}>Sous-Traitants</Text>
             </View>
             <View style={styles.sectionContent}>
-              {formData.journalSousTraitants && formData.journalSousTraitants.length > 0 ? (
+              {data.journalSousTraitants && data.journalSousTraitants.length > 0 ? (
                 <View style={styles.table}>
                   <View style={styles.tableRow}>
                     <Text style={styles.tableColHeader}>Nom</Text>
                     <Text style={styles.tableColHeader}>Quantité</Text>
                   </View>
-                  {formData.journalSousTraitants.map((sousTraitant, index) => (
+                  {data.journalSousTraitants.map((sousTraitant, index) => (
                     <View key={index} style={styles.tableRow}>
                       <Text style={styles.tableCol}>{sousTraitant.nom}</Text>
                       <Text style={styles.tableCol}>
@@ -684,100 +703,14 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
             </View>
           </View>
 
+          {renderActivitesTable()}
+
           <Text
             style={styles.pageNumber}
             render={({ pageNumber, totalPages }) => `Page ${pageNumber} / ${totalPages}`}
             fixed
           />
         </View>
-      </Page>
-
-      {/* Page des activités */}
-      <Page size="A4" style={styles.page}>
-        {/* Section des activités */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <ActivitiesIcon />
-            <Text style={styles.sectionHeaderText}>Activités</Text>
-          </View>
-          <View style={styles.sectionContent}>
-            {processedActivities.length > 0 ? (
-              processedActivities
-                .filter((activite) =>
-                  (activite.bases && activite.bases.length > 0) ||
-                  (activite.liaisons && activite.liaisons.length > 0)
-                )
-                .map((activite, index) => {
-                  const lieu = lieux?.find((l) => l.id === activite.lieuID);
-                  const activiteDetails = activites?.find((a) => a.id === activite.activiteID);
-
-                  // Calcul de la distance totale pour les liaisons
-                  const totalDistance = activite.liaisons?.reduce((total, liaison) => 
-                    total + (liaison.distanceInMeters || 0), 0) || 0;
-
-                  // Formatage des liaisons avec distances
-                  const formattedLiaisons = activite.liaisons?.map((liaison) => {
-                    const baseA = bases.find((b) => b.id === liaison.baseA)?.base;
-                    const baseB = bases.find((b) => b.id === liaison.baseB)?.base;
-                    return `${baseA}@${baseB} (${liaison.distanceInMeters}m)`;
-                  }).join(", ");
-
-                  return (
-                    <View key={index} style={styles.section}>
-                      <Text style={styles.activityTitle}>
-                        {`${index + 1}. ${activiteDetails?.nom || "Activité non spécifiée"}`}
-                      </Text>
-                      <View style={styles.activityDetails}>
-                        {lieu?.nom && (
-                          <Text style={styles.detailRow}>
-                            <Text style={styles.label}>Lieu: </Text>
-                            {lieu.nom}
-                          </Text>
-                        )}
-                        {activite.liaisons && activite.liaisons.length > 0 ? (
-                          <>
-                            <Text style={styles.detailRow}>
-                              <Text style={styles.label}>Distance Totale: </Text>
-                              {`${totalDistance}m`}
-                            </Text>
-                            <Text style={styles.detailRow}>
-                              <Text style={styles.label}>Liaisons: </Text>
-                              {formattedLiaisons}
-                            </Text>
-                          </>
-                        ) : activite.bases && activite.bases.length > 0 && (
-                          <>
-                            <Text style={styles.detailRow}>
-                              <Text style={styles.label}>Quantité: </Text>
-                              {activite.bases.length}
-                            </Text>
-                            <Text style={styles.detailRow}>
-                              <Text style={styles.label}>Bases: </Text>
-                              {activite.bases.map((base) => base.base).join(", ")}
-                            </Text>
-                          </>
-                        )}
-                        {activite.note && (
-                          <Text style={styles.detailRow}>
-                            <Text style={styles.label}>Commentaire: </Text>
-                            {activite.note}
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-                  );
-                })
-            ) : (
-              <Text style={styles.emptySection}>Aucune activité enregistrée</Text>
-            )}
-          </View>
-        </View>
-
-        <Text
-          style={styles.pageNumber}
-          render={({ pageNumber, totalPages }) => `Page ${pageNumber} / ${totalPages}`}
-          fixed
-        />
       </Page>
 
       {/* Page des heures d'activités */}
@@ -802,8 +735,8 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
               <Text style={styles.gridHeaderCell}>TD</Text>
             </View>
 
-            {formData.userStats?.map((stats, index) => {
-              const user = formData.journalUsers.find((u) => u.id === stats.id);
+            {data.userStats?.map((stats, index) => {
+              const user = data.journalUsers.find((u) => u.id === stats.id);
               if (!user) return null;
               return (
                 <View key={index} style={styles.gridRow}>
@@ -825,26 +758,26 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
               );
             })}
 
-            {formData.totals && (
+            {data.totals && (
               <View style={styles.totalsRow}>
                 <Text style={styles.gridHeaderFirstCol}>Totaux</Text>
-                {formData.totals.act.slice(0, 5).map((total, index) => (
+                {data.totals.act.slice(0, 5).map((total, index) => (
                   <Text key={index} style={styles.gridHeaderCell}>
                     {total > 0 ? total.toFixed(2) : ""}
                   </Text>
                 ))}
                 <Text style={styles.gridHeaderCell}>
-                  {formData.totals.ts > 0 ? formData.totals.ts.toFixed(2) : ""}
+                  {data.totals.ts > 0 ? data.totals.ts.toFixed(2) : ""}
                 </Text>
                 <Text style={styles.gridHeaderCell}>
-                  {formData.totals.td > 0 ? formData.totals.td.toFixed(2) : ""}
+                  {data.totals.td > 0 ? data.totals.td.toFixed(2) : ""}
                 </Text>
               </View>
             )}
           </View>
 
           {/* Tableau pour les activités 6-10 si nécessaire */}
-          {formData.userStats?.some(stats => stats.act.slice(5).some(v => v > 0)) && (
+          {data.userStats?.some(stats => stats.act.slice(5).some(v => v > 0)) && (
             <>
               <Text style={styles.tableTitle}>Heures par activité (Activités 6-10)</Text>
               <View style={styles.tableContainer}>
@@ -859,8 +792,8 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
                   <Text style={styles.gridHeaderCell}>TD</Text>
                 </View>
 
-                {formData.userStats?.map((stats, index) => {
-                  const user = formData.journalUsers.find((u) => u.id === stats.id);
+                {data.userStats?.map((stats, index) => {
+                  const user = data.journalUsers.find((u) => u.id === stats.id);
                   if (!user) return null;
                   if (!stats.act.slice(5).some(v => v > 0)) return null;
                   return (
@@ -883,19 +816,19 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
                   );
                 })}
 
-                {formData.totals && (
+                {data.totals && (
                   <View style={styles.totalsRow}>
                     <Text style={styles.gridHeaderFirstCol}>Totaux</Text>
-                    {formData.totals.act.slice(5, 10).map((total, index) => (
+                    {data.totals.act.slice(5, 10).map((total, index) => (
                       <Text key={index} style={styles.gridHeaderCell}>
                         {total > 0 ? total.toFixed(2) : ""}
                       </Text>
                     ))}
                     <Text style={styles.gridHeaderCell}>
-                      {formData.totals.ts > 0 ? formData.totals.ts.toFixed(2) : ""}
+                      {data.totals.ts > 0 ? data.totals.ts.toFixed(2) : ""}
                     </Text>
                     <Text style={styles.gridHeaderCell}>
-                      {formData.totals.td > 0 ? formData.totals.td.toFixed(2) : ""}
+                      {data.totals.td > 0 ? data.totals.td.toFixed(2) : ""}
                     </Text>
                   </View>
                 )}
@@ -915,14 +848,14 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
       {/* Page des signatures */}
       <Page size="A4" style={styles.page}>
         {/* Notes journalières */}
-        {formData.notes ? (
+        {data.notes ? (
           <View style={styles.notesSection}>
             <View style={styles.sectionHeader}>
               <NotesIcon />
               <Text style={styles.sectionHeaderText}>Note journalière</Text>
             </View>
             <View style={styles.noteContent}>
-              <Text style={styles.text}>{formData.notes}</Text>
+              <Text style={styles.text}>{data.notes}</Text>
             </View>
           </View>
         ) : (
@@ -938,28 +871,43 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
         )}
 
         <View style={styles.signatureContainer}>
-          <View style={styles.sectionHeader}>
-            <SignatureIcon />
-            <Text style={styles.sectionHeaderText}>Signatures</Text>
-          </View>
           <View style={styles.signatureGridLayout}>
-            {/* Première rangée */}
             <View style={styles.signatureRowLayout}>
-              <View style={styles.signatureBoxContainer}>
-                <Text style={styles.signatureNameLabel}>Nom complet</Text>
-                <View style={styles.signatureNameField} />
-              </View>
-              <View style={styles.signatureBoxContainer}>
-                <Text style={styles.signatureNameLabel}>Signature</Text>
-                <View style={styles.signatureField} />
-              </View>
-              <View style={styles.signatureBoxContainer}>
-                <Text style={styles.signatureDateLabel}>Date</Text>
-                <View style={styles.signatureDateLine} />
-              </View>
+              {data.signatureData ? (
+                <>
+                  <View style={styles.signatureBoxContainer}>
+                    <Text style={styles.signatureNameLabel}>Nom complet</Text>
+                    <Text style={[styles.text, { marginTop: 5 }]}>{data.signatureData.signataire}</Text>
+                  </View>
+                  <View style={styles.signatureBoxContainer}>
+                    <Text style={styles.signatureNameLabel}>Signature</Text>
+                    <Image source={data.signatureData.signature} style={{ width: 150, height: 50 }} />
+                  </View>
+                  <View style={styles.signatureBoxContainer}>
+                    <Text style={styles.signatureDateLabel}>Date</Text>
+                    <Text style={[styles.text, { marginTop: 5 }]}>
+                      {new Date(data.signatureData.date).toLocaleDateString('fr-FR')}
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.signatureBoxContainer}>
+                    <Text style={styles.signatureNameLabel}>Nom complet</Text>
+                    <View style={styles.signatureNameField} />
+                  </View>
+                  <View style={styles.signatureBoxContainer}>
+                    <Text style={styles.signatureNameLabel}>Signature</Text>
+                    <View style={styles.signatureField} />
+                  </View>
+                  <View style={styles.signatureBoxContainer}>
+                    <Text style={styles.signatureDateLabel}>Date</Text>
+                    <View style={styles.signatureDateLine} />
+                  </View>
+                </>
+              )}
             </View>
 
-            {/* Deuxième rangée */}
             <View style={styles.signatureRowLayout}>
               <View style={styles.signatureBoxContainer}>
                 <Text style={styles.signatureNameLabel}>Nom complet</Text>
@@ -988,9 +936,9 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
 };
 
 // Fonction pour générer le nom du fichier PDF
-export const getPDFFileName = (formData: PDFDocumentProps["formData"], journalPlanifId: number): string => {
-  const date = formatDateForFileName(formData.journalDate);
-  const projetId = formData.projetId || "NOPROJ";
+export const getPDFFileName = (data: PDFDocumentProps["data"], journalPlanifId: number): string => {
+  const date = formatDateForFileName(data.journalDate);
+  const projetId = data.projetId || "NOPROJ";
   const journalId = journalPlanifId.toString().padStart(7, "0");
   return `${date}_${projetId}_${journalId}`;
 };

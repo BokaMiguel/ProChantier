@@ -51,18 +51,24 @@ export interface Lieu {
 
 export interface ActivitePlanif {
   id: number;
-  activiteID: number | null;
-  lieuID: number | null;
-  quantite: number;
-  note: string;
-  date: string;
+  projetId: number;
+  lieuID: number;
   hrsDebut: string;
   hrsFin: string;
-  defaultEntrepriseId: number | null;
-  signalisationId: number | null;
-  isLab?: boolean;
-  bases?: Localisation[];
-  liaisons?: LocalisationDistance[];
+  defaultEntrepriseId: number;
+  signalisationId: number;
+  note: string;
+  isLab: boolean;
+  date: string;
+  activiteIDs: number[];
+  quantite: number;
+  nomActivite?: string;
+}
+
+export interface PlanifActivites {
+  id: number;
+  planifID: number;
+  activiteID: number;
 }
 
 // Types pour la localisation
@@ -120,6 +126,37 @@ export const statuts: Statut[] = [
 export const initialMeteo: Meteo = { id: 1, name: "Soleil" };
 export const initialStatut: Statut = { id: 2, name: 'En cours' };
 
+// Types pour les planifications
+export interface PlanifChantier {
+  id: number;
+  date: string;
+  hrsDebut: string;
+  hrsFin: string;
+  lieuID: number;
+  projetID: number;
+  defaultEntrepriseId: number;
+  isLab: boolean;
+  signalisationId: number;
+  note?: string;
+  quantite?: number;
+  lieu?: {
+    id: number;
+    nom: string;
+  };
+  projet?: {
+    id: number;
+    nomProjet: string;
+  };
+  defaultEntreprise?: {
+    id: number;
+    nom: string;
+  };
+  signalisation?: {
+    id: number;
+    nom: string;
+  };
+}
+
 // Types pour le journal
 export interface ProjectInfo {
   type: number;
@@ -137,7 +174,8 @@ export interface Journal {
   localisation: string;
   plageHoraire: string;
   notes: string;
-  activites: ActivitePlanif[];
+  planifChantier?: PlanifChantier;
+  planifActivites?: PlanifActivites[];
   employes: Employe[];
   materiaux: Materiau[];
   sousTraitants: SousTraitant[];
@@ -207,20 +245,34 @@ export type Sections = {
 };
 
 // Valeurs initiales
-export const initialActivite: ActivitePlanif = {
-  id: 1,
-  activiteID: null,
-  lieuID: null,
-  quantite: 0,
-  note: "",
+export const initialPlanifChantier: PlanifChantier = {
+  id: 0,
   date: new Date().toISOString().split('T')[0],
   hrsDebut: "",
   hrsFin: "",
-  defaultEntrepriseId: null,
-  signalisationId: null,
+  lieuID: 0,
+  projetID: 0,
+  defaultEntrepriseId: 0,
   isLab: false,
-  bases: [],
-  liaisons: []
+  signalisationId: 0,
+  note: "",
+  quantite: 0
+};
+
+export const initialActivite: ActivitePlanif = {
+  id: 1,
+  projetId: 0,
+  lieuID: 0,
+  hrsDebut: "",
+  hrsFin: "",
+  defaultEntrepriseId: 0,
+  signalisationId: 0,
+  note: "",
+  isLab: false,
+  date: "",
+  activiteIDs: [],
+  quantite: 0,
+  nomActivite: "",
 };
 
 export const initialMateriau: Materiau = {
@@ -249,7 +301,8 @@ export const initialJournal: Journal = {
   localisation: '',
   plageHoraire: '',
   notes: '',
-  activites: [initialActivite],
+  planifChantier: initialPlanifChantier,
+  planifActivites: [],
   employes: [],
   materiaux: [initialMateriau],
   sousTraitants: [initialSousTraitant],

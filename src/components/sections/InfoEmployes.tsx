@@ -14,8 +14,10 @@ const InfoEmployes: React.FC<{
 
   const handleAddUser = () => {
     if (employees && users.length < employees.length) {
+      // Trouver le plus grand ID existant et ajouter 1
+      const maxId = users.reduce((max, user) => Math.max(max, user.id), 0);
       const newUser: Employe = {
-        id: users.length + 1,
+        id: maxId + 1,
         nom: "",
         prenom: "",
         fonction: {
@@ -39,6 +41,17 @@ const InfoEmployes: React.FC<{
     const updatedUsers = users.map((user) => {
       if (user.id === id) {
         if (field === "nom") {
+          // Vérifier si l'employé est déjà sélectionné dans la liste
+          const isEmployeeAlreadySelected = users.some(
+            (existingUser) =>
+              existingUser.id !== id && // Ignorer l'utilisateur actuel
+              `${existingUser.prenom} ${existingUser.nom}` === value
+          );
+
+          if (isEmployeeAlreadySelected) {
+            return user; // Ne pas mettre à jour si l'employé est déjà sélectionné
+          }
+
           const selectedEmployee = employees?.find(
             (emp) => `${emp.prenom} ${emp.nom}` === value
           );
@@ -91,17 +104,8 @@ const InfoEmployes: React.FC<{
 
   const confirmDeleteUser = () => {
     if (userIdToDelete !== null) {
-      const updatedUsers = users.map((user) =>
-        user.id === userIdToDelete
-          ? {
-              ...user,
-              nom: "",
-              prenom: "",
-              fonction: { id: null, nom: "" },
-              equipement: { id: null, nom: "" },
-            }
-          : user
-      );
+      // Filtrer l'utilisateur au lieu de le vider
+      const updatedUsers = users.filter((user) => user.id !== userIdToDelete);
       setUsers(updatedUsers);
     }
     setShowConfirm(false);
@@ -117,48 +121,67 @@ const InfoEmployes: React.FC<{
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
-      <div className="space-y-6">
+      <div className="grid grid-cols-12 gap-4 mb-4 px-6 text-sm font-semibold text-gray-600">
+        <div className="col-span-4 flex items-center gap-2">
+          <span className="bg-blue-100 p-1.5 rounded-lg">
+            <FaUser className="text-blue-600 w-4 h-4" />
+          </span>
+          Employé
+        </div>
+        <div className="col-span-4 flex items-center gap-2">
+          <span className="bg-blue-100 p-1.5 rounded-lg">
+            <FaBriefcase className="text-blue-600 w-4 h-4" />
+          </span>
+          Fonction
+        </div>
+        <div className="col-span-3 flex items-center gap-2">
+          <span className="bg-blue-100 p-1.5 rounded-lg">
+            <FaToolbox className="text-blue-600 w-4 h-4" />
+          </span>
+          Équipement
+        </div>
+      </div>
+
+      <div className="space-y-4">
         {users.map((user, index) => (
           <div
             key={user.id}
-            className="bg-white rounded-lg border border-gray-200 p-6 transition-all duration-200 hover:shadow-md"
+            className="bg-white rounded-lg border border-gray-200 p-4 transition-all duration-200 hover:shadow-md"
           >
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-              <div className="md:col-span-5">
-                <label className="block text-gray-700 text-sm font-semibold mb-2 flex items-center">
-                  <span className="bg-blue-100 p-2 rounded-full mr-2">
-                    <FaUser className="text-blue-600" />
-                  </span>
-                  Employé
-                </label>
+            <div className="grid grid-cols-12 gap-4 items-center">
+              <div className="col-span-4">
                 <select
                   value={`${user.prenom} ${user.nom}`}
                   onChange={(e) => handleChange(user.id, "nom", e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                 >
                   <option value="">Sélectionner un employé</option>
-                  {employees?.map((employee) => (
-                    <option
-                      key={employee.id}
-                      value={`${employee.prenom} ${employee.nom}`}
-                    >
-                      {`${employee.prenom} ${employee.nom}`}
-                    </option>
-                  ))}
+                  {employees
+                    ?.filter((employee) => {
+                      const isAlreadySelected = users.some(
+                        (selectedUser) =>
+                          selectedUser.id !== user.id &&
+                          selectedUser.nom === employee.nom &&
+                          selectedUser.prenom === employee.prenom
+                      );
+                      return !isAlreadySelected;
+                    })
+                    .map((employee) => (
+                      <option
+                        key={employee.id}
+                        value={`${employee.prenom} ${employee.nom}`}
+                      >
+                        {`${employee.prenom} ${employee.nom}`}
+                      </option>
+                    ))}
                 </select>
               </div>
 
-              <div className="md:col-span-4">
-                <label className="block text-gray-700 text-sm font-semibold mb-2 flex items-center">
-                  <span className="bg-blue-100 p-2 rounded-full mr-2">
-                    <FaBriefcase className="text-blue-600" />
-                  </span>
-                  Fonction
-                </label>
+              <div className="col-span-4">
                 <select
                   value={user.fonction?.nom || ""}
                   onChange={(e) => handleChange(user.id, "fonction", e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                 >
                   <option value="">Sélectionner une fonction</option>
                   {fonctions?.map((fonction) => (
@@ -169,17 +192,11 @@ const InfoEmployes: React.FC<{
                 </select>
               </div>
 
-              <div className="md:col-span-3">
-                <label className="block text-gray-700 text-sm font-semibold mb-2 flex items-center">
-                  <span className="bg-blue-100 p-2 rounded-full mr-2">
-                    <FaToolbox className="text-blue-600" />
-                  </span>
-                  Équipement
-                </label>
+              <div className="col-span-3">
                 <select
                   value={user.equipement?.nom || ""}
                   onChange={(e) => handleChange(user.id, "equipement", e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                 >
                   <option value="">Sélectionner un équipement</option>
                   {equipements?.map((equipement) => (
@@ -189,48 +206,44 @@ const InfoEmployes: React.FC<{
                   ))}
                 </select>
               </div>
-            </div>
 
-            {users.length > 1 && (
-              <button
-                onClick={() => handleDeleteUser(user.id)}
-                className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors duration-200"
-                title="Supprimer l'employé"
-              >
-                <FaTimes className="w-5 h-5" />
-              </button>
-            )}
+              <div className="col-span-1 flex justify-center">
+                <button
+                  onClick={() => handleDeleteUser(user.id)}
+                  className="text-red-500 hover:text-red-600 p-2 rounded-full hover:bg-red-50 transition-all duration-200"
+                >
+                  <FaTimes />
+                </button>
+              </div>
+            </div>
           </div>
         ))}
 
-        {employees && users.length < employees.length && (
+        {users.length < (employees?.length || 0) && (
           <button
             onClick={handleAddUser}
-            className="w-full mt-4 py-3 px-4 bg-blue-50 text-blue-600 rounded-lg border-2 border-blue-100 hover:bg-blue-100 transition-all duration-200 flex items-center justify-center font-medium"
+            className="w-full py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 text-gray-600"
           >
-            <FaPlusCircle className="mr-2" />
-            Ajouter un employé
+            <FaPlusCircle className="inline-block mr-2" />
+            {users.filter(user => user.nom && user.prenom).length} / {employees?.length || 0} employés
           </button>
         )}
       </div>
 
       {showConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-sm mx-4">
-            <h3 className="text-lg font-semibold mb-4">Confirmation</h3>
-            <p className="text-gray-600 mb-6">
-              Êtes-vous sûr de vouloir supprimer cet employé ?
-            </p>
-            <div className="flex justify-end space-x-4">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+            <p className="text-gray-600 mb-6">Voulez-vous vraiment supprimer cet employé ?</p>
+            <div className="flex justify-end gap-4">
               <button
                 onClick={() => setShowConfirm(false)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-200"
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200"
               >
                 Annuler
               </button>
               <button
                 onClick={confirmDeleteUser}
-                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors duration-200"
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200"
               >
                 Supprimer
               </button>

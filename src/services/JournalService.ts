@@ -1,17 +1,32 @@
 // src/services/JournalService.ts
 
 export const getAuthorizedProjects = async (userId: string) => {
-  const response = await fetch(
-    `${process.env.REACT_APP_BRUNEAU_API}/Horizon/projets/GetAuthorizedProjects/${userId}`
-  );
-  const dataText = await response.text();
-  if (!response.ok) {
-    throw new Error("Network response was not ok");
+  try {
+    const response = await fetch(
+      `${process.env.REACT_APP_BRUNEAU_API}/Horizon/projets/GetAuthorizedProjects/${userId}`
+    );
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const dataText = await response.text();
+    if (!dataText || dataText.trim() === '') {
+      console.log('No projects found for user:', userId);
+      return [];
+    }
+    
+    try {
+      return JSON.parse(dataText);
+    } catch (parseError) {
+      console.error('Error parsing projects data:', parseError);
+      console.log('Raw response:', dataText);
+      return [];
+    }
+  } catch (error) {
+    console.error('Error fetching authorized projects:', error);
+    throw error;
   }
-  if (!dataText) {
-    throw new Error("Projects data is empty");
-  }
-  return JSON.parse(dataText);
 };
 
 export const getEmployeeList = async (projectId: number) => {
@@ -605,7 +620,9 @@ export const createOrUpdateEquipeChantier = async (equipeData: any) => {
 export const deleteEquipeChantier = async (id: number) => {
   const response = await fetch(
     `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/DeleteEquipeChantier/${id}`,
-    { method: "DELETE" }
+    {
+      method: "DELETE",
+    }
   );
   if (!response.ok) {
     throw new Error("Failed to delete equipe chantier");
@@ -757,3 +774,150 @@ export const deleteStatutJournal = async (id: number) => {
   }
 };
 
+
+export const getPlanifChantier = async (id: number) => {
+  const response = await fetch(
+    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetPlanifChantier/${id}`,
+    { method: "GET" }
+  );
+  if (!response.ok) {
+    throw new Error("Failed to get planif chantier");
+  }
+  return await response.json();
+};
+
+export const createOrUpdatePlanifChantier = async (planifData: any) => {
+  try {
+    console.log("Création/mise à jour planification:", planifData);
+    const response = await fetch(
+      `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdatePlanifChantier`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(planifData),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Erreur API:", errorText);
+      throw new Error(`Failed to create or update planif chantier: ${errorText}`);
+    }
+
+    const responseText = await response.text();
+    console.log("Réponse brute de l'API:", responseText);
+
+    // Si la réponse est vide, retourner un objet par défaut
+    if (!responseText) {
+      console.log("Réponse vide de l'API, utilisation d'une réponse par défaut");
+      return { id: planifData.ID };
+    }
+
+    try {
+      const result = JSON.parse(responseText);
+      console.log("Réponse parsée:", result);
+      return result;
+    } catch (parseError) {
+      console.error("Erreur de parsing JSON:", parseError);
+      // Si on ne peut pas parser la réponse mais qu'on a un ID, on le retourne
+      return { id: planifData.ID };
+    }
+  } catch (error) {
+    console.error("Erreur lors de la création/mise à jour de la planification:", error);
+    throw error;
+  }
+};
+
+export const deletePlanifChantier = async (id: number) => {
+  const response = await fetch(
+    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/DeletePlanifChantier/${id}`,
+    {
+      method: "DELETE",
+    }
+  );
+  if (!response.ok) {
+    throw new Error("Failed to delete planif chantier");
+  }
+  return await response.json();
+};
+
+export const getPlanifActivites = async (planifId: number) => {
+  const response = await fetch(
+    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetPlanifActivites/${planifId}`,
+    { method: "GET" }
+  );
+  if (!response.ok) {
+    throw new Error("Failed to get planif activites");
+  }
+  return await response.json();
+};
+
+export const createOrUpdatePlanifActivites = async (planifActivitesData: any) => {
+  console.log("Création/mise à jour activité planifiée:", planifActivitesData);
+  const response = await fetch(
+    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdatePlanifActivites`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(planifActivitesData),
+    }
+  );
+  
+  const responseText = await response.text();
+  console.log("Réponse brute de l'API:", responseText);
+  
+  if (!response.ok) {
+    console.error("Erreur API:", response.status, responseText);
+    throw new Error("Failed to create or update planif activites");
+  }
+  
+  try {
+    return responseText ? JSON.parse(responseText) : null;
+  } catch (e) {
+    console.error("Erreur parsing JSON:", e);
+    return null;
+  }
+};
+
+export const deletePlanifActivites = async (id: number) => {
+  const response = await fetch(
+    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/DeletePlanifActivites/${id}`,
+    {
+      method: "DELETE",
+    }
+  );
+  if (!response.ok) {
+    throw new Error("Failed to delete planif activites");
+  }
+  return await response.json();
+};
+
+export const getPlanifChantierByProjet = async (projetId: number, dateDebut?: Date) => {
+  try {
+    let url = `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetPlanifChantierByProjet/${projetId}`;
+    
+    if (dateDebut) {
+      const formattedDate = dateDebut.toISOString().split('T')[0];
+      url += `?dateDebut=${formattedDate}`;
+      console.log("URL avec date:", url);
+    }
+
+    console.log("Appel API getPlanifChantierByProjet avec:", { projetId, dateDebut });
+    const response = await fetch(url, { method: "GET" });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log("Réponse API getPlanifChantierByProjet:", data);
+    return data;
+  } catch (error) {
+    console.error("Erreur dans getPlanifChantierByProjet:", error);
+    throw error;
+  }
+};

@@ -154,11 +154,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const materiauxData = await getMateriauxOutillage();
       setMateriaux(materiauxData);
 
-      const activitesPlanifData = await getActivitePlanif(projectId);
-      setActivitesPlanif(activitesPlanifData);
+      const sousTraitantData = await getSousTraitantProjet();
+      setSousTraitants(sousTraitantData);
 
       const signalisationData = await getSignalisationProjet(projectId);
       setSignalisations(signalisationData);
+
+      const activitePlanifData = await getActivitePlanif(projectId);
+      setActivitesPlanif(activitePlanifData);
 
       // Récupération des bases associées aux lieux
       if (lieuData && lieuData.length > 0) {
@@ -179,9 +182,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       } else {
         setBases([]);
       }
-
-      const sousTraitantsData = await getSousTraitantProjet();
-      setSousTraitants(sousTraitantsData);
     } catch (error) {
       console.error("Error fetching project details:", error);
     }

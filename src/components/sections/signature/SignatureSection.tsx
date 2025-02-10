@@ -34,7 +34,7 @@ const SignatureSection: React.FC<SignatureSectionProps> = ({ onSignatureComplete
     }
 
     const signatureData = {
-      signature: signaturePadRef.current.toDataURL(),
+      signature: signaturePadRef.current.toDataURL('image/png', 1.0),
       signataire: signataire,
       date: new Date(),
     };
