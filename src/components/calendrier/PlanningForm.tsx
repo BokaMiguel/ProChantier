@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   DragDropContext,
   Droppable,
@@ -97,6 +97,9 @@ const PlanningForm: React.FC = () => {
 
   const [existingPlanifications, setExistingPlanifications] = useState<Map<string, number>>(new Map());
 
+  // State pour stocker toutes les planifications brutes
+  const [rawPlanifications, setRawPlanifications] = useState<ActivitePlanif[]>([]);
+
   // Calcul des dates de début et fin de semaine
   const start = useMemo(() => {
     const startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
@@ -122,113 +125,100 @@ const PlanningForm: React.FC = () => {
     return dates;
   }, [start, end]);
 
+  // 1. useEffect pour le fetch uniquement
   useEffect(() => {
-    const fetchExistingPlanifications = async () => {
+    const fetchPlanifications = async () => {
       if (!selectedProject?.ID) return;
       
       try {
         const planifResponse = await getPlanifChantierByProjet(selectedProject.ID);
-        console.log("Planifications reçues:", planifResponse);
+        console.log("Planifications brutes reçues:", planifResponse);
         
         if (planifResponse && Array.isArray(planifResponse)) {
-          const planifMap = new Map<string, number>();
-          const newActivities: { [key: string]: ActivitePlanif[] } = {};
+          const planifications = planifResponse.map(planif => ({
+            id: planif.id,
+            projetId: selectedProject.ID,
+            lieuID: planif.lieuID,
+            hrsDebut: planif.hrsDebut,
+            hrsFin: planif.hrsFin,
+            defaultEntrepriseId: planif.defaultEntrepriseId,
+            signalisationId: planif.signalisationId,
+            note: planif.note || '',
+            isLab: planif.isLab,
+            date: planif.date,
+            activiteIDs: planif.activites ? planif.activites.map((a: { activiteID: number }) => a.activiteID) : [],
+            quantite: planif.quantite || 0,
+            nomActivite: ''
+          }));
 
-          // Initialiser les jours avec des tableaux vides
-          const daysOfWeek = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
-          daysOfWeek.forEach(day => {
-            newActivities[day] = [];
-          });
-
-          // Pour chaque planification
-          for (const planif of planifResponse) {
-            // Créer une date à partir de la date reçue
-            const planifDate = parseISO(planif.date);
-            console.log("Date de planification:", planif.date, "=>", planifDate);
-            
-            if (!isValid(planifDate)) {
-              console.error('Date invalide reçue:', planif.date);
-              continue;
-            }
-
-            // Obtenir le jour de la semaine en français
-            const dayKey = format(planifDate, 'EEEE', { locale: fr });
-            // Capitaliser la première lettre pour correspondre à notre format de clé
-            const formattedDayKey = dayKey.charAt(0).toUpperCase() + dayKey.slice(1).toLowerCase();
-            console.log("Jour de la semaine:", formattedDayKey);
-            
-            // Créer une nouvelle activité avec les données de la planification
-            const newActivity: ActivitePlanif = {
-              id: planif.id,
-              projetId: selectedProject.ID,
-              lieuID: planif.lieuID,
-              hrsDebut: planif.hrsDebut,
-              hrsFin: planif.hrsFin,
-              defaultEntrepriseId: planif.defaultEntrepriseId,
-              signalisationId: planif.signalisationId,
-              note: planif.note || '',
-              isLab: planif.isLab,
-              date: planif.date,
-              activiteIDs: planif.activites ? planif.activites.map((a: { activiteID: number }) => a.activiteID) : [],
-              quantite: planif.quantite || 0,
-              nomActivite: ''
-            };
-
-            console.log("Ajout de l'activité au jour:", formattedDayKey, newActivity);
-            newActivities[formattedDayKey].push(newActivity);
-            planifMap.set(`${formattedDayKey}-${planif.id}`, planif.id);
-          }
-
-          console.log("Nouvelles activités par jour:", newActivities);
-          setExistingPlanifications(planifMap);
-          setActivities(newActivities);
-          setLocalActivities(newActivities);
-          setHasUnsavedChanges(false);
+          setRawPlanifications(planifications);
         }
       } catch (error) {
-        console.error('Erreur lors de la récupération des planifications:', error);
+        console.error('Erreur lors du fetch:', error);
       }
     };
 
-    fetchExistingPlanifications();
-  }, [selectedProject?.ID]);
+    fetchPlanifications();
+  }, [selectedProject?.ID]); // Dépendance uniquement sur le changement de projet
 
-  useEffect(() => {
-    if (activitesPlanif) {
-      const newActivities: { [key: string]: ActivitePlanif[] } = {
-        Lundi: [],
-        Mardi: [],
-        Mercredi: [],
-        Jeudi: [],
-        Vendredi: [],
-        Samedi: [],
-        Dimanche: [],
-      };
+  // 2. Fonction séparée pour distribuer les planifications aux bonnes journées
+  const distributePlanificationsToWeek = useCallback((date: Date, planifications: ActivitePlanif[]) => {
+    console.log("=== Distribution des planifications ===");
+    console.log("Date courante:", format(date, 'dd/MM/yyyy'));
+    
+    // Calculer le début et la fin de la semaine
+    const weekStart = startOfWeek(date, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(date, { weekStartsOn: 1 });
+    
+    console.log("Semaine du", format(weekStart, 'dd/MM/yyyy'), "au", format(weekEnd, 'dd/MM/yyyy'));
 
-      activitesPlanif.forEach((planif) => {
-        const planifDate = parseISO(planif.date);
-        
-        // Vérifier si la date est dans la semaine courante
-        const isInCurrentWeek = weekDates.some(weekDate => 
-          format(weekDate, 'yyyy-MM-dd') === format(planifDate, 'yyyy-MM-dd')
-        );
+    // Initialiser la structure des activités par jour
+    const newActivities: { [key: string]: ActivitePlanif[] } = {
+      Lundi: [], Mardi: [], Mercredi: [], Jeudi: [], 
+      Vendredi: [], Samedi: [], Dimanche: []
+    };
 
-        if (isInCurrentWeek) {
-          // Obtenir le jour en français
-          const dayName = format(planifDate, 'EEEE', { locale: fr });
-          const formattedDayName = dayName.charAt(0).toUpperCase() + dayName.slice(1).toLowerCase();
-          
-          if (newActivities[formattedDayName]) {
-            newActivities[formattedDayName].push(planif);
-          }
-        }
+    // Pour chaque planification
+    planifications.forEach(planif => {
+      const planifDate = parseISO(planif.date);
+      
+      if (!isValid(planifDate)) {
+        console.error('Date invalide:', planif.date);
+        return;
+      }
+
+      // Vérifier si la date est dans la semaine courante
+      const isInCurrentWeek = planifDate >= weekStart && planifDate <= weekEnd;
+      
+      console.log("Vérification planification:", {
+        id: planif.id,
+        date: planif.date,
+        isInCurrentWeek
       });
 
-      console.log("Activités organisées par jour:", newActivities);
-      setActivities(newActivities);
-      setLocalActivities(newActivities);
+      if (isInCurrentWeek) {
+        const dayName = format(planifDate, 'EEEE', { locale: fr });
+        const formattedDayName = dayName.charAt(0).toUpperCase() + dayName.slice(1).toLowerCase();
+        
+        if (newActivities[formattedDayName]) {
+          console.log(`Ajout au ${formattedDayName}:`, planif.id);
+          newActivities[formattedDayName].push(planif);
+        }
+      }
+    });
+
+    console.log("Distribution finale:", newActivities);
+    setActivities(newActivities);
+    setLocalActivities(newActivities);
+    setHasUnsavedChanges(false);
+  }, []);
+
+  // 3. useEffect pour déclencher la distribution quand la date change
+  useEffect(() => {
+    if (rawPlanifications.length > 0) {
+      distributePlanificationsToWeek(currentDate, rawPlanifications);
     }
-  }, [activitesPlanif, weekDates, currentDate]);
+  }, [currentDate, rawPlanifications, distributePlanificationsToWeek]);
 
   const handleSavePlanif = async (planif: ActivitePlanif, selectedActivities: Set<number>) => {
     if (!selectedDay || !selectedProject?.ID) {
