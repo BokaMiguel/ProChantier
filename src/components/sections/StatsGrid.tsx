@@ -156,61 +156,61 @@ const StatsGrid: React.FC<StatsGridProps> = ({
         </thead>
         <tbody>
           {userStats
-            .filter((userStat) => userStat.nom.trim() !== "")
+            .filter(userStat => userStat.nom && userStat.nom.trim() !== "")
             .map((userStat) => (
-              <tr key={userStat.id} className="hover:bg-gray-50 transition-colors duration-150">
-                <td className="py-2 px-4 border-b">{userStat.nom}</td>
-                {userStat.act.slice(nextStep ? 5 : 0, nextStep ? 10 : 5).map((value, index) => (
-                  <td key={index} className="py-2 px-4 border-b">
-                    <input
-                      type="number"
-                      step="0.25"
-                      min="0"
-                      max="24"
-                      value={value}
-                      onChange={(e) =>
-                        handleActChange(
-                          userStat.id,
-                          index,
-                          parseFloat(e.target.value) || 0
-                        )
-                      }
-                      className={`w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ${
-                        index >= activiteCount ? "text-gray-300 bg-gray-50" : "text-gray-700"
-                      }`}
-                      disabled={index >= activiteCount}
-                    />
-                  </td>
-                ))}
-                <td className="py-2 px-4 border-b">
+            <tr key={userStat.id} className="hover:bg-gray-50 transition-colors duration-150">
+              <td className="py-2 px-4 border-b">{userStat.nom}</td>
+              {userStat.act.slice(nextStep ? 5 : 0, nextStep ? 10 : 5).map((value, index) => (
+                <td key={index} className="py-2 px-4 border-b">
                   <input
                     type="number"
                     step="0.25"
                     min="0"
                     max="24"
-                    value={userStat.ts}
-                    readOnly
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
-                  />
-                </td>
-                <td className="py-2 px-4 border-b">
-                  <input
-                    type="number"
-                    step="0.25"
-                    min="0"
-                    max="24"
-                    value={userStat.td}
+                    value={value}
                     onChange={(e) =>
-                      handleTdChange(
+                      handleActChange(
                         userStat.id,
+                        index,
                         parseFloat(e.target.value) || 0
                       )
                     }
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-700"
+                    className={`w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ${
+                      index >= activiteCount ? "text-gray-300 bg-gray-50" : "text-gray-700"
+                    }`}
+                    disabled={index >= activiteCount}
                   />
                 </td>
-              </tr>
-            ))}
+              ))}
+              <td className="py-2 px-4 border-b">
+                <input
+                  type="number"
+                  step="0.25"
+                  min="0"
+                  max="24"
+                  value={userStat.ts}
+                  readOnly
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+                />
+              </td>
+              <td className="py-2 px-4 border-b">
+                <input
+                  type="number"
+                  step="0.25"
+                  min="0"
+                  max="24"
+                  value={userStat.td}
+                  onChange={(e) =>
+                    handleTdChange(
+                      userStat.id,
+                      parseFloat(e.target.value) || 0
+                    )
+                  }
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-700"
+                />
+              </td>
+            </tr>
+          ))}
           <tr className="bg-gray-50 font-semibold text-gray-700">
             <td className="py-3 px-4 border-t">Totaux</td>
             {totals.act.map((total, index) => (

@@ -72,13 +72,13 @@ const PlanningForm: React.FC = () => {
   const [activities, setActivities] = useState<{
     [key: string]: ActivitePlanif[];
   }>({
+    Dimanche: [],
     Lundi: [],
     Mardi: [],
     Mercredi: [],
     Jeudi: [],
     Vendredi: [],
-    Samedi: [],
-    Dimanche: [],
+    Samedi: []
   });
   
   const [localActivities, setLocalActivities] = useState<{
@@ -102,13 +102,13 @@ const PlanningForm: React.FC = () => {
 
   // Calcul des dates de début et fin de semaine
   const start = useMemo(() => {
-    const startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
+    const startDate = startOfWeek(currentDate, { weekStartsOn: 0 }); // 0 pour dimanche
     console.log("Début de semaine:", startDate);
     return startDate;
   }, [currentDate]);
 
   const end = useMemo(() => {
-    const endDate = endOfWeek(currentDate, { weekStartsOn: 1 });
+    const endDate = endOfWeek(currentDate, { weekStartsOn: 0 }); // 0 pour dimanche
     console.log("Fin de semaine:", endDate);
     return endDate;
   }, [currentDate]);
@@ -167,15 +167,20 @@ const PlanningForm: React.FC = () => {
     console.log("Date courante:", format(date, 'dd/MM/yyyy'));
     
     // Calculer le début et la fin de la semaine
-    const weekStart = startOfWeek(date, { weekStartsOn: 1 });
-    const weekEnd = endOfWeek(date, { weekStartsOn: 1 });
+    const weekStart = startOfWeek(date, { weekStartsOn: 0 }); // 0 pour dimanche
+    const weekEnd = endOfWeek(date, { weekStartsOn: 0 }); // 0 pour dimanche
     
     console.log("Semaine du", format(weekStart, 'dd/MM/yyyy'), "au", format(weekEnd, 'dd/MM/yyyy'));
 
-    // Initialiser la structure des activités par jour
+    // Initialiser la structure des activités par jour - Dimanche en premier
     const newActivities: { [key: string]: ActivitePlanif[] } = {
-      Lundi: [], Mardi: [], Mercredi: [], Jeudi: [], 
-      Vendredi: [], Samedi: [], Dimanche: []
+      Dimanche: [],
+      Lundi: [],
+      Mardi: [],
+      Mercredi: [],
+      Jeudi: [],
+      Vendredi: [],
+      Samedi: []
     };
 
     // Pour chaque planification
@@ -193,7 +198,10 @@ const PlanningForm: React.FC = () => {
       console.log("Vérification planification:", {
         id: planif.id,
         date: planif.date,
-        isInCurrentWeek
+        isInCurrentWeek,
+        planifWeekDay: format(planifDate, 'EEEE', { locale: fr }),
+        weekStart: format(weekStart, 'dd/MM/yyyy'),
+        weekEnd: format(weekEnd, 'dd/MM/yyyy')
       });
 
       if (isInCurrentWeek) {
@@ -343,7 +351,7 @@ const PlanningForm: React.FC = () => {
       }
 
       // Trouver la date correspondant au jour de destination
-      const dayIndex = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+      const dayIndex = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"]
         .indexOf(destinationDay.toLowerCase());
       
       if (dayIndex === -1) {
@@ -509,7 +517,7 @@ const PlanningForm: React.FC = () => {
         
         for (const activity of activitiesForDay) {
           try {
-            const dayIndex = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].indexOf(day);
+            const dayIndex = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'].indexOf(day);
             const currentDate = addDays(start, dayIndex);
             const formattedDate = format(currentDate, 'yyyy-MM-dd');
 
@@ -624,7 +632,7 @@ const PlanningForm: React.FC = () => {
 
   // Initialisation des jours de la semaine
   const daysOfWeek = useMemo(() => {
-    return ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+    return ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
   }, []);
 
   // Fonction pour capitaliser la première lettre
@@ -778,7 +786,7 @@ const PlanningForm: React.FC = () => {
               </button>  
               <button
                 onClick={() => {
-                  setSelectedDay("Lundi");
+                  setSelectedDay("Dimanche");
                   setShowModal(true);
                 }}
                 className="continue-application"
@@ -839,23 +847,23 @@ const PlanningForm: React.FC = () => {
                       
                       {/* Headers des colonnes */}
                       <div className="grid grid-cols-12 gap-4 bg-gray-50 px-4 py-2 border-b border-gray-200 text-sm font-medium text-gray-600">
-                        <div className="col-span-3 flex items-center gap-2">
+                        <div className="col-span-3 flex items-center gap-2 justify-center">
                           <FaClipboardList size={14} className="text-blue-500" />
                           <span>Activité</span>
                         </div>
-                        <div className="col-span-2 flex items-center gap-2">
+                        <div className="col-span-2 flex items-center gap-2 justify-center">
                           <FaClock size={14} className="text-blue-500" />
                           <span>Horaire</span>
                         </div>
-                        <div className="col-span-2 flex items-center gap-2">
+                        <div className="col-span-2 flex items-center gap-2 justify-center">
                           <FaBuilding size={14} className="text-blue-500" />
                           <span>Entreprise</span>
                         </div>
-                        <div className="col-span-2 flex items-center gap-2">
+                        <div className="col-span-2 flex items-center gap-2 justify-center">
                           <FaMapMarkerAlt size={14} className="text-blue-500" />
                           <span>Lieu</span>
                         </div>
-                        <div className="col-span-2 flex items-center gap-2">
+                        <div className="col-span-2 flex items-center gap-2 justify-center">
                           <FaSign size={14} className="text-blue-500" />
                           <span>Signalisation</span>
                         </div>
@@ -911,26 +919,40 @@ const PlanningForm: React.FC = () => {
                                   </div>
                                   
                                   {activity.note && (
-                                    <span className="inline-flex items-center gap-1 text-xs text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded mt-1">
-                                      <FaPencilAlt size={10} />
-                                      Note
-                                    </span>
+                                    <div className="group relative inline-block">
+                                      <span className="inline-flex items-center gap-1 text-xs text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded mt-1 cursor-pointer">
+                                        <FaPencilAlt size={10} />
+                                        Note
+                                      </span>
+                                      <div 
+                                        className="absolute invisible group-hover:visible bg-white border border-gray-200 rounded-lg shadow-lg p-3 min-w-[200px] mt-1 left-0" 
+                                        style={{ 
+                                          zIndex: 1000,
+                                          transform: 'translateY(0)',
+                                          pointerEvents: 'auto'
+                                        }}
+                                      >
+                                        <div className="text-sm text-gray-600 whitespace-pre-wrap">
+                                          {activity.note}
+                                        </div>
+                                      </div>
+                                    </div>
                                   )}
                                 </div>
 
-                                <div className="col-span-2 text-gray-700">
+                                <div className="col-span-2 text-gray-700 justify-center">
                                   {activity.hrsDebut} - {activity.hrsFin}
                                 </div>
 
-                                <div className="col-span-2 text-gray-700 truncate" title={getEntrepriseName(activity.defaultEntrepriseId!)}>
+                                <div className="col-span-2 text-gray-700 truncate justify-center" title={getEntrepriseName(activity.defaultEntrepriseId!)}>
                                   {getEntrepriseName(activity.defaultEntrepriseId!)}
                                 </div>
 
-                                <div className="col-span-2 text-gray-700 truncate" title={getLieuName(activity.lieuID!)}>
+                                <div className="col-span-2 text-gray-700 truncate justify-center" title={getLieuName(activity.lieuID!)}>
                                   {getLieuName(activity.lieuID!)}
                                 </div>
 
-                                <div className="col-span-2 text-gray-700 truncate" title={getSignalisationName(activity.signalisationId!)}>
+                                <div className="col-span-2 text-gray-700 truncate justify-center" title={getSignalisationName(activity.signalisationId!)}>
                                   {getSignalisationName(activity.signalisationId!)}
                                 </div>
 

@@ -25,11 +25,15 @@ const LocalisationModal: React.FC<LocalisationModalProps> = ({
   bases,
   usedBases,
 }) => {
-  const [selectedLocalisations, setSelectedLocalisations] = useState<Localisation[]>(savedLocalisations);
+  const [selectedLocalisations, setSelectedLocalisations] = useState<Localisation[]>([]);
 
   useEffect(() => {
-    setSelectedLocalisations(savedLocalisations);
-  }, [savedLocalisations]);
+    if (showModal) {
+      setSelectedLocalisations(savedLocalisations);
+    } else {
+      setSelectedLocalisations([]);
+    }
+  }, [showModal, savedLocalisations]);
 
   const toggleLocalisation = (localisation: Localisation) => {
     setSelectedLocalisations((prevSelected) =>

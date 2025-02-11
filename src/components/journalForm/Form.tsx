@@ -80,6 +80,9 @@ export default function Form() {
     activites,
     signalisations,
     selectedProject,
+    entreprises,
+    selectedEntreprise,
+    setSelectedEntreprise,
   } = useAuth();
 
   const { type, idPlanif } = useParams<{ type: string; idPlanif: string }>();
@@ -90,21 +93,7 @@ export default function Form() {
   const [journalWeather, setJournalWeather] = useState("");
   const [journalNotes, setJournalNotes] = useState("");
 
-  const [journalUsers, setJournalUsers] = useState<Employe[]>([
-    {
-      id: 1,
-      nom: "",
-      prenom: "",
-      fonction: {
-        id: null,
-        nom: "",
-      },
-      equipement: {
-        id: null,
-        nom: "",
-      },
-    },
-  ]);
+  const [journalUsers, setJournalUsers] = useState<Employe[]>([]);
 
   const [planifChantier, setPlanifChantier] = useState<PlanifChantier>(initialPlanifChantier);
   const [planifActivites, setPlanifActivites] = useState<PlanifActivites[]>([]);
@@ -173,7 +162,28 @@ export default function Form() {
             
             // Récupérer les activités associées
             const activitesData = await getPlanifActivites(Number(idPlanif));
-            setPlanifActivites(activitesData);
+            if (activitesData && activitesData.length > 0) {
+              // Transformer les données pour inclure les informations nécessaires
+              const formattedActivites = activitesData.map(act => ({
+                id: act.id,
+                activiteID: act.activiteID,
+                lieuID: planifData.lieuID, // Utiliser le lieu de la planification
+                quantite: 0,
+                notes: '',
+                planifId: Number(idPlanif)
+              }));
+              setPlanifActivites(formattedActivites);
+            } else {
+              // Si pas d'activités, créer une activité vide par défaut
+              setPlanifActivites([{
+                id: Date.now(),
+                activiteID: null,
+                lieuID: planifData.lieuID, // Utiliser le lieu de la planification
+                quantite: 0,
+                notes: '',
+                planifId: Number(idPlanif)
+              }]);
+            }
 
             // Si un lieu est défini, récupérer les distances
             if (planifData.lieuID) {
@@ -182,12 +192,64 @@ export default function Form() {
           }
         } catch (error) {
           console.error("Erreur lors de la récupération des données de planification:", error);
+          // En cas d'erreur, créer une activité vide
+          setPlanifActivites([{
+            id: Date.now(),
+            activiteID: null,
+            lieuID: null,
+            quantite: 0,
+            notes: '',
+            planifId: null
+          }]);
         }
       };
 
       fetchPlanifData();
+    } else {
+      // Si pas de planification sélectionnée, créer une activité vide
+      setPlanifActivites([{
+        id: Date.now(),
+        activiteID: null,
+        lieuID: null,
+        quantite: 0,
+        notes: '',
+        planifId: null
+      }]);
     }
   }, [idPlanif]);
+
+  useEffect(() => {
+    // Synchroniser userStats avec journalUsers
+    const updatedStats = journalUsers.map(user => {
+      // Chercher les stats existantes pour cet utilisateur
+      const existingStat = journalUserStats.userStats.find(stat => stat.id === user.id);
+      if (existingStat) {
+        return {
+          ...existingStat,
+          nom: user.nom && user.prenom ? `${user.prenom} ${user.nom}` : existingStat.nom
+        };
+      }
+      // Créer de nouvelles stats pour un nouvel utilisateur
+      return {
+        id: user.id,
+        nom: user.nom && user.prenom ? `${user.prenom} ${user.nom}` : "",
+        act: Array(10).fill(0),
+        ts: 0,
+        td: 0
+      };
+    });
+
+    setJournalUserStats(prev => ({
+      ...prev,
+      userStats: updatedStats
+    }));
+  }, [journalUsers]);
+
+  useEffect(() => {
+    if (idPlanif) {
+      fetchDistances(planifChantier.lieuID);
+    }
+  }, [idPlanif, planifChantier]);
 
   const fetchDistances = async (lieuId: number) => {
     try {
@@ -214,6 +276,10 @@ export default function Form() {
 
   const handleUserStatsChange = (newUserStats: JournalUserStats) => {
     setJournalUserStats(newUserStats);
+  };
+
+  const handlePlanifActivitesChange = (updatedActivites: PlanifActivites[]) => {
+    setPlanifActivites(updatedActivites);
   };
 
   const handlePDFGeneration = () => {
@@ -304,7 +370,12 @@ export default function Form() {
                 onToggle={toggleSection}
               />
               {sections.infoEmployes.open && (
-                <InfoEmployes users={journalUsers} setUsers={setJournalUsers} />
+                <InfoEmployes
+                  users={journalUsers}
+                  setUsers={setJournalUsers}
+                  userStats={journalUserStats.userStats}
+                  setUserStats={setJournalUserStats}
+                />
               )}
             </section>
           )}
@@ -322,16 +393,12 @@ export default function Form() {
               {sections.grilleActivites.open && (
                 <ActiviteProjet
                   users={journalUsers}
-                  activitesState={planifActivites}
-                  setActivitesState={setPlanifActivites}
-                  savedBases={journalSavedBases}
-                  setSavedBases={setJournalSavedBases}
-                  savedLiaisons={journalSavedLiaisons}
-                  setSavedLiaisons={setJournalSavedLiaisons}
+                  planifChantier={planifChantier}
+                  planifActivites={planifActivites || []}
+                  setPlanifActivites={setPlanifActivites}
+                  onPlanifActivitesChange={handlePlanifActivitesChange}
                   userStats={journalUserStats.userStats}
                   setUserStats={handleUserStatsChange}
-                  savedBasesAttachment={savedBasesAttachment}
-                  setSavedBasesAttachment={setSavedBasesAttachment}
                 />
               )}
             </section>
@@ -370,6 +437,7 @@ export default function Form() {
                 <SousTraitantSection
                   sousTraitants={journalSousTraitants}
                   setSousTraitants={setJournalSousTraitants}
+                  defaultEntrepriseId={planifChantier?.defaultEntrepriseId}
                 />
               )}
             </section>

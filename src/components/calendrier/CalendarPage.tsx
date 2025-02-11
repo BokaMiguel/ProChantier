@@ -7,19 +7,29 @@ import listPlugin from "@fullcalendar/list";
 import frLocale from "@fullcalendar/core/locales/fr";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import "./CalendarPage.scss";
+import { getPlanifChantierByProjet, getPlanifActivites } from "../../services/JournalService";
+import { TabPlanifChantier, TabPlanifActivites } from "../../models/JournalFormModel";
+import { FaMapMarkerAlt, FaBuilding, FaClock, FaExclamationTriangle, FaStickyNote, FaListUl } from 'react-icons/fa';
 
 interface CalendarEvent {
   id: string;
   title: string;
   start: Date;
   end?: Date;
+  allDay?: boolean;
   extendedProps: {
-    projectName: string;
-    status: "empty" | "complete";
-    notes: string;
+    planifChantier: TabPlanifChantier;
+    activites: {
+      id: number;
+      nom: string;
+    }[];
+    lieuName: string;
+    entrepriseName: string;
+    plageHoraire: string;
+    signalisationName: string;
   };
 }
 
@@ -28,17 +38,18 @@ const CalendarPage: React.FC = () => {
     projects,
     selectedProject,
     selectProject,
-    activitesPlanif,
     activites,
     lieux,
     sousTraitants,
     signalisations,
   } = useAuth();
-  const [localSelectedProject, setLocalSelectedProject] = useState<
-    number | null
-  >(selectedProject ? selectedProject.ID : null);
+  const [localSelectedProject, setLocalSelectedProject] = useState<number | null>(
+    selectedProject ? selectedProject.ID : null
+  );
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const navigate = useNavigate(); // Utilisation de useNavigate pour la redirection
+  const [planifChantier, setPlanifChantier] = useState<TabPlanifChantier[]>([]);
+  const [planifActivites, setPlanifActivites] = useState<TabPlanifActivites[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const savedProjectId = localStorage.getItem("selectedProjectId");
@@ -51,52 +62,121 @@ const CalendarPage: React.FC = () => {
     }
   }, [projects, selectProject]);
 
-  useEffect(() => {
-    if (activitesPlanif && activites && localSelectedProject) {
-      const filteredActivities = activitesPlanif.filter(
-        (activity) => activity.date
-      );
-
-      const formattedEvents = filteredActivities.map((activity) => {
-        const relatedActivity = activites.find(
-          (act) => act.id === activity.activiteID
+  // Nouvelle fonction pour charger les planifications
+  const loadPlanifications = async (projectId: number) => {
+    try {
+      console.log('Chargement des planifications pour le projet:', projectId);
+      const planifChantierData = await getPlanifChantierByProjet(projectId);
+      console.log('Planifications chantier reçues:', planifChantierData);
+      setPlanifChantier(planifChantierData);
+      
+      if (planifChantierData && planifChantierData.length > 0) {
+        // Charger les activités pour toutes les planifications
+        const activitesPromises = planifChantierData.map((planif: TabPlanifChantier) => 
+          getPlanifActivites(planif.id).then(activites => {
+            console.log(`Activités reçues pour planif ${planif.id}:`, activites);
+            return activites;
+          })
         );
-        const nomActivite = relatedActivity ? relatedActivity.nom : "Inconnu";
-        const lieuName =
-          lieux?.find((l) => l.id === activity.lieuID)?.nom || "Inconnu";
-        const entrepriseName =
-          sousTraitants?.find((st) => st.id === activity.defaultEntrepriseId)
-            ?.nom || "Inconnu";
-        const signalisationName =
-          signalisations?.find((sig) => sig.id === activity.signalisationId)
-            ?.nom || "Inconnu";
+        
+        const allActivites = await Promise.all(activitesPromises);
+        // Fusionner toutes les activités en une seule liste
+        const mergedActivites = allActivites.flat();
+        console.log('Toutes les activités fusionnées:', mergedActivites);
+        setPlanifActivites(mergedActivites);
+      } else {
+        console.log('Aucune planification trouvée');
+        setPlanifActivites([]);
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des planifications:", error);
+      setPlanifChantier([]);
+      setPlanifActivites([]);
+    }
+  };
+
+  // Charger les planifications quand le projet change
+  useEffect(() => {
+    if (localSelectedProject) {
+      loadPlanifications(localSelectedProject);
+    }
+  }, [localSelectedProject]);
+
+  // Mettre à jour les événements quand les planifications changent
+  useEffect(() => {
+    if (planifChantier.length > 0 && planifActivites && activites) {
+      console.log('Planifications chantier brutes:', planifChantier);
+
+      // Regrouper les activités par planifID
+      const activitesByPlanif = planifActivites.reduce((acc, curr) => {
+        if (!acc[curr.planifID]) {
+          acc[curr.planifID] = [];
+        }
+        const activiteInfo = activites.find(act => act.id === curr.activiteID);
+        if (activiteInfo) {
+          acc[curr.planifID].push({
+            id: curr.activiteID,
+            nom: activiteInfo.nom
+          });
+        }
+        return acc;
+      }, {} as { [key: number]: { id: number; nom: string; }[] });
+
+      // Créer un événement par planification
+      const formattedEvents = planifChantier.map(planif => {
+        const planifActivites = activitesByPlanif[planif.id] || [];
+        
+        // Vérification et parsing de la date
+        let eventDate;
+        try {
+          // Vérifier si la date est au format ISO
+          if (planif.date.includes('T')) {
+            eventDate = new Date(planif.date);
+          } else {
+            // Si la date est au format YYYY-MM-DD
+            eventDate = parseISO(planif.date);
+          }
+          
+          console.log('Date originale:', planif.date);
+          console.log('Date parsée:', eventDate);
+          console.log('Date ISO:', eventDate.toISOString());
+          
+          if (isNaN(eventDate.getTime())) {
+            console.error('Date invalide pour planif:', planif.id);
+            return null;
+          }
+        } catch (error) {
+          console.error('Erreur de parsing de date pour planif:', planif.id, error);
+          return null;
+        }
+
+        const lieuName = lieux?.find((l) => l.id === planif.lieuID)?.nom || "Inconnu";
+        const entrepriseName = sousTraitants?.find((st) => st.id === planif.defaultEntrepriseId)?.nom || "Inconnu";
+        const signalisationName = signalisations?.find((sig) => sig.id === planif.signalisationId)?.nom || "Inconnu";
+
+        // Créer un titre qui montre le nombre d'activités
+        const title = `${planifActivites.length} activité${planifActivites.length > 1 ? 's' : ''}`;
 
         return {
-          id: String(activity.id),
-          title: nomActivite,
-          start: new Date(activity.date!),
+          id: String(planif.id),
+          title,
+          start: eventDate,
+          allDay: true,
           extendedProps: {
-            projectName: relatedActivity ? relatedActivity.nom : "Sans projet", // Ajouté projectName
-            status: "empty" as "empty" | "complete", // Ajouté status
+            planifChantier: planif,
+            activites: planifActivites,
             lieuName,
             entrepriseName,
-            plageHoraire: `${activity.hrsDebut} - ${activity.hrsFin}`,
+            plageHoraire: `${planif.hrsDebut} - ${planif.hrsFin}`,
             signalisationName,
-            notes: activity.note || "",
           },
         };
-      });
+      }).filter(event => event !== null);
 
-      setEvents(formattedEvents);
+      console.log('Événements formatés:', formattedEvents);
+      setEvents(formattedEvents as CalendarEvent[]);
     }
-  }, [
-    activitesPlanif,
-    activites,
-    lieux,
-    sousTraitants,
-    signalisations,
-    localSelectedProject,
-  ]);
+  }, [planifChantier, planifActivites, activites, lieux, sousTraitants, signalisations]);
 
   const handleConfirmSelection = () => {
     const selected = projects?.find(
@@ -108,63 +188,60 @@ const CalendarPage: React.FC = () => {
     }
   };
 
-  const handleDateSelect = (selectInfo: any) => {
-    let title = prompt("Please enter the name of the activity");
-    let projectName = prompt("Please enter the name of the project");
-    let calendarApi = selectInfo.view.calendar;
-
-    calendarApi.unselect();
-
-    if (title && projectName) {
-      const newEvent: CalendarEvent = {
-        id: String(events.length + 1),
-        title,
-        start: selectInfo.start,
-        end: selectInfo.end,
-        extendedProps: {
-          projectName,
-          status: "empty",
-          notes: "",
-        },
-      };
-
-      setEvents([...events, newEvent]);
-      calendarApi.addEvent(newEvent as any);
-    }
-  };
+  const [selectedEvent, setSelectedEvent] = useState<{
+    event: any;
+    position: { x: number; y: number };
+  } | null>(null);
 
   const handleEventClick = (clickInfo: any) => {
-    const eventId = clickInfo.event.id;
-    navigate(`/journal-chantier/${eventId}`); // Rediriger vers la page spécifique avec l'ID de l'activité planifiée
+    const eventId = clickInfo.event.extendedProps.planifChantier.id;
+    navigate(`/journal-chantier/${eventId}`);
+  };
+
+  const handleEventMouseEnter = (mouseEnterInfo: any) => {
+    const rect = mouseEnterInfo.el.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Calculer la position du popup
+    let x = rect.right + 10; // Par défaut, à droite de l'événement
+    let y = rect.top;
+
+    // Si le popup dépasse à droite de l'écran
+    if (x + 320 > viewportWidth) { // 320px est la largeur max du popup
+      x = rect.left - 330; // Placer à gauche de l'événement
+    }
+
+    // Si le popup dépasse en bas de l'écran
+    if (y + 400 > viewportHeight) { // 400px est une hauteur estimée du popup
+      y = viewportHeight - 420; // Laisser un peu d'espace en bas
+    }
+
+    setSelectedEvent({
+      event: mouseEnterInfo.event,
+      position: { x, y }
+    });
+  };
+
+  const handleEventMouseLeave = () => {
+    setSelectedEvent(null);
   };
 
   const renderEventContent = (eventInfo: any) => {
     const { extendedProps } = eventInfo.event;
-
     return (
-      <div className="relative group">
-        <span className="truncate block">{eventInfo.event.title}</span>
-        <div className="absolute hidden group-hover:block bg-white text-gray-900 text-sm border border-gray-300 p-2 rounded-md shadow-lg z-10 w-64">
-          <p className="truncate">
-            <strong>Activité:</strong> {eventInfo.event.title}
-          </p>
-          <p className="truncate">
-            <strong>Lieu:</strong> {extendedProps.lieuName}
-          </p>
-          <p className="truncate">
-            <strong>Entreprise:</strong> {extendedProps.entrepriseName}
-          </p>
-          <p className="truncate">
-            <strong>Plage Horaire:</strong> {extendedProps.plageHoraire}
-          </p>
-          <p className="truncate">
-            <strong>Signalisation:</strong> {extendedProps.signalisationName}
-          </p>
-          {extendedProps.notes && (
-            <p className="truncate">
-              <strong>Notes:</strong> {extendedProps.notes}
-            </p>
-          )}
+      <div className="event-content">
+        <div className="event-title">
+          <FaListUl />
+          {eventInfo.event.title}
+        </div>
+        <div className="event-details">
+          <FaMapMarkerAlt />
+          {extendedProps.lieuName}
+        </div>
+        <div className="event-details">
+          <FaClock />
+          {extendedProps.plageHoraire}
         </div>
       </div>
     );
@@ -199,26 +276,74 @@ const CalendarPage: React.FC = () => {
           Confirmer
         </button>
       </div>
-      <FullCalendar
-        plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
-        initialView="dayGridMonth"
-        locale={frLocale}
-        events={events}
-        select={handleDateSelect}
-        eventClick={handleEventClick} // Utiliser handleEventClick pour rediriger sur le clic
-        eventContent={renderEventContent} // Utilise renderEventContent pour afficher le contenu personnalisé
-        editable={true}
-        droppable={true}
-        selectable={true}
-        eventColor="#007bff"
-        displayEventTime={false}
-        eventTextColor="#ffffff"
-        headerToolbar={{
-          left: "prev,next today",
-          center: "title",
-          right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
-        }}
-      />
+      <div className="calendar-container">
+        <FullCalendar
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
+          initialView="dayGridMonth"
+          locale={frLocale}
+          events={events}
+          eventContent={renderEventContent}
+          eventClick={handleEventClick}
+          eventMouseEnter={handleEventMouseEnter}
+          eventMouseLeave={handleEventMouseLeave}
+          editable={false}
+          selectable={false}
+          eventColor="#3b82f6"
+          displayEventTime={false}
+          eventTextColor="#ffffff"
+          headerToolbar={{
+            left: "prev,next today",
+            center: "title",
+            right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
+          }}
+        />
+      </div>
+      {selectedEvent && (
+        <div
+          className="event-popup"
+          style={{
+            left: selectedEvent.position.x,
+            top: selectedEvent.position.y,
+          }}
+        >
+          <div className="popup-header">
+            <h3><FaListUl className="inline-block mr-2 mb-1" />Activités planifiées</h3>
+          </div>
+
+          <div className="activities-section">
+            <ul className="activities-list">
+              {selectedEvent.event.extendedProps.activites.map((act: any) => (
+                <li key={act.id}>{act.nom}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="info-section">
+            <div className="info-item">
+              <label><FaMapMarkerAlt className="inline-block mr-2 text-blue-600" />Lieu :</label>
+              <span>{selectedEvent.event.extendedProps.lieuName}</span>
+            </div>
+            <div className="info-item">
+              <label><FaBuilding className="inline-block mr-2 text-blue-600" />Entreprise :</label>
+              <span>{selectedEvent.event.extendedProps.entrepriseName}</span>
+            </div>
+            <div className="info-item">
+              <label><FaClock className="inline-block mr-2 text-blue-600" />Plage Horaire :</label>
+              <span>{selectedEvent.event.extendedProps.plageHoraire}</span>
+            </div>
+            <div className="info-item">
+              <label><FaExclamationTriangle className="inline-block mr-2 text-blue-600" />Signalisation :</label>
+              <span>{selectedEvent.event.extendedProps.signalisationName}</span>
+            </div>
+            {selectedEvent.event.extendedProps.planifChantier.note && (
+              <div className="info-item">
+                <label><FaStickyNote className="inline-block mr-2 text-blue-600" />Notes :</label>
+                <span>{selectedEvent.event.extendedProps.planifChantier.note}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

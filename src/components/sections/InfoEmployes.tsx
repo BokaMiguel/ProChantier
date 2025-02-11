@@ -6,7 +6,9 @@ import { useAuth } from "../../context/AuthContext";
 const InfoEmployes: React.FC<{
   users: Employe[];
   setUsers: React.Dispatch<React.SetStateAction<Employe[]>>;
-}> = ({ users, setUsers }) => {
+  userStats: any[];
+  setUserStats: (stats: any) => void;
+}> = ({ users, setUsers, userStats, setUserStats }) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [userIdToDelete, setUserIdToDelete] = useState<number | null>(null);
 
@@ -33,6 +35,27 @@ const InfoEmployes: React.FC<{
     }
   };
 
+  const handleDeleteUser = (id: number) => {
+    setShowConfirm(true);
+    setUserIdToDelete(id);
+  };
+
+  const confirmDeleteUser = () => {
+    if (userIdToDelete !== null) {
+      // Filtrer l'utilisateur au lieu de le vider
+      const updatedUsers = users.filter((user) => user.id !== userIdToDelete);
+      setUsers(updatedUsers);
+
+      // Supprimer également les stats de l'utilisateur
+      setUserStats({
+        userStats: userStats.filter(stat => stat.id !== userIdToDelete)
+      });
+      
+      setShowConfirm(false);
+      setUserIdToDelete(null);
+    }
+  };
+
   const handleChange = (
     id: number,
     field: keyof Employe | "fonction" | "equipement",
@@ -49,19 +72,24 @@ const InfoEmployes: React.FC<{
           );
 
           if (isEmployeeAlreadySelected) {
-            return user; // Ne pas mettre à jour si l'employé est déjà sélectionné
+            return user;
           }
 
+          // Si l'employé n'est pas déjà sélectionné, trouver ses informations
           const selectedEmployee = employees?.find(
             (emp) => `${emp.prenom} ${emp.nom}` === value
           );
-          return {
-            ...user,
-            nom: selectedEmployee?.nom || "",
-            prenom: selectedEmployee?.prenom || "",
-            fonction: selectedEmployee?.fonction || { id: null, nom: "" },
-            equipement: selectedEmployee?.equipement || { id: null, nom: "" },
-          };
+
+          if (selectedEmployee) {
+            return {
+              ...user,
+              id: selectedEmployee.id,
+              nom: selectedEmployee.nom,
+              prenom: selectedEmployee.prenom,
+              fonction: selectedEmployee.fonction || { id: null, nom: "" },
+              equipement: selectedEmployee.equipement || { id: null, nom: "" },
+            };
+          }
         } else if (field === "fonction") {
           const selectedFonction = fonctions?.find((f) => f.nom === value);
           return {
@@ -97,27 +125,25 @@ const InfoEmployes: React.FC<{
     }
   };
 
-  const handleDeleteUser = (id: number) => {
-    setShowConfirm(true);
-    setUserIdToDelete(id);
-  };
-
-  const confirmDeleteUser = () => {
-    if (userIdToDelete !== null) {
-      // Filtrer l'utilisateur au lieu de le vider
-      const updatedUsers = users.filter((user) => user.id !== userIdToDelete);
-      setUsers(updatedUsers);
-    }
-    setShowConfirm(false);
-    setUserIdToDelete(null);
-  };
-
   useEffect(() => {
     // If there are no users, add one empty user
     if (users.length === 0 && employees && employees.length > 0) {
-      handleAddUser();
+      const newUser: Employe = {
+        id: Date.now(), // Utiliser timestamp pour éviter les conflits d'ID
+        nom: "",
+        prenom: "",
+        fonction: {
+          id: null,
+          nom: "",
+        },
+        equipement: {
+          id: null,
+          nom: "",
+        },
+      };
+      setUsers([newUser]);
     }
-  }, [users, employees]);
+  }, [users.length, employees]);
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
