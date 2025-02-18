@@ -157,6 +157,43 @@ export interface PlanifChantier {
   };
 }
 
+export interface TabPlanifChantier {
+  id: number;
+  lieuID: number;
+  projetID: number;
+  hrsDebut: string;
+  hrsFin: string;
+  defaultEntrepriseId: number;
+  isLab: boolean;
+  signalisationId: number;
+  note: string;
+  date: string;
+  activites?: TabPlanifActivites[];
+}
+
+export interface TabPlanifActivites {
+  notes?: string;
+  quantite?: number;
+  id: number;
+  planifID: number;
+  activiteID: number;
+}
+
+export interface JournalActivite {
+  id: number;
+  activiteID: number | null;
+  lieuID: number | null;
+  quantite: number;
+  notes?: string;
+  date: string;
+  hrsDebut: string;
+  hrsFin: string;
+  defaultEntrepriseId: number | null;
+  signalisationId: number | null;
+  bases: Localisation[];
+  liaisons: LocalisationDistance[];
+}
+
 // Types pour le journal
 export interface ProjectInfo {
   type: number;
@@ -243,6 +280,78 @@ export type Sections = {
     visible: boolean;
   };
 };
+
+// Nouvelles interfaces pour le journal de chantier
+export interface JournalChantier {
+  id: number;
+  date: string;
+  hrsDebut: string;
+  hrsFin: string;
+  planifId: number;
+  meteoId?: number;
+  statutId: number;
+  projetId: number;
+  notes: string;
+  equipeJournals?: EquipeJournal[];
+  materiauxJournals?: MateriauxJournal[];
+  sousTraitantJournals?: SousTraitantJournal[];
+  journalActivites?: JournalActivites[];
+}
+
+export interface MateriauxJournal {
+  journalId: number;
+  materielId: number;
+  quantite: number;
+}
+
+export interface StatutJournal {
+  id: number;
+  nom: string;
+}
+
+export interface MeteoJournal {
+  id: number;
+  date: string;
+  type: string;
+  averse?: string;
+  journalId: number;
+}
+
+export interface SousTraitantJournal {
+  journalId: number;
+  sousTraitantId: number;
+  quantite: number;
+}
+
+export interface JournalActivites {
+  id: number;
+  journalId: number;
+  activiteId: number;
+  comment?: string;
+}
+
+export interface LocalisationJournal {
+  id: number;
+  journalActiviteId: number;
+  localisationId: number;
+}
+
+export interface LocalisationDistanceJournal {
+  id: number;
+  journalActiviteId: number;
+  localisationDistanceId: number;
+}
+
+export interface EquipeJournal {
+  journalId: number;
+  equipeId: number;
+}
+
+export interface EquipeChantier {
+  id: number;
+  nom: string;
+  projetId: number;
+}
 
 // Valeurs initiales
 export const initialPlanifChantier: PlanifChantier = {

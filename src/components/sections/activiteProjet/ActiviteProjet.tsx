@@ -257,7 +257,13 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
       quantite: 0,
       notes: "",
       bases: [],
-      liaisons: []
+      liaisons: [],
+      date: "",
+      hrsDebut: "",
+      hrsFin: "",
+      defaultEntrepriseId: null,
+      signalisationId: null,
+      planifID: 0
     };
     
     console.log("Nouvelle activité à ajouter:", newActivity);
