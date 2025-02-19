@@ -1,0 +1,440 @@
+import { StyleSheet } from '@react-pdf/renderer';
+
+export const styles = StyleSheet.create({
+  page: {
+    flexDirection: "column",
+    backgroundColor: "#FFFFFF",
+    padding: 30,
+    paddingBottom: 65, // Augmenter la marge en bas pour éviter le chevauchement
+  },
+  section: {
+    position: "relative",
+    marginBottom: 20,
+  },
+  container: {
+    margin: "0 auto",
+    width: "90%",
+    maxWidth: "800px",
+  },
+  separator: {
+    marginVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#000000",
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingTop: 20,
+  },
+  logo: {
+    width: 120,
+    height: 120,
+    objectFit: 'contain',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  journalIdText: {
+    fontSize: 14,
+    fontWeight: "bold",
+    marginTop: 5,
+    color: "#1e3a8a",
+  },
+  sectionHeader: {
+    fontSize: 16,
+    fontFamily: "Helvetica-Bold",
+    marginBottom: 15,
+    marginTop: 20,
+    color: "#2c3e50",
+    backgroundColor: "#e8ecf3",
+    padding: 8,
+    paddingLeft: 15,
+    paddingRight: 15,
+    borderRadius: 4,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  sectionHeaderIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 15,
+  },
+  sectionHeaderText: {
+    fontSize: 16,
+    fontFamily: "Helvetica-Bold",
+    color: "#2c3e50",
+    marginLeft: 5,
+  },
+  sectionContent: {
+    paddingLeft: 8,
+    paddingRight: 8,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  text: {
+    fontSize: 12,
+    fontFamily: "Helvetica",
+    marginBottom: 3,
+  },
+  boldText: {
+    fontWeight: 'bold',
+  },
+  label: {
+    fontFamily: "Helvetica-Bold",
+    fontSize: 12,
+    marginRight: 5,
+    marginLeft: 15,
+  },
+  table: {
+    display: "flex",
+    flexDirection: "column",
+    width: "100%",
+    marginBottom: 10,
+  },
+  tableRow: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  tableHeader: {
+    backgroundColor: "#F9FAFB",
+    padding: 8,
+    fontSize: 11,
+    fontWeight: "bold",
+    color: "#374151",
+    borderBottomWidth: 2,
+    borderBottomColor: "#D1D5DB",
+  },
+  tableCell: {
+    padding: 8,
+    fontSize: 10,
+    color: "#1F2937",
+  },
+  tableCellBorder: {
+    borderRightWidth: 1,
+    borderRightColor: "#E5E7EB",
+  },
+  gridHeader: {
+    flexDirection: "row",
+    backgroundColor: "#f0f0f0",
+    borderBottomWidth: 1,
+    borderBottomColor: "#000",
+  },
+  gridRow: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "#ccc",
+  },
+  gridCell: {
+    flex: 1,
+    padding: 5,
+    fontSize: 10,
+    textAlign: "center",
+    borderRightWidth: 1,
+    borderRightColor: "#ccc",
+    minWidth: 50,
+  },
+  gridHeaderCell: {
+    flex: 1,
+    padding: 5,
+    fontSize: 10,
+    fontWeight: "bold",
+    textAlign: "center",
+    borderRightWidth: 1,
+    borderRightColor: "#ccc",
+    backgroundColor: "#e0e0e0",
+    minWidth: 50,
+  },
+  gridFirstCol: {
+    flex: 2,
+    padding: 5,
+    fontSize: 10,
+    borderRightWidth: 1,
+    borderRightColor: "#ccc",
+    minWidth: 100,
+  },
+  gridHeaderFirstCol: {
+    flex: 2,
+    padding: 5,
+    fontSize: 10,
+    fontWeight: "bold",
+    borderRightWidth: 1,
+    borderRightColor: "#ccc",
+    backgroundColor: "#e0e0e0",
+    minWidth: 100,
+  },
+  totalsRow: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "#000",
+    backgroundColor: "#f0f0f0",
+  },
+  signatureContainer: {
+    marginTop: 30,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+    paddingTop: 10,
+  },
+  signatureGridLayout: {
+    flexDirection: "column",
+    justifyContent: "space-between",
+    height: 200,
+  },
+  signatureRowLayout: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  signatureBoxContainer: {
+    flex: 1,
+    marginRight: 10,
+  },
+  signatureNameLabel: {
+    fontSize: 10,
+    color: "#6B7280",
+    marginBottom: 4,
+  },
+  signatureNameField: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+    height: 20,
+  },
+  signatureField: {
+    flex: 1,
+    marginRight: 10,
+    marginBottom: 10,
+  },
+  signatureDateLabel: {
+    fontSize: 10,
+    color: "#6B7280",
+    marginBottom: 4,
+  },
+  signatureDateLine: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+    height: 20,
+  },
+  signaturePage: {
+    marginTop: 20,
+    padding: 10,
+  },
+  signatureBlock: {
+    marginBottom: 30,
+  },
+  signatureTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  signatureRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  pageNumber: {
+    position: 'absolute',
+    fontSize: 10,
+    bottom: 10,
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    color: 'grey',
+  },
+  emptySection: {
+    color: "#666",
+    fontStyle: "italic",
+    marginTop: 10,
+  },
+  notesSection: {
+    marginTop: 8,
+    marginBottom: 8,
+    padding: 8,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 4,
+  },
+  notesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  notesTitle: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    marginLeft: 4,
+  },
+  notesText: {
+    fontSize: 10,
+    color: '#2c3e50',
+    marginLeft: 16,
+  },
+  notesContainer: {
+    marginTop: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 4,
+  },
+  activitiesContainer: {
+    marginTop: 10,
+  },
+  activitySection: {
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 4,
+  },
+  activityHeader: {
+    backgroundColor: '#F3F4F6',
+    padding: 8,
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+  },
+  activityTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  activityTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  activityId: {
+    fontSize: 10,
+    color: '#666',
+    marginLeft: 8,
+  },
+  locationText: {
+    fontSize: 11,
+    color: '#4B5563',
+  },
+  subSection: {
+    padding: 8,
+  },
+  subSectionHeader: {
+    marginBottom: 4,
+  },
+  subTitle: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#374151',
+  },
+  basesContent: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  baseText: {
+    fontSize: 11,
+    backgroundColor: '#E5E7EB',
+    padding: '4 8',
+    borderRadius: 4,
+  },
+  liaisonsContent: {
+    marginTop: 4,
+  },
+  liaisonText: {
+    fontSize: 11,
+    marginBottom: 2,
+  },
+  totalText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    marginTop: 4,
+    color: '#4B5563',
+  },
+  // Supprimer les styles liaisonsContainer et liaisonPill car on utilise maintenant basesContainer et basePill
+  // liaisonsContainer: {
+  //   marginTop: 5,
+  //   flexDirection: 'row',
+  //   flexWrap: 'wrap',
+  //   gap: 5
+  // },
+  // liaisonPill: {
+  //   backgroundColor: '#f0f0f0',
+  //   padding: 5,
+  //   borderRadius: 5,
+  //   marginRight: 5,
+  //   marginBottom: 5
+  // },
+  statsTable: {
+    width: '100%',
+    marginTop: 10,
+    borderStyle: 'solid',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  statsHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#f3f4f6',
+    borderBottomWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  statsHeaderCell: {
+    flex: 1,
+    padding: 8,
+    fontSize: 10,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  statsCell: {
+    flex: 1,
+    padding: 8,
+    fontSize: 10,
+    textAlign: 'center',
+  },
+  totalRow: {
+    backgroundColor: '#f9fafb',
+    fontWeight: 'bold',
+  },
+  employeesTable: {
+    width: '100%',
+    marginBottom: 10,
+  },
+  employeeRow: {
+    flexDirection: 'row',
+    padding: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  employeeName: {
+    flex: 1,
+    fontSize: 10,
+  },
+  employeeFunction: {
+    flex: 1,
+    fontSize: 10,
+    color: '#666',
+  },
+  signatureBox: {
+    width: 150,
+    height: 60,
+    border: '1pt solid #000',
+    marginBottom: 5,
+  },
+  signatureImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'contain',
+  },
+  signatureLabel: {
+    fontSize: 11,
+    marginBottom: 5,
+    color: '#374151',
+  },
+  signatureLine: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#000',
+    height: 30,
+  },
+});

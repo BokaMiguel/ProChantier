@@ -112,8 +112,8 @@ const CalendarPage: React.FC = () => {
         if (!acc[curr.planifID]) {
           acc[curr.planifID] = [];
         }
-        const activiteInfo = activites.find(act => act.id === curr.activiteID);
-        if (activiteInfo) {
+        const activiteInfo = curr.activiteID ? activites.find(act => act.id === curr.activiteID) : null;
+        if (activiteInfo && curr.activiteID) {
           acc[curr.planifID].push({
             id: curr.activiteID,
             nom: activiteInfo.nom

@@ -68,7 +68,14 @@ export interface ActivitePlanif {
 export interface PlanifActivites {
   id: number;
   planifID: number;
-  activiteID: number;
+  activiteID: number | null;
+  lieuID?: number | null;
+  quantite: number;
+  notes: string;
+  bases?: Localisation[];
+  liaisons?: LocalisationDistance[];
+  activiteNom?: string;
+  lieuNom?: string;
 }
 
 // Types pour la localisation
@@ -95,8 +102,27 @@ export interface Materiau {
 export interface SousTraitant {
   id: number;
   nom: string;
-  quantite?: number;
+  quantite: number;
+  activiteId?: number | null;
+  uniteId?: number | null;
 }
+
+// Types pour les unités
+export interface Unite {
+  id: number;
+  nom: string;
+  symbole: string;
+}
+
+// Mock des unités (à remplacer par l'appel API)
+export const unites: Unite[] = [
+  { id: 1, nom: "Mètre", symbole: "m" },
+  { id: 2, nom: "Mètre carré", symbole: "m²" },
+  { id: 3, nom: "Mètre cube", symbole: "m³" },
+  { id: 4, nom: "Kilogramme", symbole: "kg" },
+  { id: 5, nom: "Unité", symbole: "u" },
+  { id: 6, nom: "Heure", symbole: "h" }
+];
 
 // Types pour la météo et le statut
 export interface Meteo {
@@ -176,7 +202,7 @@ export interface TabPlanifActivites {
   quantite?: number;
   id: number;
   planifID: number;
-  activiteID: number;
+  activiteID: number | null;
 }
 
 export interface JournalActivite {
@@ -394,6 +420,8 @@ export const initialSousTraitant: SousTraitant = {
   id: 1,
   nom: "",
   quantite: 0,
+  activiteId: null,
+  uniteId: null,
 };
 
 export const initialJournal: Journal = {

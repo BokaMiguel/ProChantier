@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { FaArrowRight, FaFilePdf } from "react-icons/fa";
-import { PDFViewer, Font } from "@react-pdf/renderer";
+import { PDFViewer, Font, BlobProvider } from "@react-pdf/renderer";
 import InfoProjet from "../sections/InfoProjet";
 import InfoEmployes from "../sections/InfoEmployes";
 import ActiviteProjet from "../sections/activiteProjet/ActiviteProjet";
@@ -19,9 +19,17 @@ import {
   Localisation,
   JournalUserStats,
   SignatureData,
+  Activite,
+  Lieu,
+  JournalActivite,
+  TabPlanifChantier,
+  UserStat
 } from "../../models/JournalFormModel";
 import { PDFDocument } from "../../helper/PDFGenerator";
-import { getDistancesForLieu, getPlanifChantier, getPlanifActivites } from "../../services/JournalService";
+import {
+  getDistancesForLieu, getPlanifChantier, getPlanifActivites
+} from "../../services/JournalService";
+import { format } from "date-fns";
 
 Font.register({
   family: "Inter",
@@ -36,22 +44,6 @@ type SectionKey =
   | "grilleActivites"
   | "notes"
   | "signature";
-
-interface PDFContentProps {
-  journalDate: string;
-  journalArrivee: string;
-  journalDepart: string;
-  journalWeather: string;
-  journalUsers: Employe[];
-  planifChantier: PlanifChantier;
-  planifActivites: PlanifActivites[];
-  journalMateriaux: any[];
-  journalSousTraitants: any[];
-  userStats: JournalUserStats["userStats"];
-  notes: string;
-  projetId?: string;
-  signatureData?: SignatureData | null;
-}
 
 type Sections = {
   [key in SectionKey]: { open: boolean; visible: boolean };
@@ -68,21 +60,23 @@ type PDFData = {
   journalMateriaux: any[];
   journalSousTraitants: any[];
   userStats: { id: number; nom: string; act: number[]; ts: number; td: number }[];
+  totals: { act: number[]; ts: number; td: number };
   notes: string;
   projetId: string;
   signatureData: { signature: string; signataire: string; date: Date } | null;
 };
 
+const formatDateForFileName = (date: Date): string => {
+  return format(date, "yyyyMMdd");
+};
+
 export default function Form() {
   const {
     lieux,
-    sousTraitants,
     activites,
-    signalisations,
     selectedProject,
-    entreprises,
-    selectedEntreprise,
-    setSelectedEntreprise,
+    bases,
+    fetchBases
   } = useAuth();
 
   const { type, idPlanif } = useParams<{ type: string; idPlanif: string }>();
@@ -95,7 +89,16 @@ export default function Form() {
 
   const [journalUsers, setJournalUsers] = useState<Employe[]>([]);
 
-  const [planifChantier, setPlanifChantier] = useState<PlanifChantier>(initialPlanifChantier);
+  const [planifChantier, setPlanifChantier] = useState<PlanifChantier | null>(null);
+
+  console.log('Form - Auth Context Data:', {
+    lieux,
+    activites,
+    selectedProject,
+    bases,
+    planifChantier
+  });
+
   const [planifActivites, setPlanifActivites] = useState<PlanifActivites[]>([]);
   
   const [journalSavedBases, setJournalSavedBases] = useState<Localisation[]>([]);
@@ -133,6 +136,23 @@ export default function Form() {
     date: Date;
   } | null>(null);
 
+  const [activitesList, setActivitesList] = useState<Activite[]>([]);
+  const [lieuxList, setLieuxList] = useState<Lieu[]>([]);
+
+  useEffect(() => {
+    if (activites) {
+      console.log('Setting activitesList from activites:', activites);
+      setActivitesList(activites);
+    }
+  }, [activites]);
+
+  useEffect(() => {
+    if (lieux) {
+      console.log('Setting lieuxList from lieux:', lieux);
+      setLieuxList(lieux);
+    }
+  }, [lieux]);
+
   useEffect(() => {
     if (type === "entretien") {
       setSections((prevSections) => ({
@@ -164,13 +184,13 @@ export default function Form() {
             const activitesData = await getPlanifActivites(Number(idPlanif));
             if (activitesData && activitesData.length > 0) {
               // Transformer les données pour inclure les informations nécessaires
-              const formattedActivites = activitesData.map(act => ({
+              const formattedActivites = activitesData.map((act: PlanifActivites) => ({
                 id: act.id,
                 activiteID: act.activiteID,
                 lieuID: planifData.lieuID, // Utiliser le lieu de la planification
                 quantite: 0,
                 notes: '',
-                planifId: Number(idPlanif)
+                planifID: Number(idPlanif)
               }));
               setPlanifActivites(formattedActivites);
             } else {
@@ -181,7 +201,7 @@ export default function Form() {
                 lieuID: planifData.lieuID, // Utiliser le lieu de la planification
                 quantite: 0,
                 notes: '',
-                planifId: Number(idPlanif)
+                planifID: 0
               }]);
             }
 
@@ -199,7 +219,7 @@ export default function Form() {
             lieuID: null,
             quantite: 0,
             notes: '',
-            planifId: null
+            planifID: 0
           }]);
         }
       };
@@ -213,7 +233,7 @@ export default function Form() {
         lieuID: null,
         quantite: 0,
         notes: '',
-        planifId: null
+        planifID: 0
       }]);
     }
   }, [idPlanif]);
@@ -247,7 +267,7 @@ export default function Form() {
 
   useEffect(() => {
     if (idPlanif) {
-      fetchDistances(planifChantier.lieuID);
+      fetchDistances(planifChantier?.lieuID || 0);
     }
   }, [idPlanif, planifChantier]);
 
@@ -274,61 +294,227 @@ export default function Form() {
     (key) => sections[key as SectionKey].visible
   ) as SectionKey[];
 
-  const handleUserStatsChange = (newUserStats: JournalUserStats) => {
-    setJournalUserStats(newUserStats);
+  const handleUserStatsUpdate = (act: number[]) => {
+    const updatedStats = journalUserStats.userStats.map((user: UserStat) => ({
+      ...user,
+      act
+    }));
+
+    setJournalUserStats({
+      ...journalUserStats,
+      userStats: updatedStats
+    });
   };
 
-  const handlePlanifActivitesChange = (updatedActivites: PlanifActivites[]) => {
-    setPlanifActivites(updatedActivites);
+  const convertToJournalActivite = (planif: PlanifActivites): JournalActivite => {
+    if (!planifChantier) throw new Error("planifChantier is undefined");
+    
+    return {
+      id: planif.id,
+      activiteID: planif.activiteID,
+      lieuID: planifChantier.lieuID,
+      quantite: planif.quantite || 0,
+      date: planifChantier.date,
+      hrsDebut: planifChantier.hrsDebut,
+      hrsFin: planifChantier.hrsFin,
+      defaultEntrepriseId: planifChantier.defaultEntrepriseId,
+      signalisationId: planifChantier.signalisationId,
+      notes: planif.notes || '',
+      bases: planif.bases || [],
+      liaisons: planif.liaisons || []
+    };
   };
 
-  const handlePDFGeneration = () => {
+  const convertToPlanifActivites = (journal: JournalActivite): PlanifActivites => {
+    if (journal.activiteID === null) {
+      throw new Error("activiteID cannot be null");
+    }
+    
+    return {
+      id: journal.id,
+      planifID: Number(idPlanif),
+      activiteID: journal.activiteID,
+      lieuID: journal.lieuID,
+      quantite: journal.quantite,
+      notes: journal.notes || '',
+      bases: journal.bases,
+      liaisons: journal.liaisons
+    };
+  };
+
+  const handlePlanifActivitesUpdate = (updatedActivites: JournalActivite[]) => {
+    try {
+      console.log("Updating activities:", updatedActivites);
+      const convertedActivites = updatedActivites.map(convertToPlanifActivites);
+      console.log("Converted activities:", convertedActivites);
+      setPlanifActivites(convertedActivites);
+    } catch (error) {
+      console.error("Error updating planif activites:", error);
+    }
+  };
+
+  const renderActiviteProjet = () => {
+    if (!planifChantier) return null;
+
+    try {
+      const journalActivites = planifActivites.map(planif => {
+        if (planif.activiteID === null) {
+          throw new Error("activiteID cannot be null");
+        }
+        return convertToJournalActivite(planif);
+      });
+
+      return (
+        <ActiviteProjet
+          users={journalUsers}
+          planifChantier={planifChantier as TabPlanifChantier}
+          planifActivites={journalActivites}
+          userStats={journalUserStats.userStats}
+          setUserStats={(newStats: JournalUserStats) => setJournalUserStats(newStats)}
+          setPlanifActivites={handlePlanifActivitesUpdate}
+          onPlanifActivitesChange={handlePlanifActivitesUpdate}
+        />
+      );
+    } catch (error) {
+      console.error("Error rendering ActiviteProjet:", error);
+      return null;
+    }
+  };
+
+  const renderPDF = () => {
+    if (!planifChantier) return null;
+
+    // S'assurer que toutes les propriétés requises sont présentes
+    const planifChantierData: PlanifChantier = {
+      id: planifChantier.id || 0,
+      date: planifChantier.date || new Date().toISOString().split('T')[0],
+      hrsDebut: planifChantier.hrsDebut || '',
+      hrsFin: planifChantier.hrsFin || '',
+      lieuID: planifChantier.lieuID || 0,
+      projetID: planifChantier.projetID || 0,
+      defaultEntrepriseId: planifChantier.defaultEntrepriseId || 0,
+      isLab: planifChantier.isLab || false,
+      signalisationId: planifChantier.signalisationId || 0,
+      note: planifChantier.note || '',
+      lieu: planifChantier.lieu,
+      projet: planifChantier.projet,
+      defaultEntreprise: planifChantier.defaultEntreprise,
+      signalisation: planifChantier.signalisation
+    };
+
     const pdfData: PDFData = {
-      journalDate,
-      journalArrivee,
-      journalDepart,
-      journalWeather,
+      journalDate: journalDate,
+      journalArrivee: journalArrivee,
+      journalDepart: journalDepart,
+      journalWeather: journalWeather,
       journalUsers,
-      planifChantier,
-      planifActivites,
+      planifChantier: planifChantierData,
+      planifActivites: planifActivites.map(act => {
+        if (act.activiteID === null) {
+          throw new Error("activiteID cannot be null");
+        }
+        return {
+          ...act,
+          activiteID: act.activiteID
+        };
+      }),
       journalMateriaux,
       journalSousTraitants,
       userStats: journalUserStats.userStats,
+      totals: journalUserStats.totals || { act: [], ts: 0, td: 0 },
       notes: journalNotes,
-      projetId: selectedProject?.ID.toString() || "",
-      signatureData,
+      projetId: selectedProject?.ID?.toString() || '0',
+      signatureData: signatureData,
     };
+
+    return (
+      <div style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 1000,
+        backgroundColor: "white"
+      }}>
+        <BlobProvider document={
+          <PDFDocument
+            data={{
+              journalDate,
+              journalArrivee,
+              journalDepart,
+              journalWeather,
+              journalUsers,
+              planifChantier: planifChantier || initialPlanifChantier,
+              planifActivites,
+              journalMateriaux,
+              journalSousTraitants,
+              userStats: journalUserStats.userStats,
+              totals: journalUserStats.totals,
+              notes: journalNotes,
+              signatureData: signatureData,
+            }}
+            selectedProject={selectedProject}
+            activites={activites}
+            lieux={lieux}
+            bases={journalSavedBases}
+            distances={journalSavedLiaisons}
+            journalPlanifId={Number(idPlanif)}
+          />
+        }>
+          {({ blob, url, loading }) => {
+            if (loading) return <div>Chargement du document...</div>;
+            if (!url) return <div>Erreur lors de la génération du PDF</div>;
+            
+            const handleDownload = () => {
+              const fileName = `${formatDateForFileName(journalDate)}_${selectedProject?.NumeroProjet || "NOPROJ"}_${idPlanif?.padStart(7, "0")}`;
+
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = `${fileName}.pdf`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            };
+
+            return (
+              <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+                <div style={{ padding: "10px", backgroundColor: "#f0f0f0", display: "flex", justifyContent: "flex-end" }}>
+                  <button
+                    onClick={handleDownload}
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center"
+                  >
+                    <FaFilePdf className="mr-2" />
+                    Télécharger le PDF
+                  </button>
+                </div>
+                <iframe 
+                  src={url} 
+                  style={{ flex: 1, border: "none" }}
+                  title="PDF Preview"
+                />
+              </div>
+            );
+          }}
+        </BlobProvider>
+      </div>
+    );
+  };
+
+  const handlePDFGeneration = async () => {
+    // S'assurer que nous avons les bases pour le lieu actuel
+    if (planifChantier?.lieuID) {
+      try {
+        console.log('Chargement des bases pour le lieu:', planifChantier.lieuID);
+        await fetchBases(planifChantier.lieuID);
+      } catch (error) {
+        console.error('Erreur lors du chargement des bases:', error);
+      }
+    }
 
     setShowPDF(true);
     setPdfEnabled(true);
   };
-
-  const PDFContent = () => (
-    <PDFViewer width="100%" height="1000px">
-      <PDFDocument
-        formData={{
-          journalDate: journalDate.toISOString().split('T')[0],
-          journalArrivee,
-          journalDepart,
-          journalWeather,
-          journalUsers,
-          planifChantier,
-          planifActivites,
-          journalMateriaux,
-          journalSousTraitants,
-          userStats: journalUserStats.userStats,
-          notes: journalNotes,
-          projetId: selectedProject?.ID.toString() || "",
-          signatureData,
-        }}
-        activites={activites}
-        bases={[]}
-        distances={distances}
-        lieux={lieux}
-        journalPlanifId={Number(idPlanif)}
-      />
-    </PDFViewer>
-  );
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center py-4">
@@ -391,15 +577,7 @@ export default function Form() {
                 onToggle={toggleSection}
               />
               {sections.grilleActivites.open && (
-                <ActiviteProjet
-                  users={journalUsers}
-                  planifChantier={planifChantier}
-                  planifActivites={planifActivites || []}
-                  setPlanifActivites={setPlanifActivites}
-                  onPlanifActivitesChange={handlePlanifActivitesChange}
-                  userStats={journalUserStats.userStats}
-                  setUserStats={handleUserStatsChange}
-                />
+                renderActiviteProjet()
               )}
             </section>
           )}
@@ -426,9 +604,7 @@ export default function Form() {
           {sections.sousTraitants.visible && (
             <section>
               <SectionHeader
-                title={`${
-                  visibleSections.indexOf("sousTraitants") + 1
-                }. Sous-Traitants`}
+                title={`${visibleSections.indexOf("sousTraitants") + 1}. Sous-Traitants`}
                 sectionKey="sousTraitants"
                 isOpen={sections.sousTraitants.open}
                 onToggle={toggleSection}
@@ -438,6 +614,14 @@ export default function Form() {
                   sousTraitants={journalSousTraitants}
                   setSousTraitants={setJournalSousTraitants}
                   defaultEntrepriseId={planifChantier?.defaultEntrepriseId}
+                  planifActivites={planifActivites.map(planif => {
+                    try {
+                      return convertToJournalActivite(planif);
+                    } catch (error) {
+                      console.error("Error converting planif to journal activite:", error);
+                      return null;
+                    }
+                  }).filter((activite): activite is JournalActivite => activite !== null)}
                 />
               )}
             </section>
@@ -515,7 +699,7 @@ export default function Form() {
           </div>
         </div>
       ) : (
-        <PDFContent />
+        renderPDF()
       )}
     </div>
   );

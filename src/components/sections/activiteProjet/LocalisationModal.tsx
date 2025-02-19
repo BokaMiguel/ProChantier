@@ -8,7 +8,7 @@ interface LocalisationModalProps {
   savedLocalisations: Localisation[];
   setSavedLocalisations: (localisations: Localisation[]) => void;
   isLiaisonMode: boolean;
-  setIsLiaisonMode: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsLiaisonMode: (mode: boolean) => void;
   clearAllLocalisations: () => void;
   bases: Localisation[];
   usedBases: number[];
@@ -36,14 +36,20 @@ const LocalisationModal: React.FC<LocalisationModalProps> = ({
   }, [showModal, savedLocalisations]);
 
   const toggleLocalisation = (localisation: Localisation) => {
-    setSelectedLocalisations((prevSelected) =>
-      prevSelected.some((loc) => loc.id === localisation.id)
+    console.log("Toggle localisation:", localisation);
+    console.log("Current selectedLocalisations:", selectedLocalisations);
+    
+    setSelectedLocalisations((prevSelected) => {
+      const newSelected = prevSelected.some((loc) => loc.id === localisation.id)
         ? prevSelected.filter((loc) => loc.id !== localisation.id)
-        : [...prevSelected, localisation]
-    );
+        : [...prevSelected, localisation];
+      console.log("New selectedLocalisations:", newSelected);
+      return newSelected;
+    });
   };
 
   const handleSaveLocalisations = () => {
+    console.log("Saving localisations:", selectedLocalisations);
     setSavedLocalisations(selectedLocalisations);
     closeModal();
   };

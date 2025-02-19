@@ -23,7 +23,7 @@ const ActivityList: React.FC<ActivityListProps> = ({
   // Filtrer les activités où Date est null et qui correspondent à la recherche
   const filteredActivities = activitesPlanif?.filter((activity) => {
     const activityName =
-      activites?.find((act) => act.id === activity.activiteID)?.nom || "";
+      activites?.find((act) => act.id === activity.activiteIDs[0])?.nom || "";
     return (
       activity.date === null &&
       activityName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -102,7 +102,7 @@ const ActivityList: React.FC<ActivityListProps> = ({
                 >
                   <div className="w-full">
                     <div className="font-semibold text-gray-800">
-                      {getActivityName(activity.activiteID ?? undefined)}
+                      {getActivityName(activity.activiteIDs[0] ?? undefined)}
                     </div>
                     <div className="text-sm text-gray-600">
                       <span className="font-medium">Entreprise:</span>{" "}

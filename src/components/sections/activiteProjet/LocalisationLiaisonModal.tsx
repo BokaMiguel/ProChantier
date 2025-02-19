@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { FaTrash, FaTimes, FaSave, FaLink, FaMapMarkerAlt } from "react-icons/fa";
 import "./LocalisationModal.scss";
-import { LocalisationDistance } from "../../../models/JournalFormModel";
+import { LocalisationDistance, Localisation } from "../../../models/JournalFormModel";
 
 interface LocalisationLiaisonModalProps {
   showModal: boolean;
@@ -13,6 +13,9 @@ interface LocalisationLiaisonModalProps {
   isLiaisonMode: boolean;
   clearAllLocalisations: () => void;
   usedLiaisons: number[];
+  onUpdateLiaisons: (activiteId: number, liaisons: LocalisationDistance[]) => void;
+  currentActiviteId: number;
+  bases: Localisation[];
 }
 
 const LocalisationLiaisonModal: React.FC<LocalisationLiaisonModalProps> = ({
@@ -25,6 +28,9 @@ const LocalisationLiaisonModal: React.FC<LocalisationLiaisonModalProps> = ({
   isLiaisonMode,
   clearAllLocalisations,
   usedLiaisons,
+  onUpdateLiaisons,
+  currentActiviteId,
+  bases,
 }) => {
   const [selectedLiaisons, setSelectedLiaisons] = useState<LocalisationDistance[]>(savedLiaisons);
 
@@ -33,15 +39,23 @@ const LocalisationLiaisonModal: React.FC<LocalisationLiaisonModalProps> = ({
   }, [savedLiaisons]);
 
   const toggleLiaison = (liaison: LocalisationDistance) => {
-    setSelectedLiaisons((prevSelected) =>
-      prevSelected.some((l) => l.id === liaison.id)
-        ? prevSelected.filter((l) => l.id !== liaison.id)
-        : [...prevSelected, liaison]
-    );
+    console.log("Toggling liaison:", liaison);
+    setSelectedLiaisons(prevSelected => {
+      const isSelected = prevSelected.some(l => l.id === liaison.id);
+      if (isSelected) {
+        return prevSelected.filter(l => l.id !== liaison.id);
+      } else {
+        return [...prevSelected, liaison];
+      }
+    });
   };
 
   const handleSaveLiaisons = () => {
-    setSavedLiaisons(selectedLiaisons);
+    console.log("Saving liaisons:", selectedLiaisons);
+    // Mettre à jour le parent
+    onUpdateLiaisons(currentActiviteId, selectedLiaisons);
+    // Mettre à jour l'état local
+    setSavedLiaisons([...selectedLiaisons]);
     closeModal();
   };
 
@@ -50,7 +64,10 @@ const LocalisationLiaisonModal: React.FC<LocalisationLiaisonModalProps> = ({
     clearAllLocalisations();
   };
 
-  const formatLiaison = (baseA: number, baseB: number) => `${baseA} @ ${baseB}`;
+  const getBaseName = (baseId: number) => {
+    const base = bases.find(b => b.id === baseId);
+    return base ? base.base : `Base ${baseId}`;
+  };
 
   if (!showModal) return null;
 
@@ -117,7 +134,8 @@ const LocalisationLiaisonModal: React.FC<LocalisationLiaisonModalProps> = ({
                     <div className="flex items-center space-x-2">
                       <FaMapMarkerAlt className={`text-lg ${isSelected ? "text-white" : "text-blue-500"}`} />
                       <span className="font-medium">
-                        Base {distance.baseA} - Base {distance.baseB}
+                        <span className={`${isSelected ? "text-white" : "text-gray-600"}`}>Bases: </span>
+                        {getBaseName(distance.baseA)} - {getBaseName(distance.baseB)}
                       </span>
                     </div>
                     <span className={`text-sm mt-1 ${isSelected ? "text-blue-100" : "text-blue-500"} font-medium`}>

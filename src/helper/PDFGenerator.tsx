@@ -10,6 +10,7 @@ import {
   Svg,
   Path,
 } from "@react-pdf/renderer";
+import { styles } from '../styles/PDFStyles';
 import {
   Employe,
   PlanifChantier,
@@ -17,7 +18,10 @@ import {
   LocalisationDistance,
   Localisation,
   SignatureData,
+  Activite,
+  Lieu,
 } from "../models/JournalFormModel";
+import { format } from 'date-fns';
 
 Font.register({
   family: "Roboto",
@@ -33,355 +37,33 @@ Font.register({
   ],
 });
 
-const styles = StyleSheet.create({
-  page: {
-    flexDirection: "column",
-    backgroundColor: "#FFFFFF",
-    padding: 30,
-    position: "relative",
-  },
-  container: {
-    margin: "0 auto",
-    width: "90%",
-    maxWidth: "800px",
-  },
-  separator: {
-    marginVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#000000",
-  },
-  header: {
-    flexDirection: "column",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  logo: {
-    width: 50,
-    height: 50,
-    marginBottom: 10,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-  journalIdText: {
-    fontSize: 14,
-    fontWeight: "bold",
-    marginTop: 5,
-    color: "#1e3a8a",
-  },
-  section: {
-    marginBottom: 10,
-  },
-  sectionHeader: {
-    fontSize: 16,
-    fontFamily: "Helvetica-Bold",
-    marginBottom: 15,
-    marginTop: 20,
-    color: "#2c3e50",
-    backgroundColor: "#e8ecf3",
-    padding: 8,
-    paddingLeft: 15,
-    paddingRight: 15,
-    borderRadius: 4,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  sectionHeaderIcon: {
-    width: 20,
-    height: 20,
-    marginRight: 15,
-  },
-  sectionHeaderText: {
-    fontSize: 16,
-    fontFamily: "Helvetica-Bold",
-    color: "#2c3e50",
-    marginLeft: 15,
-  },
-  sectionContent: {
-    paddingLeft: 8,
-    paddingRight: 8,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  text: {
-    fontSize: 12,
-    fontFamily: "Helvetica",
-    marginBottom: 3,
-  },
-  boldText: {
-    fontSize: 12,
-    fontWeight: "bold",
-  },
-  label: {
-    fontFamily: "Helvetica-Bold",
-    fontSize: 12,
-    marginRight: 5,
-    marginLeft: 15,
-  },
-  signatureLine: {
-    marginTop: 30,
-    borderTopWidth: 1,
-    borderTopStyle: "solid",
-    borderTopColor: "#000000",
-    width: "50%",
-    marginLeft: "auto",
-    marginRight: "auto",
-    textAlign: "center",
-    paddingTop: 5,
-  },
-  table: {
-    display: "flex",
-    width: "auto",
-    borderStyle: "solid",
-    borderWidth: 1,
-    borderColor: "#bfbfbf",
-    marginBottom: 5,
-  },
-  tableRow: {
-    flexDirection: "row",
-  },
-  tableColHeader: {
-    width: "33.33%",
-    borderStyle: "solid",
-    borderWidth: 1,
-    borderColor: "#bfbfbf",
-    backgroundColor: "#e0e0e0",
-    padding: 5,
-    fontSize: 12,
-    fontWeight: "bold",
-  },
-  tableCol: {
-    width: "33.33%",
-    borderStyle: "solid",
-    borderWidth: 1,
-    borderColor: "#bfbfbf",
-    padding: 5,
-    fontSize: 12,
-  },
-  timeTable: {
-    width: "100%",
-    borderStyle: "solid",
-    borderWidth: 1,
-    borderColor: "#bfbfbf",
-    marginBottom: 10,
-  },
-  timeTableHeader: {
-    backgroundColor: "#e0e0e0",
-    padding: 5,
-    fontSize: 10,
-    fontWeight: "bold",
-    width: "20%",
-    borderStyle: "solid",
-    borderWidth: 1,
-    borderColor: "#bfbfbf",
-  },
-  timeTableCell: {
-    padding: 5,
-    fontSize: 10,
-    width: "20%",
-    borderStyle: "solid",
-    borderWidth: 1,
-    borderColor: "#bfbfbf",
-  },
-  liaisonContainer: {
-    backgroundColor: "#f0f0f0",
-    padding: 8,
-    marginVertical: 4,
-    borderRadius: 4,
-  },
-  notesSection: {
-    marginTop: 20,
-    padding: 10,
-    backgroundColor: "#f8f8f8",
-    borderRadius: 5,
-  },
-  noteContent: {
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: "#ffffff",
-    borderRadius: 3,
-    minHeight: 100,
-  },
-  emptySection: {
-    color: "#666",
-    fontStyle: "italic",
-    marginTop: 10,
-  },
-  signatureContainer: {
-    marginTop: 30,
-  },
-  signatureGridLayout: {
-    marginTop: 20,
-    border: "1px solid #e5e7eb",
-    borderRadius: 8,
-    padding: 20,
-  },
-  signatureRowLayout: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 30,
-    gap: 20,
-  },
-  signatureBoxContainer: {
-    flex: 1,
-  },
-  signatureNameLabel: {
-    fontSize: 12,
-    color: "#374151",
-    marginBottom: 8,
-    fontWeight: "bold",
-  },
-  signatureNameField: {
-    height: 30,
-    borderBottomWidth: 1,
-    borderBottomColor: "#d1d5db",
-  },
-  signatureField: {
-    height: 50,
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 4,
-  },
-  signatureDateLabel: {
-    fontSize: 12,
-    color: "#374151",
-    marginBottom: 8,
-    fontWeight: "bold",
-  },
-  signatureDateLine: {
-    height: 30,
-    borderBottomWidth: 1,
-    borderBottomColor: "#d1d5db",
-  },
-  tableContainer: {
-    marginTop: 20,
-    marginBottom: 15,
-  },
-  gridHeader: {
-    flexDirection: "row",
-    backgroundColor: "#f0f0f0",
-    borderBottomWidth: 1,
-    borderBottomColor: "#000",
-  },
-  gridRow: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
-  },
-  gridCell: {
-    flex: 1,
-    padding: 5,
-    fontSize: 10,
-    textAlign: "center",
-    borderRightWidth: 1,
-    borderRightColor: "#ccc",
-    minWidth: 50,
-  },
-  gridHeaderCell: {
-    flex: 1,
-    padding: 5,
-    fontSize: 10,
-    fontWeight: "bold",
-    textAlign: "center",
-    borderRightWidth: 1,
-    borderRightColor: "#ccc",
-    backgroundColor: "#e0e0e0",
-    minWidth: 50,
-  },
-  gridFirstCol: {
-    flex: 2,
-    padding: 5,
-    fontSize: 10,
-    borderRightWidth: 1,
-    borderRightColor: "#ccc",
-    minWidth: 100,
-  },
-  gridHeaderFirstCol: {
-    flex: 2,
-    padding: 5,
-    fontSize: 10,
-    fontWeight: "bold",
-    borderRightWidth: 1,
-    borderRightColor: "#ccc",
-    backgroundColor: "#e0e0e0",
-    minWidth: 100,
-  },
-  totalsRow: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#000",
-    backgroundColor: "#f0f0f0",
-  },
-  tableTitle: {
-    fontSize: 12,
-    fontWeight: "bold",
-    marginTop: 15,
-    marginBottom: 5,
-  },
-  pageNumber: {
-    position: "absolute",
-    bottom: 30,
-    right: 30,
-    fontSize: 12,
-    color: "grey",
-  },
-  signatureGrid: {
-    width: "100%",
-  },
-  signatureRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: "100%",
-  },
-  signatureCell: {
-    width: '48%',
-  },
-  signatureLabel: {
-    fontSize: 14,
-    marginBottom: 20,
-    fontFamily: "Helvetica-Bold",
-  },
-  dateBox: {
-    marginTop: 40,
-  },
-  dateLabel: {
-    fontSize: 14,
-    marginBottom: 20,
-    fontFamily: "Helvetica-Bold",
-  },
-  dateLine: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#000',
-    marginTop: 20,
-  },
-  activityHeader: {
-    fontSize: 14,
-    fontFamily: "Helvetica-Bold",
-    marginBottom: 8,
-    marginTop: 12,
-    color: "#34495e",
-  },
-  activityDetails: {
-    marginLeft: 15,
-    fontSize: 12,
-    lineHeight: 1.4,
-  },
-  detailRow: {
-    marginBottom: 4,
-  },
-  activityTitle: {
-    fontSize: 14,
-    fontFamily: "Helvetica-Bold",
-    marginBottom: 5,
-    backgroundColor: "#FFD700",
-    padding: 2,
-  },
-});
+interface PDFData {
+  totals: any;
+  journalDate: Date;
+  journalArrivee: string;
+  journalDepart: string;
+  journalWeather: string;
+  journalUsers: Employe[];
+  planifChantier: PlanifChantier;
+  planifActivites: PlanifActivites[];
+  journalMateriaux: any[];
+  journalSousTraitants: any[];
+  userStats: {
+    id: number;
+    nom: string;
+    act: number[];
+    ts: number;
+    td: number;
+    totals?: {
+      act: number[];
+      ts: number;
+      td: number;
+    };
+  }[];
+  notes: string;
+  projetId: string;
+  signatureData: SignatureData | null;
+}
 
 interface PDFDocumentProps {
   data: {
@@ -395,19 +77,21 @@ interface PDFDocumentProps {
     journalMateriaux: any[];
     journalSousTraitants: any[];
     userStats: { id: number; nom: string; act: number[]; ts: number; td: number }[];
+    totals: { act: number[]; ts: number; td: number };
     notes: string;
-    projetId: string;
-    signatureData: SignatureData | null;
+    signatureData: { signature: string; signataire: string; date: Date } | null;
   };
-  activites: any[];
-  bases: Localisation[];
+  selectedProject: any;
+  activites: Activite[] | null;
+  lieux: Lieu[] | null;
+  bases: Localisation[] | null;
   distances: LocalisationDistance[];
-  lieux: any[];
   journalPlanifId: number;
 }
 
-interface ProcessedActivitePlanif extends PlanifActivites {
-  processedDistances?: LocalisationDistance[];
+interface EnrichedPlanifActivite extends PlanifActivites {
+  activiteNom?: string;
+  lieuNom?: string;
 }
 
 // Fonction utilitaire pour formater la date
@@ -429,7 +113,7 @@ const InfoIcon = () => (
 const EmployeesIcon = () => (
   <Svg viewBox="0 0 24 24" width={20} height={20}>
     <Path
-      d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
+      d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z"
       fill="#2c3e50"
     />
   </Svg>
@@ -438,7 +122,11 @@ const EmployeesIcon = () => (
 const ActivitiesIcon = () => (
   <Svg viewBox="0 0 24 24" width={20} height={20}>
     <Path
-      d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"
+      d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"
+      fill="#2c3e50"
+    />
+    <Path
+      d="M7 7h10v2H7zm0 4h10v2H7zm0 4h7v2H7z"
       fill="#2c3e50"
     />
   </Svg>
@@ -454,7 +142,7 @@ const TimeIcon = () => (
 );
 
 const NotesIcon = () => (
-  <Svg viewBox="0 0 24 24" width={20} height={20}>
+  <Svg width={20} height={20} viewBox="0 0 24 24">
     <Path
       d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 14H8v-2h6v2zm0-4H8v-2h6v2zM8 9h6V7H8v2z"
       fill="#2c3e50"
@@ -487,95 +175,299 @@ const MaterialsIcon = () => (
 const ContractorsIcon = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24">
     <Path
-      d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
+      d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z"
       fill="#2c3e50"
     />
   </Svg>
 );
 
-export const PDFDocument: React.FC<PDFDocumentProps> = ({
-  data,
-  activites,
-  bases,
-  distances,
-  lieux,
-  journalPlanifId,
-}) => {
-  const formatDate = (date: Date) => {
-    const options: Intl.DateTimeFormatOptions = {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    };
-    return date.toLocaleDateString("fr-FR", options);
-  };
-
-  const generateFileName = () => {
-    const date = formatDateForFileName(data.journalDate);
-    const projetId = data.projetId || "NOPROJ";
-    const journalId = journalPlanifId.toString().padStart(7, "0");
-    return `${date}_${projetId}_${journalId}`;
-  };
-
-  const filteredUsers = data.journalUsers.filter(
+export const PDFDocument: React.FC<PDFDocumentProps> = ({ data, selectedProject, activites, lieux, bases, distances, journalPlanifId }) => {
+  const validUsers = data.journalUsers.filter(
     (user) => user.prenom !== "" || user.nom !== ""
   );
 
   const renderActivitesTable = () => {
-    if (!data.planifChantier || !data.planifActivites) return null;
+    const renderBases = (activite: PlanifActivites) => {
+      if (!activite.bases || activite.bases.length === 0) return null;
+      
+      return (
+        <View style={styles.subSection}>
+          <View style={styles.subSectionHeader}>
+            <Text style={styles.subTitle}>Bases ({activite.bases.length})</Text>
+          </View>
+          <View style={styles.basesContent}>
+            {activite.bases.map((base: Localisation, index: number) => (
+              <Text key={index} style={styles.baseText}>
+                {base.base}
+              </Text>
+            ))}
+          </View>
+        </View>
+      );
+    };
 
-    const activitesNames = data.planifActivites.map(pa => {
-      const activite = activites?.find(a => a.id === pa.activiteID);
-      return activite ? activite.nom : "Inconnu";
-    }).join(", ");
+    const renderLiaisons = (distances: LocalisationDistance[]) => {
+      if (!distances || distances.length === 0) return null;
 
-    const lieu = lieux?.find(l => l.id === data.planifChantier.lieuID);
-    const lieuNom = lieu ? lieu.nom : "Inconnu";
+      // Calculer la distance totale
+      const totalDistance = distances.reduce((sum, d) => sum + d.distanceInMeters, 0);
+
+      return (
+        <View style={styles.subSection}>
+          <View style={styles.subSectionHeader}>
+            <Text style={styles.subTitle}>Liaisons ({distances.length})</Text>
+          </View>
+          <View style={styles.basesContent}>
+            {distances.map((liaison, index) => {
+              const baseA = bases?.find(b => b.id === liaison.baseA)?.base;
+              const baseB = bases?.find(b => b.id === liaison.baseB)?.base;
+              if (!baseA || !baseB) return null;
+              
+              return (
+                <Text key={index} style={styles.baseText}>
+                  {baseA} {baseB}: {liaison.distanceInMeters}m
+                </Text>
+              );
+            })}
+            <Text style={styles.totalText}>Distance totale: {totalDistance}m</Text>
+          </View>
+        </View>
+      );
+    };
 
     return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Activités</Text>
-        <View style={styles.table}>
-          <View style={styles.tableRow}>
-            <View style={styles.tableCol}>
-              <Text style={styles.tableHeader}>Lieu</Text>
-              <Text style={styles.tableCell}>{lieuNom}</Text>
+      <View style={styles.activitiesContainer}>
+        {data.planifActivites.map((activite, index) => (
+          <View key={index} style={styles.activitySection}>
+            <View style={styles.activityHeader}>
+              <View style={styles.activityTitleContainer}>
+                <Text style={styles.activityTitle}>
+                  {activite.activiteNom || 'N/A'}
+                </Text>
+                <Text style={styles.activityId}>
+                  ACT. {index + 1}
+                </Text>
+              </View>
+              <Text style={styles.locationText}>
+                Localisation: {activite.lieuNom || 'N/A'}
+              </Text>
             </View>
-            <View style={styles.tableCol}>
-              <Text style={styles.tableHeader}>Activités</Text>
-              <Text style={styles.tableCell}>{activitesNames}</Text>
+
+            {/* Affichage des notes si présentes */}
+            {activite.notes && activite.notes.trim() !== '' && (
+              <View style={styles.notesSection}>
+                <View style={styles.notesHeader}>
+                  <Svg width={12} height={12} viewBox="0 0 24 24">
+                    <Path
+                      d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 14H8v-2h6v2zm0-4H8v-2h6v2zM8 9h6V7H8v2z"
+                      fill="#2c3e50"
+                    />
+                  </Svg>
+                  <Text style={styles.notesTitle}>Commentaire</Text>
+                </View>
+                <Text style={styles.notesText}>{activite.notes}</Text>
+              </View>
+            )}
+
+            {renderBases(activite)}
+            {renderLiaisons(activite.liaisons || [])}
+          </View>
+        ))}
+      </View>
+    );
+  };
+
+  const renderSousTraitantsTable = () => (
+    <View style={styles.table}>
+      <View style={styles.tableRow}>
+        <View style={[styles.tableCell, styles.tableHeader, styles.tableCellBorder, { flex: 2 }]}>
+          <Text>Nom</Text>
+        </View>
+        <View style={[styles.tableCell, styles.tableHeader, { flex: 1 }]}>
+          <Text>Quantité</Text>
+        </View>
+      </View>
+      {data.journalSousTraitants.map((sousTraitant, index) => (
+        <View key={index} style={styles.tableRow}>
+          <View style={[styles.tableCell, styles.tableCellBorder, { flex: 2 }]}>
+            <Text>{sousTraitant.nom}</Text>
+          </View>
+          <View style={[styles.tableCell, { flex: 1 }]}>
+            <Text>{sousTraitant.quantite}</Text>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+
+  const renderMateriauxTable = () => (
+    <View style={styles.table}>
+      <View style={styles.tableRow}>
+        <View style={[styles.tableCell, styles.tableHeader, styles.tableCellBorder, { flex: 2 }]}>
+          <Text>Nom</Text>
+        </View>
+        <View style={[styles.tableCell, styles.tableHeader, { flex: 1 }]}>
+          <Text>Quantité</Text>
+        </View>
+      </View>
+      {data.journalMateriaux.map((materiel, index) => (
+        <View key={index} style={styles.tableRow}>
+          <View style={[styles.tableCell, styles.tableCellBorder, { flex: 2 }]}>
+            <Text>{materiel.nom}</Text>
+          </View>
+          <View style={[styles.tableCell, { flex: 1 }]}>
+            <Text>{materiel.quantite}</Text>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+
+  const renderEmployesTable = () => (
+    <View style={styles.table}>
+      <View style={styles.tableRow}>
+        <View style={[styles.tableCell, styles.tableHeader, styles.tableCellBorder, { flex: 2 }]}>
+          <Text>Nom</Text>
+        </View>
+        <View style={[styles.tableCell, styles.tableHeader, styles.tableCellBorder, { flex: 2 }]}>
+          <Text>Fonction</Text>
+        </View>
+        <View style={[styles.tableCell, styles.tableHeader, { flex: 2 }]}>
+          <Text>Équipement</Text>
+        </View>
+      </View>
+      {validUsers.map((employe, index) => (
+        <View key={index} style={styles.tableRow}>
+          <View style={[styles.tableCell, styles.tableCellBorder, { flex: 2 }]}>
+            <Text>{`${employe.prenom} ${employe.nom}`}</Text>
+          </View>
+          <View style={[styles.tableCell, styles.tableCellBorder, { flex: 2 }]}>
+            <Text>{employe.fonction?.nom || 'N/A'}</Text>
+          </View>
+          <View style={[styles.tableCell, { flex: 2 }]}>
+            <Text>{employe.equipement?.nom || 'N/A'}</Text>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+
+  const renderStatsTable = () => (
+    <View style={styles.statsTable}>
+      <View style={styles.statsHeader} fixed>
+        <Text style={styles.statsHeaderCell}>Employé</Text>
+        {Array.from({ length: 5 }, (_, i: number) => (
+          <Text key={i} style={styles.statsHeaderCell}>Act {i + 1}</Text>
+        ))}
+        <Text style={styles.statsHeaderCell}>TS</Text>
+        <Text style={styles.statsHeaderCell}>TD</Text>
+      </View>
+      {data.userStats?.filter(stat => 
+        stat.act.some(hours => hours > 0) || stat.ts > 0 || stat.td > 0
+      ).map((stat, index) => (
+        <View key={index} style={styles.statsRow}>
+          <Text style={styles.statsCell}>{stat.nom}</Text>
+          {stat.act.slice(0, 5).map((hours: number, i: number) => (
+            <Text key={i} style={styles.statsCell}>{hours}</Text>
+          ))}
+          <Text style={styles.statsCell}>{stat.ts}</Text>
+          <Text style={styles.statsCell}>{stat.td}</Text>
+        </View>
+      ))}
+      {data.totals && (
+        <View style={[styles.statsRow, styles.totalRow]}>
+          <Text style={[styles.statsCell, styles.boldText]}>Total</Text>
+          {data.totals.act.slice(0, 5).map((total: number, i: number) => (
+            <Text key={i} style={[styles.statsCell, styles.boldText]}>{total}</Text>
+          ))}
+          <Text style={[styles.statsCell, styles.boldText]}>{data.totals.ts}</Text>
+          <Text style={[styles.statsCell, styles.boldText]}>{data.totals.td}</Text>
+        </View>
+      )}
+    </View>
+  );
+
+  const renderSignatureSection = () => {
+    const currentDate = new Date().toLocaleDateString('fr-FR');
+    
+    const SignatureBlock = ({ 
+      title, 
+      isElectronic = false 
+    }: { 
+      title: string; 
+      isElectronic?: boolean;
+    }) => (
+      <View style={styles.signatureBlock}>
+        <Text style={styles.signatureTitle}>{title}</Text>
+        <View style={styles.signatureRow}>
+          <View style={styles.signatureField}>
+            <Text style={styles.signatureLabel}>Signature</Text>
+            <View style={styles.signatureBox}>
+              {isElectronic && data.signatureData?.signature && (
+                <Image src={data.signatureData.signature} style={styles.signatureImage} />
+              )}
             </View>
-            <View style={styles.tableCol}>
-              <Text style={styles.tableHeader}>Note</Text>
-              <Text style={styles.tableCell}>{data.planifChantier.note || ""}</Text>
+          </View>
+          <View style={styles.signatureField}>
+            <Text style={styles.signatureLabel}>Nom complet</Text>
+            <View style={styles.signatureLine}>
+              {isElectronic && (
+                <Text>{data.signatureData?.signataire || ''}</Text>
+              )}
+            </View>
+          </View>
+          <View style={styles.signatureField}>
+            <Text style={styles.signatureLabel}>Date</Text>
+            <View style={styles.signatureLine}>
+              {isElectronic && (
+                <Text>
+                  {data.signatureData?.date 
+                    ? new Date(data.signatureData.date).toLocaleDateString('fr-FR') 
+                    : currentDate}
+                </Text>
+              )}
             </View>
           </View>
         </View>
       </View>
     );
+
+    return (
+      <View style={styles.signaturePage}>
+        <SignatureBlock title="Signature Électronique" isElectronic={true} />
+        <SignatureBlock title="Signature Manuscrite" />
+      </View>
+    );
   };
+
+  const PageFooter = () => (
+    <Text
+      style={styles.pageNumber}
+      render={({ pageNumber, totalPages }) => `Page ${pageNumber} sur ${totalPages}`}
+      fixed
+    />
+  );
 
   return (
     <Document
       author="Journal de Chantier"
-      creator="Journal de Chantier App"
-      producer="Journal de Chantier PDF Generator"
-      title={generateFileName()}
+      keywords="journal, chantier, rapport"
+      subject="Rapport journalier"
+      title={`Journal de Chantier - ${format(data.journalDate, 'dd/MM/yyyy')}`}
     >
-      {/* Première page : En-tête et informations générales */}
-      <Page size="A4" style={styles.page}>
+      {/* Première page : Informations et Employés */}
+      <Page size="A4" style={styles.page} wrap={false}>
         <View style={styles.container}>
-          {/* En-tête */}
+          {/* En-tête avec logo */}
           <View style={styles.header}>
             <Image style={styles.logo} src="/logo512.png" />
           </View>
 
-          {/* Informations du Journal */}
+          {/* Section Info Projet */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <InfoIcon />
-              <Text style={styles.sectionHeaderText}>Informations du Journal</Text>
+              <Text style={styles.sectionHeaderText}>Informations du Projet</Text>
             </View>
             <View style={styles.sectionContent}>
               <View style={{ flexDirection: "row", marginBottom: 10 }}>
@@ -585,15 +477,16 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
                 </Text>
               </View>
               <View style={{ flexDirection: "row", marginBottom: 10 }}>
-                <Text style={styles.label}>N° Projet : </Text>
+                <Text style={styles.label}>Projet : </Text>
                 <Text style={styles.text}>
-                  {data.projetId || "Non spécifié"}
+                  {selectedProject?.NumeroProjet || "Non spécifié"}
                 </Text>
               </View>
+
               <View style={{ flexDirection: "row", marginBottom: 10 }}>
                 <Text style={styles.label}>Date : </Text>
                 <Text style={styles.text}>
-                  {formatDate(data.journalDate)}
+                  {format(data.journalDate, 'dd/MM/yyyy')}
                 </Text>
               </View>
               <View style={{ flexDirection: "row", marginBottom: 10 }}>
@@ -613,36 +506,79 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
             </View>
           </View>
 
-          {/* Informations des Employés */}
+          {/* Section Employés */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <EmployeesIcon />
-              <Text style={styles.sectionHeaderText}>Informations des Employés</Text>
+              <Text style={styles.sectionHeaderText}>Employés</Text>
             </View>
             <View style={styles.sectionContent}>
-              {filteredUsers.length > 0 ? (
-                <View style={styles.table}>
-                  <View style={styles.tableRow}>
-                    <Text style={styles.tableColHeader}>Nom</Text>
-                    <Text style={styles.tableColHeader}>Fonction</Text>
-                    <Text style={styles.tableColHeader}>Équipement</Text>
-                  </View>
-                  {filteredUsers.map((user, index) => (
-                    <View key={index} style={styles.tableRow}>
-                      <Text style={styles.tableCol}>
-                        {user.prenom} {user.nom}
-                      </Text>
-                      <Text style={styles.tableCol}>
-                        {user.fonction?.nom || "N/A"}
-                      </Text>
-                      <Text style={styles.tableCol}>
-                        {user.equipement?.nom || "N/A"}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
+              {validUsers.length > 0 ? (
+                renderEmployesTable()
               ) : (
                 <Text style={styles.emptySection}>Aucun employé enregistré</Text>
+              )}
+            </View>
+          </View>
+        </View>
+        <PageFooter />
+      </Page>
+
+      {/* Deuxième page : Statistiques */}
+      <Page size="A4" style={styles.page} wrap={false}>
+        <View style={styles.container}>
+          {/* Section Statistiques des heures */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <TimeIcon />
+              <Text style={styles.sectionHeaderText}>Statistiques des heures</Text>
+            </View>
+            <View style={styles.statsTable}>
+              <View style={styles.statsHeader} fixed>
+                <Text style={styles.statsHeaderCell}>Employé</Text>
+                {Array.from({ length: 5 }, (_, i: number) => (
+                  <Text key={i} style={styles.statsHeaderCell}>Act {i + 1}</Text>
+                ))}
+                <Text style={styles.statsHeaderCell}>TS</Text>
+                <Text style={styles.statsHeaderCell}>TD</Text>
+              </View>
+              {data.userStats?.filter(stat => 
+                stat.act.some(hours => hours > 0) || stat.ts > 0 || stat.td > 0
+              ).map((stat, index) => (
+                <View key={index} style={styles.statsRow}>
+                  <Text style={styles.statsCell}>{stat.nom}</Text>
+                  {stat.act.slice(0, 5).map((hours: number, i: number) => (
+                    <Text key={i} style={styles.statsCell}>{hours}</Text>
+                  ))}
+                  <Text style={styles.statsCell}>{stat.ts}</Text>
+                  <Text style={styles.statsCell}>{stat.td}</Text>
+                </View>
+              ))}
+              {data.totals && (
+                <View style={[styles.statsRow, styles.totalRow]}>
+                  <Text style={[styles.statsCell, styles.boldText]}>Total</Text>
+                  {data.totals.act.slice(0, 5).map((total: number, i: number) => (
+                    <Text key={i} style={[styles.statsCell, styles.boldText]}>{total}</Text>
+                  ))}
+                  <Text style={[styles.statsCell, styles.boldText]}>{data.totals.ts}</Text>
+                  <Text style={[styles.statsCell, styles.boldText]}>{data.totals.td}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* Autres sections */}
+          {/* Section des sous-traitants */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <ContractorsIcon />
+              <Text style={styles.sectionHeaderText}>Sous-Traitants</Text>
+            </View>
+            <View style={styles.sectionContent}>
+              {data.journalSousTraitants && data.journalSousTraitants.length > 0 ? (
+                renderSousTraitantsTable()
+              ) : (
+                <Text style={styles.emptySection}>Aucun sous-traitant enregistré</Text>
               )}
             </View>
           </View>
@@ -655,290 +591,53 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
             </View>
             <View style={styles.sectionContent}>
               {data.journalMateriaux && data.journalMateriaux.length > 0 ? (
-                <View style={styles.table}>
-                  <View style={styles.tableRow}>
-                    <Text style={styles.tableColHeader}>Nom</Text>
-                    <Text style={styles.tableColHeader}>Quantité</Text>
-                  </View>
-                  {data.journalMateriaux.map((materiau, index) => (
-                    <View key={index} style={styles.tableRow}>
-                      <Text style={styles.tableCol}>{materiau.nom}</Text>
-                      <Text style={styles.tableCol}>
-                        {materiau.quantite !== undefined ? materiau.quantite : 'N/A'}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
+                renderMateriauxTable()
               ) : (
                 <Text style={styles.emptySection}>Aucun matériau enregistré</Text>
               )}
             </View>
           </View>
-
-          {/* Section des sous-traitants */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <ContractorsIcon />
-              <Text style={styles.sectionHeaderText}>Sous-Traitants</Text>
-            </View>
-            <View style={styles.sectionContent}>
-              {data.journalSousTraitants && data.journalSousTraitants.length > 0 ? (
-                <View style={styles.table}>
-                  <View style={styles.tableRow}>
-                    <Text style={styles.tableColHeader}>Nom</Text>
-                    <Text style={styles.tableColHeader}>Quantité</Text>
-                  </View>
-                  {data.journalSousTraitants.map((sousTraitant, index) => (
-                    <View key={index} style={styles.tableRow}>
-                      <Text style={styles.tableCol}>{sousTraitant.nom}</Text>
-                      <Text style={styles.tableCol}>
-                        {sousTraitant.quantite !== undefined ? sousTraitant.quantite : 'N/A'}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              ) : (
-                <Text style={styles.emptySection}>Aucun sous-traitant enregistré</Text>
-              )}
-            </View>
-          </View>
-
-          {renderActivitesTable()}
-
-          <Text
-            style={styles.pageNumber}
-            render={({ pageNumber, totalPages }) => `Page ${pageNumber} / ${totalPages}`}
-            fixed
-          />
         </View>
+        <PageFooter />
       </Page>
 
-      {/* Page des heures d'activités */}
+      {/* Troisième page : Activités */}
       <Page size="A4" style={styles.page}>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <TimeIcon />
-            <Text style={styles.sectionHeaderText}>Heures d'activités</Text>
+            <ActivitiesIcon />
+            <Text style={styles.sectionHeaderText}>Activités du Projet</Text>
           </View>
-          
-          {/* Tableau pour les activités 1-5 */}
-          <Text style={styles.tableTitle}>Heures par activité (Activités 1-5)</Text>
-          <View style={styles.tableContainer}>
-            <View style={styles.gridHeader}>
-              <Text style={styles.gridHeaderFirstCol}>Employé</Text>
-              {[1, 2, 3, 4, 5].map((num) => (
-                <Text key={num} style={styles.gridHeaderCell}>
-                  ACT {num}
-                </Text>
-              ))}
-              <Text style={styles.gridHeaderCell}>TS</Text>
-              <Text style={styles.gridHeaderCell}>TD</Text>
-            </View>
-
-            {data.userStats?.map((stats, index) => {
-              const user = data.journalUsers.find((u) => u.id === stats.id);
-              if (!user) return null;
-              return (
-                <View key={index} style={styles.gridRow}>
-                  <Text style={styles.gridFirstCol}>
-                    {user.prenom} {user.nom}
-                  </Text>
-                  {stats.act.slice(0, 5).map((value, actIndex) => (
-                    <Text key={actIndex} style={styles.gridCell}>
-                      {value > 0 ? value.toFixed(2) : ""}
-                    </Text>
-                  ))}
-                  <Text style={styles.gridCell}>
-                    {stats.ts > 0 ? stats.ts.toFixed(2) : ""}
-                  </Text>
-                  <Text style={styles.gridCell}>
-                    {stats.td > 0 ? stats.td.toFixed(2) : ""}
-                  </Text>
-                </View>
-              );
-            })}
-
-            {data.totals && (
-              <View style={styles.totalsRow}>
-                <Text style={styles.gridHeaderFirstCol}>Totaux</Text>
-                {data.totals.act.slice(0, 5).map((total, index) => (
-                  <Text key={index} style={styles.gridHeaderCell}>
-                    {total > 0 ? total.toFixed(2) : ""}
-                  </Text>
-                ))}
-                <Text style={styles.gridHeaderCell}>
-                  {data.totals.ts > 0 ? data.totals.ts.toFixed(2) : ""}
-                </Text>
-                <Text style={styles.gridHeaderCell}>
-                  {data.totals.td > 0 ? data.totals.td.toFixed(2) : ""}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {/* Tableau pour les activités 6-10 si nécessaire */}
-          {data.userStats?.some(stats => stats.act.slice(5).some(v => v > 0)) && (
-            <>
-              <Text style={styles.tableTitle}>Heures par activité (Activités 6-10)</Text>
-              <View style={styles.tableContainer}>
-                <View style={styles.gridHeader}>
-                  <Text style={styles.gridHeaderFirstCol}>Employé</Text>
-                  {[6, 7, 8, 9, 10].map((num) => (
-                    <Text key={num} style={styles.gridHeaderCell}>
-                      ACT {num}
-                    </Text>
-                  ))}
-                  <Text style={styles.gridHeaderCell}>TS</Text>
-                  <Text style={styles.gridHeaderCell}>TD</Text>
-                </View>
-
-                {data.userStats?.map((stats, index) => {
-                  const user = data.journalUsers.find((u) => u.id === stats.id);
-                  if (!user) return null;
-                  if (!stats.act.slice(5).some(v => v > 0)) return null;
-                  return (
-                    <View key={index} style={styles.gridRow}>
-                      <Text style={styles.gridFirstCol}>
-                        {user.prenom} {user.nom}
-                      </Text>
-                      {stats.act.slice(5, 10).map((value, actIndex) => (
-                        <Text key={actIndex} style={styles.gridCell}>
-                          {value > 0 ? value.toFixed(2) : ""}
-                        </Text>
-                      ))}
-                      <Text style={styles.gridCell}>
-                        {stats.ts > 0 ? stats.ts.toFixed(2) : ""}
-                      </Text>
-                      <Text style={styles.gridCell}>
-                        {stats.td > 0 ? stats.td.toFixed(2) : ""}
-                      </Text>
-                    </View>
-                  );
-                })}
-
-                {data.totals && (
-                  <View style={styles.totalsRow}>
-                    <Text style={styles.gridHeaderFirstCol}>Totaux</Text>
-                    {data.totals.act.slice(5, 10).map((total, index) => (
-                      <Text key={index} style={styles.gridHeaderCell}>
-                        {total > 0 ? total.toFixed(2) : ""}
-                      </Text>
-                    ))}
-                    <Text style={styles.gridHeaderCell}>
-                      {data.totals.ts > 0 ? data.totals.ts.toFixed(2) : ""}
-                    </Text>
-                    <Text style={styles.gridHeaderCell}>
-                      {data.totals.td > 0 ? data.totals.td.toFixed(2) : ""}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </>
-          )}
-
+          {renderActivitesTable()}
         </View>
-
-        <Text
-          style={styles.pageNumber}
-          render={({ pageNumber, totalPages }) => `Page ${pageNumber} / ${totalPages}`}
-          fixed
-        />
+        <PageFooter />
       </Page>
 
-      {/* Page des signatures */}
+      {/* Dernière page : Notes et signatures */}
       <Page size="A4" style={styles.page}>
-        {/* Notes journalières */}
-        {data.notes ? (
-          <View style={styles.notesSection}>
-            <View style={styles.sectionHeader}>
-              <NotesIcon />
-              <Text style={styles.sectionHeaderText}>Note journalière</Text>
-            </View>
-            <View style={styles.noteContent}>
-              <Text style={styles.text}>{data.notes}</Text>
-            </View>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <NotesIcon />
+            <Text style={styles.sectionHeaderText}>Notes Journalières</Text>
           </View>
-        ) : (
           <View style={styles.notesSection}>
-            <View style={styles.sectionHeader}>
-              <NotesIcon />
-              <Text style={styles.sectionHeaderText}>Note journalière</Text>
-            </View>
-            <View style={styles.noteContent}>
-              <Text style={[styles.text, { color: "#666" }]}>Aucune note journalière</Text>
-            </View>
-          </View>
-        )}
-
-        <View style={styles.signatureContainer}>
-          <View style={styles.signatureGridLayout}>
-            <View style={styles.signatureRowLayout}>
-              {data.signatureData ? (
-                <>
-                  <View style={styles.signatureBoxContainer}>
-                    <Text style={styles.signatureNameLabel}>Nom complet</Text>
-                    <Text style={[styles.text, { marginTop: 5 }]}>{data.signatureData.signataire}</Text>
-                  </View>
-                  <View style={styles.signatureBoxContainer}>
-                    <Text style={styles.signatureNameLabel}>Signature</Text>
-                    <Image source={data.signatureData.signature} style={{ width: 150, height: 50 }} />
-                  </View>
-                  <View style={styles.signatureBoxContainer}>
-                    <Text style={styles.signatureDateLabel}>Date</Text>
-                    <Text style={[styles.text, { marginTop: 5 }]}>
-                      {new Date(data.signatureData.date).toLocaleDateString('fr-FR')}
-                    </Text>
-                  </View>
-                </>
-              ) : (
-                <>
-                  <View style={styles.signatureBoxContainer}>
-                    <Text style={styles.signatureNameLabel}>Nom complet</Text>
-                    <View style={styles.signatureNameField} />
-                  </View>
-                  <View style={styles.signatureBoxContainer}>
-                    <Text style={styles.signatureNameLabel}>Signature</Text>
-                    <View style={styles.signatureField} />
-                  </View>
-                  <View style={styles.signatureBoxContainer}>
-                    <Text style={styles.signatureDateLabel}>Date</Text>
-                    <View style={styles.signatureDateLine} />
-                  </View>
-                </>
-              )}
-            </View>
-
-            <View style={styles.signatureRowLayout}>
-              <View style={styles.signatureBoxContainer}>
-                <Text style={styles.signatureNameLabel}>Nom complet</Text>
-                <View style={styles.signatureNameField} />
-              </View>
-              <View style={styles.signatureBoxContainer}>
-                <Text style={styles.signatureNameLabel}>Signature</Text>
-                <View style={styles.signatureField} />
-              </View>
-              <View style={styles.signatureBoxContainer}>
-                <Text style={styles.signatureDateLabel}>Date</Text>
-                <View style={styles.signatureDateLine} />
-              </View>
-            </View>
+            <Text>{data.notes || 'Aucune note'}</Text>
           </View>
         </View>
-
-        <Text
-          style={styles.pageNumber}
-          render={({ pageNumber, totalPages }) => `Page ${pageNumber} / ${totalPages}`}
-          fixed
-        />
+        {renderSignatureSection()}
+        <PageFooter />
       </Page>
     </Document>
   );
 };
 
 // Fonction pour générer le nom du fichier PDF
-export const getPDFFileName = (data: PDFDocumentProps["data"], journalPlanifId: number): string => {
+export const getPDFFileName = (
+  data: PDFDocumentProps["data"], 
+  journalPlanifId: number,
+  selectedProject: any
+): string => {
   const date = formatDateForFileName(data.journalDate);
-  const projetId = data.projetId || "NOPROJ";
   const journalId = journalPlanifId.toString().padStart(7, "0");
-  return `${date}_${projetId}_${journalId}`;
+  return `${date}_${selectedProject?.NumeroProjet || "NOPROJ"}_${journalId}`;
 };

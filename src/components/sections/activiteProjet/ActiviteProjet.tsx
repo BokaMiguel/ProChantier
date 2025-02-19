@@ -70,9 +70,9 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
         setLieuBases(formattedBases);
       }
       
-      const distances = await getDistancesForLieu(lieuId);
-      if (distances) {
-        setDistances(distances);
+      const distancesResponse = await getDistancesForLieu(lieuId);
+      if (distancesResponse) {
+        setDistances(distancesResponse);
       }
     } catch (error) {
       console.error("Erreur lors du chargement des bases:", error);
@@ -108,21 +108,27 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
     }
   };
 
-  const handleBasesChange = (newBases: Localisation[], activiteId: number) => {
-    if (!planifActivites) return;
-    
-    const updatedActivites = planifActivites.map(activite => {
-      if (activite.id === activiteId) {
-        return {
-          ...activite,
-          bases: newBases,
-          liaisons: [], // Réinitialiser les liaisons quand on change les bases
-          quantite: isLiaisonMode(activiteId) ? 0 : newBases.length
-        };
-      }
-      return activite;
-    });
-    onPlanifActivitesChange(updatedActivites);
+  const handleUpdateLiaisons = (activiteId: number, newLiaisons: LocalisationDistance[]) => {
+    console.log("Updating liaisons:", newLiaisons);
+    handleLiaisonsChange(newLiaisons, activiteId);
+  };
+
+  const handleUpdateBases = (activiteId: number, newBases: Localisation[]) => {
+    console.log("Updating bases:", newBases);
+    handleBasesChange(newBases, activiteId);
+  };
+
+  const calculateQuantity = (activite: JournalActivite) => {
+    if (isLiaisonMode(activite.id) && activite.liaisons && activite.liaisons.length > 0) {
+      return activite.liaisons.reduce((total, liaison) => total + (liaison.distanceInMeters || 0), 0);
+    } else if (!isLiaisonMode(activite.id) && activite.bases && activite.bases.length > 0) {
+      return activite.bases.length;
+    }
+    return 0;
+  };
+
+  const handleQuantityChange = (activiteId: number, value: string) => {
+    handleChange(activiteId, "quantite", parseFloat(value));
   };
 
   const handleLiaisonsChange = (newLiaisons: LocalisationDistance[], activiteId: number) => {
@@ -130,16 +136,36 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
     
     const updatedActivites = planifActivites.map(activite => {
       if (activite.id === activiteId) {
-        const totalDistance = newLiaisons.reduce((total, liaison) => total + (liaison.distanceInMeters || 0), 0);
-        return {
+        const updatedActivite = {
           ...activite,
-          liaisons: newLiaisons,
-          bases: [], // Réinitialiser les bases quand on change les liaisons
-          quantite: isLiaisonMode(activiteId) ? totalDistance : 0
+          liaisons: [...newLiaisons],
+          bases: []
         };
+        updatedActivite.quantite = calculateQuantity(updatedActivite);
+        return updatedActivite;
       }
       return activite;
     });
+    
+    onPlanifActivitesChange(updatedActivites);
+  };
+
+  const handleBasesChange = (newBases: Localisation[], activiteId: number) => {
+    if (!planifActivites) return;
+    
+    const updatedActivites = planifActivites.map(activite => {
+      if (activite.id === activiteId) {
+        const updatedActivite = {
+          ...activite,
+          bases: [...newBases],
+          liaisons: []
+        };
+        updatedActivite.quantite = calculateQuantity(updatedActivite);
+        return updatedActivite;
+      }
+      return activite;
+    });
+    
     onPlanifActivitesChange(updatedActivites);
   };
 
@@ -184,29 +210,8 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
       .flatMap(activite => activite.liaisons?.map(liaison => liaison.id) || []);
   };
 
-  const calculateQuantity = (activite: JournalActivite) => {
-    if (isLiaisonMode(activite.id) && activite.liaisons && activite.liaisons.length > 0) {
-      return activite.liaisons.reduce((total, liaison) => total + (liaison.distanceInMeters || 0), 0);
-    } else if (!isLiaisonMode(activite.id) && activite.bases && activite.bases.length > 0) {
-      return activite.bases.length;
-    }
-    return 0;
-  };
-
-  const handleQuantityChange = (activiteId: number, value: string) => {
-    handleChange(activiteId, "quantite", parseFloat(value));
-  };
-
   const handleNotesChange = (activiteId: number, value: string) => {
     handleChange(activiteId, "notes", value);
-  };
-
-  const handleUpdateLiaisons = (activiteId: number, newLiaisons: LocalisationDistance[]) => {
-    handleLiaisonsChange(newLiaisons, activiteId);
-  };
-
-  const handleUpdateBases = (activiteId: number, newBases: Localisation[]) => {
-    handleBasesChange(newBases, activiteId);
   };
 
   const handleModalClose = () => {
@@ -216,6 +221,12 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
   const openModal = (id: number) => {
     setCurrentActiviteId(id);
     setShowModal(true);
+    
+    // Charger les bases pour l'activité courante
+    const currentActivite = planifActivites.find(activite => activite.id === id);
+    if (currentActivite && currentActivite.lieuID) {
+      loadBasesAndDistances(currentActivite.lieuID);
+    }
   };
 
   const clearAllLocalisations = (activiteId: number) => {
@@ -247,9 +258,6 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
   };
 
   const addNewActivity = () => {
-    console.log("Ajout d'une nouvelle activité");
-    console.log("planifActivites actuel:", planifActivites);
-    
     const newActivity: JournalActivite = {
       id: nextId,
       activiteID: 0,
@@ -263,13 +271,9 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
       hrsFin: "",
       defaultEntrepriseId: null,
       signalisationId: null,
-      planifID: 0
     };
     
-    console.log("Nouvelle activité à ajouter:", newActivity);
     const updatedActivites = [...(planifActivites || []), newActivity];
-    console.log("Liste mise à jour:", updatedActivites);
-    
     onPlanifActivitesChange(updatedActivites);
     setNextId(nextId + 1);
   };
@@ -371,11 +375,9 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
                   </div>
                   <input
                     type="number"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                    placeholder={planifActivite.liaisons && planifActivite.liaisons.length ? "Distance en mètres" : "Quantité"}
-                    value={planifActivite.liaisons && planifActivite.liaisons.length 
-                      ? (planifActivite.liaisons?.reduce((sum, liaison) => sum + (liaison.distanceInMeters || 0), 0) || 0)
-                      : (planifActivite.bases?.length || 0)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={calculateQuantity(planifActivite)}
+                    onChange={(e) => handleQuantityChange(planifActivite.id, e.target.value)}
                     readOnly
                   />
                 </div>
@@ -387,30 +389,45 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
                     <FaMapMarkerAlt className="text-blue-600 w-4 h-4" />
                   </span>
                   <label className="text-gray-700 text-sm font-semibold ml-2">
-                    Bases et liaisons
+                    {isLiaisonMode(planifActivite.id) ? "Liaisons" : "Bases"}
                   </label>
                 </div>
                 <div
                   onClick={() => openModal(planifActivite.id)}
                   className="w-full min-h-[80px] p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                 >
-                  <div className="flex flex-wrap gap-2 mt-2">
+                  <div className="flex flex-wrap gap-2">
+                    {/* Affichage des bases */}
                     {!isLiaisonMode(planifActivite.id) && planifActivite.bases && planifActivite.bases.map((base, index) => (
                       <span
-                        key={`base-${index}`}
+                        key={`base-${planifActivite.id}-${base.id}-${index}`}
                         className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm"
                       >
                         {base.base}
                       </span>
                     ))}
-                    {isLiaisonMode(planifActivite.id) && planifActivite.liaisons && planifActivite.liaisons.map((liaison, index) => (
-                      <span
-                        key={`liaison-${index}`}
-                        className="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm"
-                      >
-                        {liaison.baseA} → {liaison.baseB} ({liaison.distanceInMeters}m)
+
+                    {/* Affichage des liaisons */}
+                    {isLiaisonMode(planifActivite.id) && planifActivite.liaisons && planifActivite.liaisons.map((liaison, index) => {
+                      const baseAName = lieuBases.find(b => b.id === liaison.baseA)?.base;
+                      const baseBName = lieuBases.find(b => b.id === liaison.baseB)?.base;
+                      
+                      return (
+                        <span
+                          key={`liaison-${planifActivite.id}-${liaison.id}-${index}`}
+                          className="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm"
+                        >
+                          {baseAName} → {baseBName} ({liaison.distanceInMeters}m)
+                        </span>
+                      );
+                    })}
+
+                    {/* Message si vide */}
+                    {(!planifActivite.bases?.length && !planifActivite.liaisons?.length) && (
+                      <span className="text-gray-400 italic">
+                        Cliquez pour sélectionner des {isLiaisonMode(planifActivite.id) ? "liaisons" : "bases"}
                       </span>
-                    ))}
+                    )}
                   </div>
                 </div>
               </div>
@@ -426,7 +443,7 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
                 </div>
                 <textarea
                   ref={(el) => (notesRef.current[planifActivite.id] = el)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   rows={2}
                   placeholder="Ajouter un commentaire..."
                   value={planifActivite.notes || ''}
@@ -453,6 +470,9 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
                   isLiaisonMode={isLiaisonMode(planifActivite.id)}
                   clearAllLocalisations={() => clearAllLocalisations(planifActivite.id)}
                   usedLiaisons={getUsedLiaisons(planifActivite.id)}
+                  onUpdateLiaisons={handleUpdateLiaisons}
+                  currentActiviteId={planifActivite.id}
+                  bases={lieuBases}
                 />
               ) : (
                 <LocalisationModal
