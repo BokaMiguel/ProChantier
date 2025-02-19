@@ -99,15 +99,38 @@ export interface Materiau {
   quantite?: number;
 }
 
-export interface SousTraitant {
+export interface SousTraitantFormData {
   id: number;
   nom: string;
   quantite: number;
-  activiteId?: number | null;
-  uniteId?: number | null;
+  activiteID: number | null;
+  idUnite: number | null;
+}
+
+export interface SousTraitant {
+  id: number;
+  nom: string;
+}
+
+export interface JournalSousTraitant {
+  journalID?: number;
+  sousTraitantID: number;
+  activiteID: number | null;
+  idUnite: number | null;
+  quantite: number;
+  // Propriétés pour l'affichage
+  nomSousTraitant?: string;
+  nomActivite?: string;
+  descriptionUnite?: string;
 }
 
 // Types pour les unités
+export interface ListUnite {
+  idUnite: number;
+  description: string;
+  descriptionCourt: string;
+}
+
 export interface Unite {
   id: number;
   nom: string;
@@ -165,6 +188,7 @@ export interface PlanifChantier {
   signalisationId: number;
   note?: string;
   quantite?: number;
+  labQuantity?: number;
   lieu?: {
     id: number;
     nom: string;
@@ -185,6 +209,7 @@ export interface PlanifChantier {
 
 export interface TabPlanifChantier {
   id: number;
+  date: string;
   lieuID: number;
   projetID: number;
   hrsDebut: string;
@@ -193,9 +218,36 @@ export interface TabPlanifChantier {
   isLab: boolean;
   signalisationId: number;
   note: string;
-  date: string;
   activites?: TabPlanifActivites[];
 }
+
+export const initialPlanifChantier: TabPlanifChantier = {
+  id: 0,
+  date: new Date().toISOString().split('T')[0],
+  lieuID: 0,
+  projetID: 0,
+  hrsDebut: "",
+  hrsFin: "",
+  defaultEntrepriseId: 0,
+  isLab: false,
+  signalisationId: 0,
+  note: "",
+  activites: []
+};
+
+export const initialPlanif: PlanifChantier = {
+  id: 0,
+  date: new Date().toISOString().split('T')[0],
+  hrsDebut: "",
+  hrsFin: "",
+  lieuID: 0,
+  projetID: 0,
+  defaultEntrepriseId: 0,
+  isLab: false,
+  signalisationId: 0,
+  note: "",
+  quantite: 0
+};
 
 export interface TabPlanifActivites {
   notes?: string;
@@ -231,21 +283,42 @@ export interface ProjectInfo {
 }
 
 export interface Journal {
-  id: number;
-  projetInfo: ProjectInfo;
-  entreprise: string;
-  localisation: string;
-  plageHoraire: string;
+  projetInfo: any;
+  employes: any;
+  date: Date;
+  arrivee: string;
+  depart: string;
+  meteo: string;
+  temperature: number;
+  conditions: string[];
+  planifChantier: TabPlanifChantier;
+  planifActivites: JournalActivite[];
+  journalMateriaux: any[];
+  journalSousTraitants: JournalSousTraitant[];
+  userStats: UserStat[];
+  totals: { act: number[]; ts: number; td: number };
   notes: string;
-  planifChantier?: PlanifChantier;
-  planifActivites?: PlanifActivites[];
-  employes: Employe[];
-  materiaux: Materiau[];
-  sousTraitants: SousTraitant[];
-  userStats?: UserStat[];
-  statut: Statut;
-  signatureData?: SignatureData;
+  signalisations: any[];
 }
+
+export const initialJournal: Journal = {
+  date: new Date(),
+  arrivee: "",
+  depart: "",
+  meteo: "",
+  temperature: 0,
+  conditions: [],
+  planifChantier: initialPlanifChantier,
+  planifActivites: [],
+  journalMateriaux: [],
+  journalSousTraitants: [],
+  userStats: [],
+  totals: { act: [], ts: 0, td: 0 },
+  notes: "",
+  signalisations: [],
+  projetInfo: undefined,
+  employes: undefined
+};
 
 export interface SignatureData {
   signature: string;
@@ -380,20 +453,6 @@ export interface EquipeChantier {
 }
 
 // Valeurs initiales
-export const initialPlanifChantier: PlanifChantier = {
-  id: 0,
-  date: new Date().toISOString().split('T')[0],
-  hrsDebut: "",
-  hrsFin: "",
-  lieuID: 0,
-  projetID: 0,
-  defaultEntrepriseId: 0,
-  isLab: false,
-  signalisationId: 0,
-  note: "",
-  quantite: 0
-};
-
 export const initialActivite: ActivitePlanif = {
   id: 1,
   projetId: 0,
@@ -419,35 +478,9 @@ export const initialMateriau: Materiau = {
 export const initialSousTraitant: SousTraitant = {
   id: 1,
   nom: "",
-  quantite: 0,
-  activiteId: null,
-  uniteId: null,
 };
 
-export const initialJournal: Journal = {
-  id: 1,
-  projetInfo: {
-    type: 1,
-    date: new Date(),
-    arrivee: '',
-    depart: '',
-    weather: initialMeteo,
-    nomProjet: ""
-  },
-  entreprise: '',
-  localisation: '',
-  plageHoraire: '',
-  notes: '',
-  planifChantier: initialPlanifChantier,
-  planifActivites: [],
-  employes: [],
-  materiaux: [initialMateriau],
-  sousTraitants: [initialSousTraitant],
-  userStats: [],
-  statut: initialStatut,
-  signatureData: undefined
-};
-
+// Types pour les planifications
 export interface SignalisationProjet {
   id: number;
   idProjet: number;
@@ -490,14 +523,12 @@ export interface TabTypeProjet {
   description: string;
 }
 
-// Nouveau modèle : TabLocalisationActivites
 export interface TabLocalisationActivites {
   activiteId: number; // FK vers Activite
   locDistanceId: number; // FK vers LocalisationDistance
   locId: number; // FK vers Localisation
 }
 
-// Nouveau modèle : TabEquipeJournal
 export interface TabEquipeJournal {
   journalId: number; // FK vers Journal
   equipeId: number; // FK vers TabEquipes

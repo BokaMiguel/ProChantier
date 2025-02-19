@@ -1,5 +1,7 @@
 // src/services/JournalService.ts
 
+import { ListUnite } from "../models/JournalFormModel";
+
 export const getAuthorizedProjects = async (userId: string) => {
   try {
     const response = await fetch(
@@ -918,6 +920,20 @@ export const getPlanifChantierByProjet = async (projetId: number, dateDebut?: Da
     return data;
   } catch (error) {
     console.error("Erreur dans getPlanifChantierByProjet:", error);
+    throw error;
+  }
+};
+
+export const getAllUnites = async (): Promise<ListUnite[]> => {
+  try {
+    const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetAllUnites`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des unités:', error);
     throw error;
   }
 };

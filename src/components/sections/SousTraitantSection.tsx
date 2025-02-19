@@ -1,19 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { FaCubes, FaTimes, FaPlusCircle, FaBuilding, FaTools, FaRuler } from "react-icons/fa";
 import { useAuth } from "../../context/AuthContext";
-import { Unite, unites, JournalActivite } from "../../models/JournalFormModel";
-
-interface SousTraitant {
-  id: number;
-  nom: string;
-  quantite: number;
-  activiteId: number | null;
-  uniteId: number | null;
-}
+import { JournalActivite, ListUnite, SousTraitantFormData } from "../../models/JournalFormModel";
 
 interface SousTraitantSectionProps {
-  sousTraitants: SousTraitant[];
-  setSousTraitants: React.Dispatch<React.SetStateAction<SousTraitant[]>>;
+  sousTraitants: SousTraitantFormData[];
+  setSousTraitants: React.Dispatch<React.SetStateAction<SousTraitantFormData[]>>;
   defaultEntrepriseId?: number;
   planifActivites?: JournalActivite[];
 }
@@ -24,19 +16,17 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
   defaultEntrepriseId,
   planifActivites = [],
 }) => {
-  const { sousTraitants: contextSousTraitants, activites } = useAuth();
+  const { sousTraitants: contextSousTraitants, activites, unites } = useAuth();
   const [nextId, setNextId] = useState(sousTraitants.length + 1);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [sousTraitantToDelete, setSousTraitantToDelete] = useState<number | null>(null);
 
-  // Assurer qu'il y a toujours au moins un sous-traitant
   useEffect(() => {
     if (sousTraitants.length === 0) {
       handleAddSousTraitant();
     }
   }, []);
 
-  // Sélectionner le sous-traitant par défaut
   useEffect(() => {
     if (defaultEntrepriseId && contextSousTraitants && sousTraitants.length > 0) {
       const defaultSousTraitant = contextSousTraitants.find(st => st.id === defaultEntrepriseId);
@@ -51,18 +41,18 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
   }, [defaultEntrepriseId, contextSousTraitants]);
 
   const handleAddSousTraitant = () => {
-    const newSousTraitant: SousTraitant = {
+    const newSousTraitant: SousTraitantFormData = {
       id: nextId,
       nom: "",
       quantite: 0,
-      activiteId: null,
-      uniteId: null,
+      activiteID: null,
+      idUnite: null,
     };
     setSousTraitants([...sousTraitants, newSousTraitant]);
     setNextId(nextId + 1);
   };
 
-  const handleChange = (id: number, field: keyof SousTraitant, value: any) => {
+  const handleChange = (id: number, field: keyof SousTraitantFormData, value: any) => {
     setSousTraitants(prevSousTraitants => 
       prevSousTraitants.map(st =>
         st.id === id ? { ...st, [field]: value } : st
@@ -83,7 +73,6 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
     setSousTraitantToDelete(null);
   };
 
-  // Filtrer les activités pour n'afficher que celles qui sont sélectionnées dans planifActivites
   const filteredActivites = activites?.filter(activite => 
     planifActivites.some(planifAct => planifAct.activiteID === activite.id)
   ) || [];
@@ -128,8 +117,8 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
                   Activité
                 </label>
                 <select
-                  value={sousTraitant.activiteId || ""}
-                  onChange={(e) => handleChange(sousTraitant.id, "activiteId", e.target.value ? Number(e.target.value) : null)}
+                  value={sousTraitant.activiteID || ""}
+                  onChange={(e) => handleChange(sousTraitant.id, "activiteID", e.target.value ? Number(e.target.value) : null)}
                   className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                 >
                   <option value="">Sélectionner une activité</option>
@@ -159,14 +148,14 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
                     step="0.01"
                   />
                   <select
-                    value={sousTraitant.uniteId || ""}
-                    onChange={(e) => handleChange(sousTraitant.id, "uniteId", e.target.value ? Number(e.target.value) : null)}
+                    value={sousTraitant.idUnite || ""}
+                    onChange={(e) => handleChange(sousTraitant.id, "idUnite", e.target.value ? Number(e.target.value) : null)}
                     className="mt-1 block w-1/3 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                   >
                     <option value="">Unité</option>
-                    {unites.map((unite) => (
-                      <option key={unite.id} value={unite.id}>
-                        {unite.symbole}
+                    {unites?.map((unite) => (
+                      <option key={unite.idUnite} value={unite.idUnite}>
+                        {unite.descriptionCourt}
                       </option>
                     ))}
                   </select>

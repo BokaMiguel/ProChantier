@@ -27,6 +27,7 @@ import {
   getSousTraitantProjet,
   getSignalisationProjet,
   getActivitePlanif,
+  getAllUnites,
 } from "../services/JournalService";
 import { Project } from "../models/ProjectInfoModel";
 import { UserClaims } from "../models/AuthModel";
@@ -41,6 +42,7 @@ import {
   Materiau,
   SignalisationProjet,
   SousTraitant,
+  ListUnite,
 } from "../models/JournalFormModel";
 
 interface AuthContextProps {
@@ -58,6 +60,7 @@ interface AuthContextProps {
   sousTraitants: SousTraitant[] | null;
   bases: Localisation[] | null;
   signalisations: SignalisationProjet[] | null;
+  unites: ListUnite[] | null;
   isLoading: boolean;
   login: () => void;
   logout: () => void;
@@ -73,6 +76,7 @@ interface AuthContextProps {
   fetchSousTraitants: () => void;
   fetchSignalisations: (projectId: number) => void;
   fetchActivitesPlanif: (projectId: number) => void;
+  fetchUnites: () => void;
   setBases: Dispatch<SetStateAction<Localisation[] | null>>;
 }
 
@@ -103,6 +107,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [signalisations, setSignalisations] = useState<
     SignalisationProjet[] | null
   >(null);
+  const [unites, setUnites] = useState<ListUnite[]>([]);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -328,6 +333,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     setSousTraitants(sousTraitantsData);
   }, []);
 
+  const fetchUnites = useCallback(async () => {
+    try {
+      const unitesList = await getAllUnites();
+      setUnites(unitesList);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des unités:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUnites();
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -345,6 +363,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         sousTraitants,
         signalisations,
         activitesPlanif,
+        unites,
         isLoading,
         login: handleUserLogin,
         logout: handleUserLogout,
@@ -360,6 +379,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         fetchSousTraitants,
         fetchSignalisations,
         fetchActivitesPlanif,
+        fetchUnites,
         setBases,
       }}
     >

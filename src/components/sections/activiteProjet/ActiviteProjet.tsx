@@ -261,7 +261,7 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
     const newActivity: JournalActivite = {
       id: nextId,
       activiteID: 0,
-      lieuID: planifChantier?.lieuID || 0,
+      lieuID: 0,
       quantite: 0,
       notes: "",
       bases: [],
@@ -347,7 +347,7 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
                     </label>
                   </div>
                   <select
-                    value={planifActivite.lieuID || planifChantier?.lieuID || ""}
+                    value={planifActivite.lieuID || ""}
                     onChange={(e) => handleChange(planifActivite.id, "lieuID", parseInt(e.target.value) || 0)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                   >
@@ -375,9 +375,8 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
                   </div>
                   <input
                     type="number"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 cursor-not-allowed"
                     value={calculateQuantity(planifActivite)}
-                    onChange={(e) => handleQuantityChange(planifActivite.id, e.target.value)}
                     readOnly
                   />
                 </div>

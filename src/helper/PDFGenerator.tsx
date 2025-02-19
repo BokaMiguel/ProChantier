@@ -4,7 +4,6 @@ import {
   Page,
   Text,
   View,
-  StyleSheet,
   Font,
   Image,
   Svg,
@@ -15,13 +14,15 @@ import {
   Employe,
   PlanifChantier,
   PlanifActivites,
-  LocalisationDistance,
   Localisation,
   SignatureData,
   Activite,
   Lieu,
+  JournalSousTraitant,
 } from "../models/JournalFormModel";
 import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { Project } from "../models/ProjectInfoModel";
 
 Font.register({
   family: "Roboto",
@@ -47,7 +48,7 @@ interface PDFData {
   planifChantier: PlanifChantier;
   planifActivites: PlanifActivites[];
   journalMateriaux: any[];
-  journalSousTraitants: any[];
+  journalSousTraitants: JournalSousTraitant[];
   userStats: {
     id: number;
     nom: string;
@@ -75,17 +76,16 @@ interface PDFDocumentProps {
     planifChantier: PlanifChantier;
     planifActivites: PlanifActivites[];
     journalMateriaux: any[];
-    journalSousTraitants: any[];
+    journalSousTraitants: JournalSousTraitant[];
     userStats: { id: number; nom: string; act: number[]; ts: number; td: number }[];
     totals: { act: number[]; ts: number; td: number };
     notes: string;
     signatureData: { signature: string; signataire: string; date: Date } | null;
   };
-  selectedProject: any;
+  selectedProject: Project | null;
   activites: Activite[] | null;
   lieux: Lieu[] | null;
   bases: Localisation[] | null;
-  distances: LocalisationDistance[];
   journalPlanifId: number;
 }
 
@@ -97,6 +97,10 @@ interface EnrichedPlanifActivite extends PlanifActivites {
 // Fonction utilitaire pour formater la date
 const formatDateForFileName = (date: Date): string => {
   return date.toLocaleDateString("fr-FR").split("/").join("-");
+};
+
+const formatDateToFrenchText = (date: Date): string => {
+  return format(date, 'EEEE d MMMM yyyy', { locale: fr });
 };
 
 const Separator = () => <View style={styles.separator} />;
@@ -175,13 +179,20 @@ const MaterialsIcon = () => (
 const ContractorsIcon = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24">
     <Path
-      d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z"
+      d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z"
       fill="#2c3e50"
     />
   </Svg>
 );
 
-export const PDFDocument: React.FC<PDFDocumentProps> = ({ data, selectedProject, activites, lieux, bases, distances, journalPlanifId }) => {
+export const PDFDocument: React.FC<PDFDocumentProps> = ({
+  data,
+  selectedProject,
+  activites,
+  lieux,
+  bases,
+  journalPlanifId
+}) => {
   const validUsers = data.journalUsers.filter(
     (user) => user.prenom !== "" || user.nom !== ""
   );
@@ -206,26 +217,27 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({ data, selectedProject,
       );
     };
 
-    const renderLiaisons = (distances: LocalisationDistance[]) => {
-      if (!distances || distances.length === 0) return null;
+    const renderLiaisons = (activite: PlanifActivites) => {
+      if (!activite.liaisons || activite.liaisons.length === 0) return null;
 
       // Calculer la distance totale
-      const totalDistance = distances.reduce((sum, d) => sum + d.distanceInMeters, 0);
+      const totalDistance = activite.liaisons.reduce((sum, liaison) => {
+        return sum + (liaison.distanceInMeters || 0);
+      }, 0);
 
       return (
         <View style={styles.subSection}>
           <View style={styles.subSectionHeader}>
-            <Text style={styles.subTitle}>Liaisons ({distances.length})</Text>
+            <Text style={styles.subTitle}>Liaisons ({activite.liaisons.length})</Text>
           </View>
           <View style={styles.basesContent}>
-            {distances.map((liaison, index) => {
+            {activite.liaisons.map((liaison, index) => {
               const baseA = bases?.find(b => b.id === liaison.baseA)?.base;
               const baseB = bases?.find(b => b.id === liaison.baseB)?.base;
-              if (!baseA || !baseB) return null;
               
               return (
                 <Text key={index} style={styles.baseText}>
-                  {baseA} {baseB}: {liaison.distanceInMeters}m
+                  {baseA} - {baseB}: {liaison.distanceInMeters}m
                 </Text>
               );
             })}
@@ -237,66 +249,62 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({ data, selectedProject,
 
     return (
       <View style={styles.activitiesContainer}>
-        {data.planifActivites.map((activite, index) => (
-          <View key={index} style={styles.activitySection}>
-            <View style={styles.activityHeader}>
-              <View style={styles.activityTitleContainer}>
-                <Text style={styles.activityTitle}>
-                  {activite.activiteNom || 'N/A'}
-                </Text>
-                <Text style={styles.activityId}>
-                  ACT. {index + 1}
-                </Text>
-              </View>
-              <Text style={styles.locationText}>
-                Localisation: {activite.lieuNom || 'N/A'}
-              </Text>
-            </View>
-
-            {/* Affichage des notes si présentes */}
-            {activite.notes && activite.notes.trim() !== '' && (
-              <View style={styles.notesSection}>
-                <View style={styles.notesHeader}>
-                  <Svg width={12} height={12} viewBox="0 0 24 24">
-                    <Path
-                      d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 14H8v-2h6v2zm0-4H8v-2h6v2zM8 9h6V7H8v2z"
-                      fill="#2c3e50"
-                    />
-                  </Svg>
-                  <Text style={styles.notesTitle}>Commentaire</Text>
+        {data.planifActivites.map((activite, index) => {
+          const activiteInfo = activites?.find(a => a.id === activite.activiteID);
+          const lieuInfo = lieux?.find(l => l.id === activite.lieuID);
+          
+          return (
+            <View key={index} style={styles.activitySection}>
+              <View style={styles.activityHeader}>
+                <View style={styles.activityTitleContainer}>
+                  <Text style={styles.activityTitle}>
+                    {activiteInfo?.nom || 'N/A'}
+                  </Text>
+                  <Text style={styles.activityId}>
+                    ACT. {index + 1}
+                  </Text>
                 </View>
-                <Text style={styles.notesText}>{activite.notes}</Text>
+                <Text style={styles.locationText}>
+                  Localisation: {lieuInfo?.nom || 'N/A'}
+                </Text>
               </View>
-            )}
 
-            {renderBases(activite)}
-            {renderLiaisons(activite.liaisons || [])}
-          </View>
-        ))}
+              {activite.notes && activite.notes.trim() !== '' && (
+                <View style={styles.notesSection}>
+                  <View style={styles.notesHeader}>
+                    <Text style={styles.notesTitle}>Commentaire</Text>
+                  </View>
+                  <Text style={styles.notesText}>{activite.notes}</Text>
+                </View>
+              )}
+
+              {renderBases(activite)}
+              {renderLiaisons(activite)}
+            </View>
+          );
+        })}
       </View>
     );
   };
 
   const renderSousTraitantsTable = () => (
-    <View style={styles.table}>
-      <View style={styles.tableRow}>
-        <View style={[styles.tableCell, styles.tableHeader, styles.tableCellBorder, { flex: 2 }]}>
-          <Text>Nom</Text>
+    <View style={styles.section}>
+      <View style={styles.table}>
+        <View style={[styles.tableRow, { backgroundColor: "#F9FAFB" }]}>
+          <Text style={[styles.tableHeader, { flex: 3 }]}>Sous-traitant</Text>
+          <Text style={[styles.tableHeader, { flex: 3 }]}>Activité</Text>
+          <Text style={[styles.tableHeader, { flex: 2 }]}>Quantité</Text>
+          <Text style={[styles.tableHeader, { flex: 2 }]}>Unité</Text>
         </View>
-        <View style={[styles.tableCell, styles.tableHeader, { flex: 1 }]}>
-          <Text>Quantité</Text>
-        </View>
+        {data.journalSousTraitants.map((st, index) => (
+          <View key={index} style={styles.tableRow}>
+            <Text style={[styles.tableCell, { flex: 3 }]}>{st.nomSousTraitant || ''}</Text>
+            <Text style={[styles.tableCell, { flex: 3 }]}>{st.nomActivite || ''}</Text>
+            <Text style={[styles.tableCell, { flex: 2 }]}>{st.quantite}</Text>
+            <Text style={[styles.tableCell, { flex: 2 }]}>{st.descriptionUnite || ''}</Text>
+          </View>
+        ))}
       </View>
-      {data.journalSousTraitants.map((sousTraitant, index) => (
-        <View key={index} style={styles.tableRow}>
-          <View style={[styles.tableCell, styles.tableCellBorder, { flex: 2 }]}>
-            <Text>{sousTraitant.nom}</Text>
-          </View>
-          <View style={[styles.tableCell, { flex: 1 }]}>
-            <Text>{sousTraitant.quantite}</Text>
-          </View>
-        </View>
-      ))}
     </View>
   );
 
@@ -453,7 +461,7 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({ data, selectedProject,
       author="Journal de Chantier"
       keywords="journal, chantier, rapport"
       subject="Rapport journalier"
-      title={`Journal de Chantier - ${format(data.journalDate, 'dd/MM/yyyy')}`}
+      title={`Journal de Chantier - ${formatDateToFrenchText(data.journalDate)}`}
     >
       {/* Première page : Informations et Employés */}
       <Page size="A4" style={styles.page} wrap={false}>
@@ -486,7 +494,7 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({ data, selectedProject,
               <View style={{ flexDirection: "row", marginBottom: 10 }}>
                 <Text style={styles.label}>Date : </Text>
                 <Text style={styles.text}>
-                  {format(data.journalDate, 'dd/MM/yyyy')}
+                  {formatDateToFrenchText(data.journalDate)}
                 </Text>
               </View>
               <View style={{ flexDirection: "row", marginBottom: 10 }}>
@@ -602,7 +610,7 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({ data, selectedProject,
       </Page>
 
       {/* Troisième page : Activités */}
-      <Page size="A4" style={styles.page}>
+ <Page size="A4" style={styles.page}>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <ActivitiesIcon />
@@ -635,7 +643,7 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({ data, selectedProject,
 export const getPDFFileName = (
   data: PDFDocumentProps["data"], 
   journalPlanifId: number,
-  selectedProject: any
+  selectedProject: Project | null
 ): string => {
   const date = formatDateForFileName(data.journalDate);
   const journalId = journalPlanifId.toString().padStart(7, "0");

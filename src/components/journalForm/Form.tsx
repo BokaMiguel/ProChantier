@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { FaArrowRight, FaFilePdf } from "react-icons/fa";
 import { PDFViewer, Font, BlobProvider } from "@react-pdf/renderer";
@@ -23,7 +23,11 @@ import {
   Lieu,
   JournalActivite,
   TabPlanifChantier,
-  UserStat
+  UserStat,
+  SousTraitant,
+  Journal,
+  SousTraitantFormData,
+  JournalSousTraitant
 } from "../../models/JournalFormModel";
 import { PDFDocument } from "../../helper/PDFGenerator";
 import {
@@ -58,7 +62,7 @@ type PDFData = {
   planifChantier: PlanifChantier;
   planifActivites: PlanifActivites[];
   journalMateriaux: any[];
-  journalSousTraitants: any[];
+  journalSousTraitants: JournalSousTraitant[];
   userStats: { id: number; nom: string; act: number[]; ts: number; td: number }[];
   totals: { act: number[]; ts: number; td: number };
   notes: string;
@@ -76,11 +80,13 @@ export default function Form() {
     activites,
     selectedProject,
     bases,
+    unites,
     fetchBases
   } = useAuth();
 
   const { type, idPlanif } = useParams<{ type: string; idPlanif: string }>();
 
+  const [journal, setJournal] = useState<Journal | null>(null);
   const [journalDate, setJournalDate] = useState<Date>(new Date());
   const [journalArrivee, setJournalArrivee] = useState("");
   const [journalDepart, setJournalDepart] = useState("");
@@ -99,6 +105,12 @@ export default function Form() {
     planifChantier
   });
 
+  useEffect(() => {
+    if (unites) {
+      console.log('Form - Unités disponibles:', unites);
+    }
+  }, [unites]);
+
   const [planifActivites, setPlanifActivites] = useState<PlanifActivites[]>([]);
   
   const [journalSavedBases, setJournalSavedBases] = useState<Localisation[]>([]);
@@ -115,7 +127,7 @@ export default function Form() {
   });
   
   const [journalMateriaux, setJournalMateriaux] = useState<any[]>([]);
-  const [journalSousTraitants, setJournalSousTraitants] = useState<any[]>([]);
+  const [journalSousTraitants, setJournalSousTraitants] = useState<SousTraitantFormData[]>([]);
   const [distances, setDistances] = useState<LocalisationDistance[]>([]);
 
   const [sections, setSections] = useState<Sections>({
@@ -353,6 +365,34 @@ export default function Form() {
     }
   };
 
+  const transformSousTraitantsForJournal = (sousTraitants: SousTraitantFormData[]): JournalSousTraitant[] => {
+    return sousTraitants.map(st => {
+      const activite = activites?.find(a => a.id === st.activiteID);
+      const unite = unites?.find(u => u.idUnite === st.idUnite);
+      return {
+        sousTraitantID: st.id,
+        activiteID: st.activiteID,
+        idUnite: st.idUnite,
+        quantite: st.quantite,
+        nomSousTraitant: st.nom,
+        nomActivite: activite?.nom || '',
+        descriptionUnite: unite?.description || ''
+      };
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!journal) return;
+
+    const journalToSubmit = {
+      ...journal,
+      sousTraitants: transformSousTraitantsForJournal(journalSousTraitants)
+    };
+
+    // ... reste du code de soumission
+  };
+
   const renderActiviteProjet = () => {
     if (!planifChantier) return null;
 
@@ -367,7 +407,11 @@ export default function Form() {
       return (
         <ActiviteProjet
           users={journalUsers}
-          planifChantier={planifChantier as TabPlanifChantier}
+          planifChantier={{
+            ...planifChantier,
+            note: planifChantier.note || '',
+            activites: []
+          } as TabPlanifChantier}
           planifActivites={journalActivites}
           userStats={journalUserStats.userStats}
           setUserStats={(newStats: JournalUserStats) => setJournalUserStats(newStats)}
@@ -419,7 +463,7 @@ export default function Form() {
         };
       }),
       journalMateriaux,
-      journalSousTraitants,
+      journalSousTraitants: transformSousTraitantsForJournal(journalSousTraitants),
       userStats: journalUserStats.userStats,
       totals: journalUserStats.totals || { act: [], ts: 0, td: 0 },
       notes: journalNotes,
@@ -448,7 +492,7 @@ export default function Form() {
               planifChantier: planifChantier || initialPlanifChantier,
               planifActivites,
               journalMateriaux,
-              journalSousTraitants,
+              journalSousTraitants: transformSousTraitantsForJournal(journalSousTraitants),
               userStats: journalUserStats.userStats,
               totals: journalUserStats.totals,
               notes: journalNotes,
@@ -457,8 +501,7 @@ export default function Form() {
             selectedProject={selectedProject}
             activites={activites}
             lieux={lieux}
-            bases={journalSavedBases}
-            distances={journalSavedLiaisons}
+            bases={bases}
             journalPlanifId={Number(idPlanif)}
           />
         }>

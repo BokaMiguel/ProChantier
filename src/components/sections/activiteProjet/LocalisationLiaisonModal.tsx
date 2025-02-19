@@ -45,17 +45,24 @@ const LocalisationLiaisonModal: React.FC<LocalisationLiaisonModalProps> = ({
       if (isSelected) {
         return prevSelected.filter(l => l.id !== liaison.id);
       } else {
-        return [...prevSelected, liaison];
+        // S'assurer d'ajouter la liaison complète avec toutes les propriétés
+        const fullLiaison = distances.find(d => d.id === liaison.id);
+        return [...prevSelected, fullLiaison || liaison];
       }
     });
   };
 
   const handleSaveLiaisons = () => {
     console.log("Saving liaisons:", selectedLiaisons);
-    // Mettre à jour le parent
-    onUpdateLiaisons(currentActiviteId, selectedLiaisons);
+    // Mettre à jour le parent avec les liaisons complètes
+    const updatedLiaisons = selectedLiaisons.map(liaison => {
+      const fullLiaison = distances.find(d => d.id === liaison.id);
+      return fullLiaison || liaison;
+    });
+    
+    onUpdateLiaisons(currentActiviteId, updatedLiaisons);
     // Mettre à jour l'état local
-    setSavedLiaisons([...selectedLiaisons]);
+    setSavedLiaisons([...updatedLiaisons]);
     closeModal();
   };
 
