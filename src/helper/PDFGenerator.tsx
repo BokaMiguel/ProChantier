@@ -448,6 +448,25 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
     );
   };
 
+  const renderNotesSection = () => {
+    if (!data.notes || data.notes.trim() === '') return null;
+
+    return (
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <NotesIcon />
+          <Text style={styles.sectionHeaderText}>Notes Journalières</Text>
+        </View>
+        <View style={styles.notesSection}>
+          <View style={styles.notesHeader}>
+            <Text style={styles.notesTitle}>Commentaires du jour</Text>
+          </View>
+          <Text style={styles.notesContent}>{data.notes}</Text>
+        </View>
+      </View>
+    );
+  };
+
   const PageFooter = () => (
     <Text
       style={styles.pageNumber}
@@ -624,13 +643,7 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
       {/* Dernière page : Notes et signatures */}
       <Page size="A4" style={styles.page}>
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <NotesIcon />
-            <Text style={styles.sectionHeaderText}>Notes Journalières</Text>
-          </View>
-          <View style={styles.notesSection}>
-            <Text>{data.notes || 'Aucune note'}</Text>
-          </View>
+          {renderNotesSection()}
         </View>
         {renderSignatureSection()}
         <PageFooter />

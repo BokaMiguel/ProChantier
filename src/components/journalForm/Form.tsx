@@ -199,7 +199,7 @@ export default function Form() {
               const formattedActivites = activitesData.map((act: PlanifActivites) => ({
                 id: act.id,
                 activiteID: act.activiteID,
-                lieuID: planifData.lieuID, // Utiliser le lieu de la planification
+                lieuID: act.lieuID || planifData.lieuID, // Garder le lieu existant ou utiliser celui de la planif par défaut
                 quantite: 0,
                 notes: '',
                 planifID: Number(idPlanif)
@@ -210,7 +210,7 @@ export default function Form() {
               setPlanifActivites([{
                 id: Date.now(),
                 activiteID: null,
-                lieuID: planifData.lieuID, // Utiliser le lieu de la planification
+                lieuID: null, // Ne pas forcer le lieu par défaut
                 quantite: 0,
                 notes: '',
                 planifID: 0
@@ -228,7 +228,7 @@ export default function Form() {
           setPlanifActivites([{
             id: Date.now(),
             activiteID: null,
-            lieuID: null,
+            lieuID: null, // Ne pas forcer le lieu par défaut
             quantite: 0,
             notes: '',
             planifID: 0
@@ -242,7 +242,7 @@ export default function Form() {
       setPlanifActivites([{
         id: Date.now(),
         activiteID: null,
-        lieuID: null,
+        lieuID: null, // Ne pas forcer le lieu par défaut
         quantite: 0,
         notes: '',
         planifID: 0
@@ -324,7 +324,7 @@ export default function Form() {
     return {
       id: planif.id,
       activiteID: planif.activiteID,
-      lieuID: planifChantier.lieuID,
+      lieuID: planif.lieuID || planifChantier.lieuID, // Utiliser le lieu spécifique de l'activité, sinon celui de la planif
       quantite: planif.quantite || 0,
       date: planifChantier.date,
       hrsDebut: planifChantier.hrsDebut,
@@ -346,7 +346,7 @@ export default function Form() {
       id: journal.id,
       planifID: Number(idPlanif),
       activiteID: journal.activiteID,
-      lieuID: journal.lieuID,
+      lieuID: journal.lieuID, // Garder le lieu spécifique de l'activité
       quantite: journal.quantite,
       notes: journal.notes || '',
       bases: journal.bases,

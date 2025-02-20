@@ -80,8 +80,13 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
   };
 
   useEffect(() => {
+    // Remove the automatic location reset effect
+    // Only load bases and distances if there's no specific activity location set
     if (planifChantier?.lieuID) {
-      loadBasesAndDistances(planifChantier.lieuID);
+      const activitiesWithoutLocation = planifActivites.filter(act => !act.lieuID);
+      if (activitiesWithoutLocation.length > 0) {
+        loadBasesAndDistances(planifChantier.lieuID);
+      }
     }
   }, [planifChantier?.lieuID]);
 
@@ -91,10 +96,11 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
         if (activite.id === activiteId) {
           const updatedActivite = { ...activite, [field]: value };
           
-          // Si on change le lieu, réinitialiser les bases et liaisons
+          // Si on change le lieu, réinitialiser les bases et liaisons seulement pour cette activité
           if (field === 'lieuID') {
             updatedActivite.bases = [];
             updatedActivite.liaisons = [];
+            // Charger les nouvelles bases et liaisons pour le nouveau lieu
             if (value) {
               loadBasesAndDistances(value);
             }
