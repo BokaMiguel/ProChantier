@@ -399,6 +399,7 @@ export interface JournalChantier {
   journalActivites?: JournalActivites[];
   localisationJournals?: LocalisationJournal[];
   localisationDistanceJournals?: LocalisationDistanceJournal[];
+  bottinJournals?: BottinJournal[];
 }
 
 export interface MateriauxJournal {
@@ -443,6 +444,11 @@ export interface LocalisationDistanceJournal {
   id: number;
   journalActiviteId: number;
   localisationDistanceId: number;
+}
+
+export interface BottinJournal {
+  bottinId: number;
+  journalId: number;
 }
 
 export interface EquipeJournal {
