@@ -40,6 +40,7 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
   const [selectedActivities, setSelectedActivities] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isLab, setIsLab] = useState<boolean>(false);
+  const [labQuantity, setLabQuantity] = useState<number | null>(null);
   const { lieux, sousTraitants, signalisations, activites } = useAuth();
 
   useEffect(() => {
@@ -51,12 +52,11 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
       setSignalisationId(planif.signalisationId ?? null);
       setNotes(planif.note ?? "");
       setIsLab(planif.isLab ?? false);
-      // Initialiser les activités sélectionnées à partir des activités existantes
+      setLabQuantity(planif.labQuantity ?? null);
       if (planif.activiteIDs) {
         setSelectedActivities(new Set(planif.activiteIDs));
       }
     } else {
-      // Réinitialiser le formulaire
       setEntrepriseId(null);
       setLieuId(null);
       setStartHour("");
@@ -64,9 +64,16 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
       setSignalisationId(null);
       setNotes("");
       setIsLab(false);
+      setLabQuantity(null);
       setSelectedActivities(new Set());
     }
   }, [planif]);
+
+  useEffect(() => {
+    if (!isLab) {
+      setLabQuantity(null);
+    }
+  }, [isLab]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,6 +90,11 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
       return;
     }
 
+    if (isLab && (labQuantity === null || labQuantity < 0)) {
+      alert("Veuillez entrer une quantité valide pour le laboratoire");
+      return;
+    }
+
     const planifData: ActivitePlanif = {
       id: planif?.id || Date.now(),
       lieuID: lieuId!,
@@ -92,6 +104,7 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
       signalisationId: signalisationId ?? 0,
       note: notes || "",
       isLab: isLab,
+      labQuantity: isLab ? labQuantity : null,
       date: planif?.date || "",
       activiteIDs: Array.from(selectedActivities),
       projetId: 0,
@@ -108,6 +121,11 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
       return;
     }
 
+    if (isLab && (labQuantity === null || labQuantity < 0)) {
+      alert("Veuillez entrer une quantité valide pour le laboratoire");
+      return;
+    }
+
     const updatedPlanif: ActivitePlanif = {
       id: planif?.id || 0,
       lieuID: lieuId,
@@ -117,10 +135,11 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
       signalisationId: signalisationId || 0,
       note: notes,
       isLab: isLab,
+      labQuantity: isLab ? labQuantity : null,
       date: planif?.date || new Date().toISOString(),
       activiteIDs: Array.from(selectedActivities),
-      projetId: 0, // Sera mis à jour par le composant parent
-      quantite: 0 // Valeur par défaut
+      projetId: 0,
+      quantite: 0
     };
 
     onSave(updatedPlanif, selectedActivities);
@@ -341,19 +360,41 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
         </div>
 
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <label className="flex items-center gap-2 text-gray-700 cursor-pointer">
+          <div className="flex flex-col space-y-4">
+            <label className="flex items-center space-x-2">
               <input
                 type="checkbox"
                 checked={isLab}
                 onChange={(e) => setIsLab(e.target.checked)}
-                className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                className="form-checkbox h-4 w-4 text-blue-500 rounded"
               />
-              <span className="flex items-center gap-2">
-                <FaFlask className="text-blue-500" size={14} />
+              <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <FaFlask className="text-blue-500" />
                 Laboratoire requis
               </span>
             </label>
+
+            {isLab && (
+              <div className="pl-6 pt-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FaFlask className="text-blue-500" />
+                    Quantité laboratoire
+                    <span className="text-red-500">*</span>
+                  </div>
+                  <input
+                    type="number"
+                    value={labQuantity || ''}
+                    onChange={(e) => setLabQuantity(e.target.value ? Number(e.target.value) : null)}
+                    min="0"
+                    step="1"
+                    className="mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                    required={isLab}
+                    placeholder="Entrez la quantité..."
+                  />
+                </label>
+              </div>
+            )}
           </div>
         </div>
       </div>

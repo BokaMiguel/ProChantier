@@ -41,15 +41,17 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [isImporterOpen, setIsImporterOpen] = useState(false);
 
-  const filteredItems = items.filter((item) =>
-    columns.some((column) => {
-      const value = item[column.toLowerCase()];
-      return (
-        typeof value === "string" &&
-        value.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    })
-  );
+  const filteredItems = Array.isArray(items) 
+    ? items.filter((item) =>
+        columns.some((column) => {
+          const value = item[column.toLowerCase()];
+          return (
+            typeof value === "string" &&
+            value.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+        })
+      )
+    : [];
 
   const toggleExpandCategory = () => {
     setIsCategoryExpanded(!isCategoryExpanded);

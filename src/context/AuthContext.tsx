@@ -28,6 +28,12 @@ import {
   getSignalisationProjet,
   getActivitePlanif,
   getAllUnites,
+  getEquipeChantierByProjet,
+  getBottinsEquipeChantier,
+  createOrUpdateEquipeChantier,
+  deleteEquipeChantier,
+  addEmployeToEquipe,
+  removeEmployeFromEquipe,
 } from "../services/JournalService";
 import { Project } from "../models/ProjectInfoModel";
 import { UserClaims } from "../models/AuthModel";
@@ -43,6 +49,8 @@ import {
   SignalisationProjet,
   SousTraitant,
   ListUnite,
+  TabEquipeChantier,
+  TabBottinsEquipeChantier,
 } from "../models/JournalFormModel";
 
 interface AuthContextProps {
@@ -61,6 +69,8 @@ interface AuthContextProps {
   bases: Localisation[] | null;
   signalisations: SignalisationProjet[] | null;
   unites: ListUnite[] | null;
+  equipes: TabEquipeChantier[] | null;
+  bottinsEquipe: TabBottinsEquipeChantier[] | null;
   isLoading: boolean;
   login: () => void;
   logout: () => void;
@@ -77,6 +87,12 @@ interface AuthContextProps {
   fetchSignalisations: (projectId: number) => void;
   fetchActivitesPlanif: (projectId: number) => void;
   fetchUnites: () => void;
+  fetchEquipes: (projectId: number) => Promise<void>;
+  fetchBottinsEquipe: (equipeId: number) => void;
+  createOrUpdateEquipeChantier: (equipe: TabEquipeChantier) => Promise<TabEquipeChantier>;
+  deleteEquipeChantier: (id: number) => Promise<void>;
+  addEmployeToEquipe: (equipeId: number, employeId: number) => Promise<void>;
+  removeEmployeFromEquipe: (equipeId: number, employeId: number) => Promise<void>;
   setBases: Dispatch<SetStateAction<Localisation[] | null>>;
 }
 
@@ -108,6 +124,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     SignalisationProjet[] | null
   >(null);
   const [unites, setUnites] = useState<ListUnite[]>([]);
+  const [equipes, setEquipes] = useState<TabEquipeChantier[] | null>(null);
+  const [bottinsEquipe, setBottinsEquipe] = useState<
+    TabBottinsEquipeChantier[] | null
+  >(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -342,47 +362,177 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   }, []);
 
+  const fetchEquipes = useCallback(async (projectId: number) => {
+    if (!projectId) {
+      console.error("ID du projet non fourni pour fetchEquipes");
+      setEquipes([]);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await getEquipeChantierByProjet(projectId);
+      const equipeData = response.data || []; // Accéder à la propriété data de la réponse
+
+      if (!Array.isArray(equipeData)) {
+        console.error("Les données d'équipes reçues ne sont pas un tableau:", equipeData);
+        setEquipes([]);
+        return;
+      }
+      
+      // Pour chaque équipe, récupérer ses employés
+      const equipesWithEmployes = await Promise.all(
+        equipeData.map(async (equipe: TabEquipeChantier) => {
+          try {
+            if (!equipe.id) {
+              console.error("Équipe sans ID:", equipe);
+              return {
+                ...equipe,
+                employes: []
+              };
+            }
+            const bottinsResponse = await getBottinsEquipeChantier(equipe.id);
+            const bottins = bottinsResponse.data || [];
+            return {
+              ...equipe,
+              employes: bottins
+            };
+          } catch (error) {
+            console.error(`Erreur lors de la récupération des employés pour l'équipe ${equipe.id}:`, error);
+            return {
+              ...equipe,
+              employes: []
+            };
+          }
+        })
+      );
+      
+      setEquipes(equipesWithEmployes);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des équipes:", error);
+      setEquipes([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [setIsLoading]);
+
+  useEffect(() => {
+    if (selectedProject?.ID) {
+      fetchEquipes(selectedProject.ID);
+    } else {
+      setEquipes([]);
+    }
+  }, [selectedProject?.ID, fetchEquipes]);
+
+  const fetchBottinsEquipe = useCallback(async (equipeId: number) => {
+    try {
+      const bottins = await getBottinsEquipeChantier(equipeId);
+      setBottinsEquipe(bottins);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des bottins de l'équipe:", error);
+      setBottinsEquipe(null);
+    }
+  }, []);
+
+  const handleCreateOrUpdateEquipe = useCallback(async (equipe: TabEquipeChantier): Promise<TabEquipeChantier> => {
+    try {
+      const updatedEquipe = await createOrUpdateEquipeChantier(equipe);
+      return updatedEquipe;
+    } catch (error) {
+      console.error("Erreur lors de la création ou de la mise à jour de l'équipe:", error);
+      throw error;
+    }
+  }, []);
+
+  const handleDeleteEquipe = useCallback(async (id: number): Promise<void> => {
+    try {
+      await deleteEquipeChantier(id);
+    } catch (error) {
+      console.error("Erreur lors de la suppression de l'équipe:", error);
+      throw error;
+    }
+  }, []);
+
+  const handleAddEmployeToEquipe = useCallback(async (equipeId: number, employeId: number): Promise<void> => {
+    try {
+      await addEmployeToEquipe(equipeId, employeId);
+    } catch (error) {
+      console.error("Erreur lors de l'ajout d'un employé à l'équipe:", error);
+      throw error;
+    }
+  }, []);
+
+  const handleRemoveEmployeFromEquipe = useCallback(async (equipeId: number, employeId: number): Promise<void> => {
+    try {
+      await removeEmployeFromEquipe(equipeId, employeId);
+    } catch (error) {
+      console.error("Erreur lors de la suppression d'un employé de l'équipe:", error);
+      throw error;
+    }
+  }, []);
+
   useEffect(() => {
     fetchUnites();
   }, []);
 
+  useEffect(() => {
+    if (selectedProject?.ID) {
+      fetchEmployes(selectedProject.ID);
+      fetchBases(selectedProject.ID);
+      fetchLieux(selectedProject.ID);
+      fetchFonctions();
+      fetchEquipements(selectedProject.ID);
+      fetchSousTraitants();
+      fetchMateriaux();
+      fetchActivites(selectedProject.ID);
+    }
+  }, [selectedProject, fetchEmployes, fetchBases, fetchLieux, fetchFonctions, fetchEquipements, fetchSousTraitants, fetchMateriaux, fetchActivites]);
+
+  const value = {
+    user,
+    claims,
+    projects,
+    selectedProject,
+    employees: employeeList,
+    fonctions,
+    lieux,
+    activites,
+    equipements,
+    materiaux,
+    bases,
+    sousTraitants,
+    signalisations,
+    activitesPlanif,
+    unites,
+    equipes,
+    bottinsEquipe,
+    isLoading,
+    login: handleUserLogin,
+    logout: handleUserLogout,
+    handleCallback: handleUserCallback,
+    selectProject,
+    fetchBases,
+    fetchLieux,
+    fetchEmployes,
+    fetchFonctions,
+    fetchEquipements,
+    fetchActivites,
+    fetchMateriaux,
+    fetchSousTraitants,
+    fetchSignalisations,
+    fetchActivitesPlanif,
+    fetchUnites,
+    fetchEquipes,
+    fetchBottinsEquipe,
+    createOrUpdateEquipeChantier: handleCreateOrUpdateEquipe,
+    deleteEquipeChantier: handleDeleteEquipe,
+    addEmployeToEquipe: handleAddEmployeToEquipe,
+    removeEmployeFromEquipe: handleRemoveEmployeFromEquipe,
+    setBases,
+  };
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        claims,
-        projects,
-        selectedProject,
-        employees: employeeList,
-        fonctions,
-        lieux,
-        activites,
-        equipements,
-        materiaux,
-        bases,
-        sousTraitants,
-        signalisations,
-        activitesPlanif,
-        unites,
-        isLoading,
-        login: handleUserLogin,
-        logout: handleUserLogout,
-        handleCallback: handleUserCallback,
-        selectProject,
-        fetchBases,
-        fetchLieux,
-        fetchEmployes,
-        fetchFonctions,
-        fetchEquipements,
-        fetchActivites,
-        fetchMateriaux,
-        fetchSousTraitants,
-        fetchSignalisations,
-        fetchActivitesPlanif,
-        fetchUnites,
-        setBases,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

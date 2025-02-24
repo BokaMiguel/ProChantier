@@ -1,0 +1,64 @@
+.gestion-container {
+  display: flex;
+  height: calc(100vh - 64px);
+  background-color: #f5f5f5;
+}
+
+.gestion-sidebar {
+  width: 250px;
+  background-color: white;
+  padding: 1rem;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.gestion-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.gestion-item:hover {
+  background-color: #f0f7ff;
+}
+
+.gestion-item.active {
+  background-color: #1976d2;
+  color: white;
+}
+
+.gestion-icon {
+  margin-right: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.gestion-text {
+  font-size: 1rem;
+}
+
+.gestion-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.gestion-header {
+  margin-bottom: 2rem;
+}
+
+.gestion-header h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1976d2;
+}
+
+.gestion-table {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+}

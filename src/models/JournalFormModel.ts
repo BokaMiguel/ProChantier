@@ -59,6 +59,7 @@ export interface ActivitePlanif {
   signalisationId: number;
   note: string;
   isLab: boolean;
+  labQuantity: number | null;
   date: string;
   activiteIDs: number[];
   quantite: number;
@@ -391,10 +392,13 @@ export interface JournalChantier {
   statutId: number;
   projetId: number;
   notes: string;
+  labQuantity?: number;
   equipeJournals?: EquipeJournal[];
   materiauxJournals?: MateriauxJournal[];
   sousTraitantJournals?: SousTraitantJournal[];
   journalActivites?: JournalActivites[];
+  localisationJournals?: LocalisationJournal[];
+  localisationDistanceJournals?: LocalisationDistanceJournal[];
 }
 
 export interface MateriauxJournal {
@@ -452,6 +456,39 @@ export interface EquipeChantier {
   projetId: number;
 }
 
+// Nouvelles interfaces pour la gestion des équipes
+export interface TabEquipeChantier {
+  id: number;
+  nom: string;
+  projetId: number;
+  employes?: {
+    bottinID: number;
+    nom: string;
+    prenom: string;
+    fonction?: {
+      id: number | null;
+      nom: string;
+    } | null;
+    equipement?: {
+      id: number | null;
+      nom: string;
+    } | null;
+  }[];
+}
+
+export interface TabBottinsEquipeChantier {
+  EquipeID: number;
+  BottinID: number;
+  Nom: string;
+  Prenom: string;
+}
+
+export interface TabBottin {
+  ID: number;
+  Nom: string;
+  Prenom: string;
+}
+
 // Valeurs initiales
 export const initialActivite: ActivitePlanif = {
   id: 1,
@@ -463,6 +500,7 @@ export const initialActivite: ActivitePlanif = {
   signalisationId: 0,
   note: "",
   isLab: false,
+  labQuantity: null,
   date: "",
   activiteIDs: [],
   quantite: 0,

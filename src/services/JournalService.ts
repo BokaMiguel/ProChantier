@@ -1,6 +1,6 @@
 // src/services/JournalService.ts
 
-import { ListUnite } from "../models/JournalFormModel";
+import { ListUnite, TabEquipeChantier, TabBottinsEquipeChantier } from '../models/JournalFormModel';
 
 export const getAuthorizedProjects = async (userId: string) => {
   try {
@@ -556,78 +556,167 @@ export const deleteActivitePlanif = async (id: number) => {
   }
 };
 
-export const getBottinsEquipeChantier = async (equipeID: number) => {
+export const getEquipeChantier = async (id: number): Promise<TabEquipeChantier> => {
+  try {
+    const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetEquipeChantier/${id}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.data;
+  } catch (error) {
+    console.error("Erreur lors de la récupération de l'équipe:", error);
+    throw error;
+  }
+};
+
+export const getEquipeChantierByProjet = async (projetId: number) => {
   const response = await fetch(
-    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetBottinsEquipeChantier/${equipeID}`,
+    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetEquipeChantierByProjet/${projetId}`,
     { method: "GET" }
   );
   return response.json();
 };
 
-export const createOrUpdateBottinsEquipeChantier = async (equipeData: any) => {
-  const response = await fetch(
-    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdateBottinsEquipeChantier`,
-    {
+export const createOrUpdateEquipeChantier = async (equipe: TabEquipeChantier): Promise<TabEquipeChantier> => {
+  try {
+    const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdateEquipeChantier`, {
       method: "POST",
       headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(equipeData),
+      body: JSON.stringify(equipe),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  );
-  if (!response.ok) {
-    throw new Error("Failed to create or update bottins equipe chantier");
-  }
-  return response.json();
-};
-
-export const deleteBottinsEquipeChantier = async (
-  equipeID: number,
-  bottinID: number
-) => {
-  const response = await fetch(
-    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/DeleteBottinsEquipeChantier/${equipeID}/${bottinID}`,
-    { method: "DELETE" }
-  );
-  if (!response.ok) {
-    throw new Error("Failed to delete bottins equipe chantier");
+    const data = await response.json();
+    return data.data;
+  } catch (error) {
+    console.error("Erreur lors de la création/mise à jour de l'équipe:", error);
+    throw error;
   }
 };
 
-export const getEquipeChantier = async (id: number) => {
-  const response = await fetch(
-    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetEquipeChantier/${id}`,
-    { method: "GET" }
-  );
-  return response.json();
-};
-
-export const createOrUpdateEquipeChantier = async (equipeData: any) => {
-  const response = await fetch(
-    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdateEquipeChantier`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(equipeData),
-    }
-  );
-  if (!response.ok) {
-    throw new Error("Failed to create or update equipe chantier");
-  }
-  return response.json();
-};
-
-export const deleteEquipeChantier = async (id: number) => {
-  const response = await fetch(
-    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/DeleteEquipeChantier/${id}`,
-    {
+export const deleteEquipeChantier = async (id: number): Promise<void> => {
+  try {
+    const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/DeleteEquipeChantier/${id}`, {
       method: "DELETE",
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        "Content-Type": "application/json",
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  );
-  if (!response.ok) {
-    throw new Error("Failed to delete equipe chantier");
+  } catch (error) {
+    console.error("Erreur lors de la suppression de l'équipe:", error);
+    throw error;
+  }
+};
+
+export const addEmployeToEquipe = async (equipeId: number, employeId: number): Promise<void> => {
+  try {
+    const bottin = {
+      EquipeID: equipeId,
+      BottinID: employeId
+    };
+    const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdateBottinsEquipeChantier`, {
+      method: "POST",
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(bottin),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+  } catch (error) {
+    console.error("Erreur lors de l'ajout de l'employé à l'équipe:", error);
+    throw error;
+  }
+};
+
+export const removeEmployeFromEquipe = async (equipeId: number, employeId: number): Promise<void> => {
+  try {
+    const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/DeleteBottinsEquipeChantier/${equipeId}/${employeId}`, {
+      method: "DELETE",
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        "Content-Type": "application/json",
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+  } catch (error) {
+    console.error("Erreur lors du retrait de l'employé de l'équipe:", error);
+    throw error;
+  }
+};
+
+export const getBottinsEquipeChantier = async (equipeId: number) => {
+  try {
+    const response = await fetch(
+      `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetBottinsEquipeChantier/${equipeId}`,
+      { method: "GET" }
+    );
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  } catch (error) {
+    console.error('Error fetching bottins for equipe:', error);
+    throw error;
+  }
+};
+
+export const createOrUpdateBottinsEquipeChantier = async (bottin: {
+  EquipeID: number;
+  BottinID: number;
+}) => {
+  try {
+    const response = await fetch(
+      `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdateBottinsEquipeChantier`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(bottin),
+      }
+    );
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  } catch (error) {
+    console.error('Error creating/updating bottin equipe:', error);
+    throw error;
+  }
+};
+
+export const deleteBottinsEquipeChantier = async (equipeId: number, bottinId: number) => {
+  try {
+    const response = await fetch(
+      `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/DeleteBottinsEquipeChantier/${equipeId}/${bottinId}`,
+      { method: "DELETE" }
+    );
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+  } catch (error) {
+    console.error('Error deleting bottin equipe:', error);
+    throw error;
   }
 };
 

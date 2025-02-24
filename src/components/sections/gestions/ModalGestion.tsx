@@ -8,6 +8,7 @@ interface ModalProps {
   onSubmit: (item: any) => void;
   fonctions: { id: number; nom: string }[];
   equipements: { id: number; nom: string }[];
+  employees?: { id: number; nom: string; prenom: string }[];
 }
 
 const ModalGestion: React.FC<ModalProps> = ({
@@ -17,6 +18,7 @@ const ModalGestion: React.FC<ModalProps> = ({
   onSubmit,
   fonctions,
   equipements,
+  employees,
 }) => {
   const [formState, setFormState] = useState<any>(item || {});
 
@@ -55,6 +57,30 @@ const ModalGestion: React.FC<ModalProps> = ({
     } else {
       setFormState((prevState: any) => ({ ...prevState, [name]: value }));
     }
+  };
+
+  const handleEmployeeToggle = (employeeId: number) => {
+    setFormState((prevState: any) => {
+      const currentEmployes = prevState.employes || [];
+      const isSelected = currentEmployes.some((e: any) => e.id === employeeId);
+      
+      if (isSelected) {
+        return {
+          ...prevState,
+          employes: currentEmployes.filter((e: any) => e.id !== employeeId)
+        };
+      } else {
+        const selectedEmployee = employees?.find(e => e.id === employeeId);
+        return {
+          ...prevState,
+          employes: [...currentEmployes, {
+            id: employeeId,
+            nom: selectedEmployee?.nom,
+            prenom: selectedEmployee?.prenom
+          }]
+        };
+      }
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -140,6 +166,40 @@ const ModalGestion: React.FC<ModalProps> = ({
                     </option>
                   ))}
                 </select>
+              </div>
+            </>
+          )}
+
+          {/* Logique spécifique pour la catégorie Équipes */}
+          {category === "equipes" && (
+            <>
+              <div className="mb-4">
+                <label className="block mb-1">Nom de l'équipe</label>
+                <input
+                  type="text"
+                  name="nom"
+                  value={formState.nom || ""}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300"
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block mb-2">Sélectionner les employés</label>
+                <div className="max-h-60 overflow-y-auto border border-gray-300 rounded-lg p-4">
+                  {employees?.map((employee) => (
+                    <div key={employee.id} className="flex items-center mb-2">
+                      <input
+                        type="checkbox"
+                        id={`employee-${employee.id}`}
+                        checked={formState.employes?.some((e: any) => e.id === employee.id) || false}
+                        onChange={() => handleEmployeeToggle(employee.id)}
+                        className="mr-2"
+                      />
+                      <label htmlFor={`employee-${employee.id}`}>{employee.prenom} {employee.nom}</label>
+                    </div>
+                  ))}
+                </div>
               </div>
             </>
           )}

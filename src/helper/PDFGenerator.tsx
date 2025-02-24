@@ -360,41 +360,6 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
     </View>
   );
 
-  const renderStatsTable = () => (
-    <View style={styles.statsTable}>
-      <View style={styles.statsHeader} fixed>
-        <Text style={styles.statsHeaderCell}>Employé</Text>
-        {Array.from({ length: 5 }, (_, i: number) => (
-          <Text key={i} style={styles.statsHeaderCell}>Act {i + 1}</Text>
-        ))}
-        <Text style={styles.statsHeaderCell}>TS</Text>
-        <Text style={styles.statsHeaderCell}>TD</Text>
-      </View>
-      {data.userStats?.filter(stat => 
-        stat.act.some(hours => hours > 0) || stat.ts > 0 || stat.td > 0
-      ).map((stat, index) => (
-        <View key={index} style={styles.statsRow}>
-          <Text style={styles.statsCell}>{stat.nom}</Text>
-          {stat.act.slice(0, 5).map((hours: number, i: number) => (
-            <Text key={i} style={styles.statsCell}>{hours}</Text>
-          ))}
-          <Text style={styles.statsCell}>{stat.ts}</Text>
-          <Text style={styles.statsCell}>{stat.td}</Text>
-        </View>
-      ))}
-      {data.totals && (
-        <View style={[styles.statsRow, styles.totalRow]}>
-          <Text style={[styles.statsCell, styles.boldText]}>Total</Text>
-          {data.totals.act.slice(0, 5).map((total: number, i: number) => (
-            <Text key={i} style={[styles.statsCell, styles.boldText]}>{total}</Text>
-          ))}
-          <Text style={[styles.statsCell, styles.boldText]}>{data.totals.ts}</Text>
-          <Text style={[styles.statsCell, styles.boldText]}>{data.totals.td}</Text>
-        </View>
-      )}
-    </View>
-  );
-
   const renderSignatureSection = () => {
     const currentDate = new Date().toLocaleDateString('fr-FR');
     

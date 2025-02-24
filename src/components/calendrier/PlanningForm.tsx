@@ -144,7 +144,8 @@ const PlanningForm: React.FC = () => {
             defaultEntrepriseId: planif.defaultEntrepriseId,
             signalisationId: planif.signalisationId,
             note: planif.note || '',
-            isLab: planif.isLab,
+            isLab: planif.isLab || false,
+            labQuantity: planif.labQuantity || null,
             date: planif.date,
             activiteIDs: planif.activites ? planif.activites.map((a: { activiteID: number }) => a.activiteID) : [],
             quantite: planif.quantite || 0,
@@ -276,17 +277,13 @@ const PlanningForm: React.FC = () => {
       
       // Ajouter ou mettre à jour la planification dans le jour cible
       if (planif.id) {
-        updatedActivities[targetDay].push({
-          ...updatedPlanif,
-          activiteIDs: selectedActivitiesArray
-        });
+        updatedActivities[targetDay].push(updatedPlanif);
       } else {
         // Nouvelle planif - générer un ID temporaire négatif
         const tempId = -Date.now();
         updatedActivities[targetDay].push({
           ...updatedPlanif,
-          id: tempId,
-          activiteIDs: selectedActivitiesArray
+          id: tempId
         });
       }
 
