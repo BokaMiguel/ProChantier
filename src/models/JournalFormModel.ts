@@ -392,13 +392,9 @@ export interface JournalChantier {
   statutId: number;
   projetId: number;
   notes: string;
-  labQuantity?: number;
   equipeJournals?: EquipeJournal[];
   materiauxJournals?: MateriauxJournal[];
-  sousTraitantJournals?: SousTraitantJournal[];
   journalActivites?: JournalActivites[];
-  localisationJournals?: LocalisationJournal[];
-  localisationDistanceJournals?: LocalisationDistanceJournal[];
   bottinJournals?: BottinJournal[];
 }
 
@@ -421,17 +417,21 @@ export interface MeteoJournal {
   journalId: number;
 }
 
-export interface SousTraitantJournal {
-  journalId: number;
-  sousTraitantId: number;
-  quantite: number;
-}
-
 export interface JournalActivites {
   id: number;
   journalId: number;
   activiteId: number;
   comment?: string;
+  localisationJournals?: LocalisationJournal[];
+  localisationDistanceJournals?: LocalisationDistanceJournal[];
+  sousTraitantJournals?: SousTraitantJournal[];
+}
+
+export interface SousTraitantJournal {
+  journalActiviteId: number;
+  sousTraitantId: number;
+  quantite: number;
+  uniteId: number;
 }
 
 export interface LocalisationJournal {

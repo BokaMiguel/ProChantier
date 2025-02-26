@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import { FaCubes, FaTimes, FaPlusCircle } from "react-icons/fa";
 import { useAuth } from "../../context/AuthContext";
+import { Materiau as OriginalMateriau } from "../../models/JournalFormModel";
 
-interface Materiau {
-  id: number;
-  nom: string;
-  quantite: number;
+// Extension du type Materiau pour ajouter un champ materielId
+interface Materiau extends OriginalMateriau {
+  localId: number; // ID local pour l'interface utilisateur
+  materielId?: number; // ID réel du matériau du contexte (optionnel)
 }
 
 interface MateriauxInfoProps {
@@ -24,21 +25,37 @@ const MateriauxInfo: React.FC<MateriauxInfoProps> = ({
 
   const handleAddMateriau = () => {
     const newMateriau: Materiau = {
-      id: nextId,
+      id: 0, // ID réel du matériau (sera mis à jour lors de la sélection)
+      localId: nextId, // ID local pour l'interface utilisateur
       nom: "",
-      quantite: 0,
+      quantite: 0
     };
     setMateriaux((prevMateriaux) => [...prevMateriaux, newMateriau]);
     setNextId(nextId + 1);
   };
 
   const handleChange = (
-    id: number,
+    localId: number,
     field: keyof Materiau,
     value: string | number
   ) => {
     const updatedMateriaux = materiaux.map((materiau) => {
-      if (materiau.id === id) {
+      if (materiau.localId === localId) {
+        // Si le champ est "nom", nous devons aussi mettre à jour l'id avec l'id réel du matériau
+        if (field === "nom" && typeof value === "string") {
+          // Trouver le matériau correspondant dans le contexte
+          const selectedMateriau = contextMateriaux?.find(m => m.nom === value);
+          if (selectedMateriau) {
+            console.log(`Matériau sélectionné: ID=${selectedMateriau.id}, Nom=${selectedMateriau.nom}`);
+            // Mettre à jour avec l'ID réel du matériau du contexte
+            return { 
+              ...materiau, 
+              [field]: value,
+              id: selectedMateriau.id, // Mettre à jour id avec l'ID réel
+              materielId: selectedMateriau.id // Mettre à jour materielId avec l'ID réel
+            };
+          }
+        }
         return { ...materiau, [field]: value };
       }
       return materiau;
@@ -46,15 +63,15 @@ const MateriauxInfo: React.FC<MateriauxInfoProps> = ({
     setMateriaux(updatedMateriaux);
   };
 
-  const confirmDeleteMateriau = (id: number) => {
-    setMateriauToDelete(id);
+  const confirmDeleteMateriau = (localId: number) => {
+    setMateriauToDelete(localId);
     setShowConfirm(true);
   };
 
   const handleDeleteMateriau = () => {
     if (materiauToDelete !== null) {
       setMateriaux((prevMateriaux) =>
-        prevMateriaux.filter((materiau) => materiau.id !== materiauToDelete)
+        prevMateriaux.filter((materiau) => materiau.localId !== materiauToDelete)
       );
       setShowConfirm(false);
       setMateriauToDelete(null);
@@ -66,7 +83,7 @@ const MateriauxInfo: React.FC<MateriauxInfoProps> = ({
       <div className="space-y-6">
         {materiaux.map((materiau, index) => (
           <div
-            key={materiau.id}
+            key={materiau.localId}
             className="bg-white rounded-lg border border-gray-200 p-6 relative transition-all duration-200 hover:shadow-md"
           >
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -79,7 +96,7 @@ const MateriauxInfo: React.FC<MateriauxInfoProps> = ({
                 </label>
                 <select
                   value={materiau.nom}
-                  onChange={(e) => handleChange(materiau.id, "nom", e.target.value)}
+                  onChange={(e) => handleChange(materiau.localId, "nom", e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                 >
                   <option value="">Sélectionner un matériau</option>
@@ -102,7 +119,7 @@ const MateriauxInfo: React.FC<MateriauxInfoProps> = ({
                   type="number"
                   value={materiau.quantite}
                   onChange={(e) =>
-                    handleChange(materiau.id, "quantite", parseFloat(e.target.value) || 0)
+                    handleChange(materiau.localId, "quantite", parseFloat(e.target.value) || 0)
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                   min="0"
@@ -112,7 +129,7 @@ const MateriauxInfo: React.FC<MateriauxInfoProps> = ({
             </div>
 
             <button
-              onClick={() => confirmDeleteMateriau(materiau.id)}
+              onClick={() => confirmDeleteMateriau(materiau.localId)}
               className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors duration-200"
               title="Supprimer le matériau"
             >

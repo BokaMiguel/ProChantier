@@ -30,10 +30,11 @@ import {
   getAllUnites,
   getEquipeChantierByProjet,
   getBottinsEquipeChantier,
-  createOrUpdateEquipeChantier,
-  deleteEquipeChantier,
-  addEmployeToEquipe,
-  removeEmployeFromEquipe,
+  createOrUpdateEquipeChantier as createOrUpdateEquipeChantierService,
+  deleteEquipeChantier as deleteEquipeChantierService,
+  addEmployeToEquipe as addEmployeToEquipeService,
+  removeEmployeFromEquipe as removeEmployeFromEquipeService,
+  getAllJournalChantierByProject,
 } from "../services/JournalService";
 import { Project } from "../models/ProjectInfoModel";
 import { UserClaims } from "../models/AuthModel";
@@ -71,6 +72,7 @@ interface AuthContextProps {
   unites: ListUnite[] | null;
   equipes: TabEquipeChantier[] | null;
   bottinsEquipe: TabBottinsEquipeChantier[] | null;
+  journals: any[] | null; // Ajouter le type pour les journaux
   isLoading: boolean;
   login: () => void;
   logout: () => void;
@@ -89,6 +91,7 @@ interface AuthContextProps {
   fetchUnites: () => void;
   fetchEquipes: (projectId: number) => Promise<void>;
   fetchBottinsEquipe: (equipeId: number) => void;
+  fetchJournals: (projectId: number) => void; // Ajouter la fonction pour récupérer les journaux
   createOrUpdateEquipeChantier: (equipe: TabEquipeChantier) => Promise<TabEquipeChantier>;
   deleteEquipeChantier: (id: number) => Promise<void>;
   addEmployeToEquipe: (equipeId: number, employeId: number) => Promise<void>;
@@ -128,6 +131,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [bottinsEquipe, setBottinsEquipe] = useState<
     TabBottinsEquipeChantier[] | null
   >(null);
+  const [journals, setJournals] = useState<any[] | null>(null); // Ajouter l'état pour les journaux
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -434,9 +438,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   }, []);
 
+  const fetchJournals = useCallback(async (projectId: number) => { // Ajouter la fonction pour récupérer les journaux
+    try {
+      const journalsData = await getAllJournalChantierByProject(projectId);
+      setJournals(journalsData);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des journaux:", error);
+      setJournals(null);
+    }
+  }, []);
+
   const handleCreateOrUpdateEquipe = useCallback(async (equipe: TabEquipeChantier): Promise<TabEquipeChantier> => {
     try {
-      const updatedEquipe = await createOrUpdateEquipeChantier(equipe);
+      const updatedEquipe = await createOrUpdateEquipeChantierService(equipe);
       return updatedEquipe;
     } catch (error) {
       console.error("Erreur lors de la création ou de la mise à jour de l'équipe:", error);
@@ -446,7 +460,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
   const handleDeleteEquipe = useCallback(async (id: number): Promise<void> => {
     try {
-      await deleteEquipeChantier(id);
+      await deleteEquipeChantierService(id);
     } catch (error) {
       console.error("Erreur lors de la suppression de l'équipe:", error);
       throw error;
@@ -455,7 +469,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
   const handleAddEmployeToEquipe = useCallback(async (equipeId: number, employeId: number): Promise<void> => {
     try {
-      await addEmployeToEquipe(equipeId, employeId);
+      await addEmployeToEquipeService(equipeId, employeId);
     } catch (error) {
       console.error("Erreur lors de l'ajout d'un employé à l'équipe:", error);
       throw error;
@@ -464,7 +478,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
   const handleRemoveEmployeFromEquipe = useCallback(async (equipeId: number, employeId: number): Promise<void> => {
     try {
-      await removeEmployeFromEquipe(equipeId, employeId);
+      await removeEmployeFromEquipeService(equipeId, employeId);
     } catch (error) {
       console.error("Erreur lors de la suppression d'un employé de l'équipe:", error);
       throw error;
@@ -485,8 +499,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       fetchSousTraitants();
       fetchMateriaux();
       fetchActivites(selectedProject.ID);
+      fetchJournals(selectedProject.ID); // Appeler la fonction pour récupérer les journaux
     }
-  }, [selectedProject, fetchEmployes, fetchBases, fetchLieux, fetchFonctions, fetchEquipements, fetchSousTraitants, fetchMateriaux, fetchActivites]);
+  }, [selectedProject, fetchEmployes, fetchBases, fetchLieux, fetchFonctions, fetchEquipements, fetchSousTraitants, fetchMateriaux, fetchActivites, fetchJournals]);
 
   const value = {
     user,
@@ -506,6 +521,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     unites,
     equipes,
     bottinsEquipe,
+    journals, // Ajouter les journaux à la valeur du contexte
     isLoading,
     login: handleUserLogin,
     logout: handleUserLogout,
@@ -524,6 +540,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     fetchUnites,
     fetchEquipes,
     fetchBottinsEquipe,
+    fetchJournals, // Ajouter la fonction pour récupérer les journaux à la valeur du contexte
     createOrUpdateEquipeChantier: handleCreateOrUpdateEquipe,
     deleteEquipeChantier: handleDeleteEquipe,
     addEmployeToEquipe: handleAddEmployeToEquipe,

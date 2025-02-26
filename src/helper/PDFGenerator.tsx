@@ -247,6 +247,19 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
       );
     };
 
+    const renderCommentaire = (activite: PlanifActivites) => {
+      if (!activite.notes || activite.notes.trim() === '') return null;
+
+      return (
+        <View style={styles.notesSection}>
+          <View style={styles.notesHeader}>
+            <Text style={styles.notesTitle}>Note :</Text>
+          </View>
+          <Text style={styles.notesText}>{activite.notes}</Text>
+        </View>
+      );
+    };
+
     return (
       <View style={styles.activitiesContainer}>
         {data.planifActivites.map((activite, index) => {
@@ -269,17 +282,9 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
                 </Text>
               </View>
 
-              {activite.notes && activite.notes.trim() !== '' && (
-                <View style={styles.notesSection}>
-                  <View style={styles.notesHeader}>
-                    <Text style={styles.notesTitle}>Commentaire</Text>
-                  </View>
-                  <Text style={styles.notesText}>{activite.notes}</Text>
-                </View>
-              )}
-
               {renderBases(activite)}
               {renderLiaisons(activite)}
+              {renderCommentaire(activite)}
             </View>
           );
         })}

@@ -17,7 +17,7 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
   planifActivites = [],
 }) => {
   const { sousTraitants: contextSousTraitants, activites, unites } = useAuth();
-  const [nextId, setNextId] = useState(sousTraitants.length + 1);
+  const [nextId, setNextId] = useState(-1); // Commencer avec des IDs négatifs pour les distinguer des vrais IDs
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [sousTraitantToDelete, setSousTraitantToDelete] = useState<number | null>(null);
 
@@ -49,15 +49,29 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
       idUnite: null,
     };
     setSousTraitants([...sousTraitants, newSousTraitant]);
-    setNextId(nextId + 1);
+    setNextId(nextId - 1); // Décrémenter pour le prochain ID temporaire
   };
 
   const handleChange = (id: number, field: keyof SousTraitantFormData, value: any) => {
-    setSousTraitants(prevSousTraitants => 
-      prevSousTraitants.map(st =>
-        st.id === id ? { ...st, [field]: value } : st
-      )
-    );
+    setSousTraitants(prevSousTraitants => {
+      return prevSousTraitants.map(st => {
+        if (st.id === id) {
+          // Si on change le nom du sous-traitant, on doit aussi mettre à jour l'ID
+          if (field === 'nom' && value) {
+            const selectedSousTraitant = contextSousTraitants?.find(cst => cst.nom === value);
+            if (selectedSousTraitant) {
+              return { 
+                ...st, 
+                [field]: value,
+                id: selectedSousTraitant.id // Mettre à jour l'ID avec celui du sous-traitant sélectionné
+              };
+            }
+          }
+          return { ...st, [field]: value };
+        }
+        return st;
+      });
+    });
   };
 
   const requestDeleteSousTraitant = (id: number) => {
@@ -95,8 +109,17 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
                   Sous-traitant
                 </label>
                 <select
-                  value={sousTraitant.nom || ""}
-                  onChange={(e) => handleChange(sousTraitant.id, "nom", e.target.value)}
+                  value={contextSousTraitants?.find(st => st.id === sousTraitant.id)?.nom || ""}
+                  onChange={(e) => {
+                    const selectedNom = e.target.value;
+                    const selectedSousTraitant = contextSousTraitants?.find(st => st.nom === selectedNom);
+                    if (selectedSousTraitant) {
+                      handleChange(sousTraitant.id, "id", selectedSousTraitant.id);
+                      handleChange(sousTraitant.id, "nom", selectedSousTraitant.nom);
+                    } else {
+                      handleChange(sousTraitant.id, "nom", "");
+                    }
+                  }}
                   className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                 >
                   <option value="">Sélectionner un sous-traitant</option>

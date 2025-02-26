@@ -27,13 +27,16 @@ import {
   SousTraitant,
   Journal,
   SousTraitantFormData,
-  JournalSousTraitant
+  JournalSousTraitant,
+  JournalChantier
 } from "../../models/JournalFormModel";
 import { PDFDocument } from "../../helper/PDFGenerator";
 import {
-  getDistancesForLieu, getPlanifChantier, getPlanifActivites
+  getDistancesForLieu, getPlanifChantier, getPlanifActivites, createJournalChantier
 } from "../../services/JournalService";
-import { format } from "date-fns";
+import {
+  format
+} from "date-fns";
 
 Font.register({
   family: "Inter",
@@ -142,6 +145,9 @@ export default function Form() {
 
   const [showPDF, setShowPDF] = useState(false);
   const [pdfEnabled, setPdfEnabled] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [signatureData, setSignatureData] = useState<{
     signature: string;
     signataire: string;
@@ -383,14 +389,100 @@ export default function Form() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!journal) return;
+    
+    setIsSubmitting(true);
+    setSubmitSuccess(null);
+    setSubmitError(null);
+
+    const journalChantier: JournalChantier = {
+      id: 0,
+      date: planifChantier?.date || new Date().toISOString().split('T')[0],
+      hrsDebut: planifChantier?.hrsDebut || '',
+      hrsFin: planifChantier?.hrsFin || '',
+      planifId: planifChantier?.id || 0,
+      meteoId: undefined,
+      statutId: 1,
+      projetId: planifChantier?.projetID || 0,
+      notes: journalNotes,
+      equipeJournals: undefined,
+      materiauxJournals: journalMateriaux.map(materiau => ({
+        journalId: 0,
+        materielId: materiau.materielId || materiau.id, // Utiliser materielId s'il existe, sinon utiliser id
+        quantite: materiau.quantite
+      })),
+      journalActivites: planifActivites
+        .filter(activite => activite.activiteID !== null)
+        .map(activite => {
+          // Trouver les sous-traitants associés à cette activité
+          const relatedSousTraitants = journalSousTraitants
+            .filter(st => st.activiteID === activite.activiteID)
+            .map(st => {
+              console.log(`Sous-traitant à envoyer - ID: ${st.id}, Nom: ${st.nom}, ActivitéID: ${st.activiteID}`);
+              return {
+                journalActiviteId: 0, // Sera mis à jour après création de l'activité
+                sousTraitantId: st.id, // Utiliser directement l'ID du sous-traitant
+                quantite: st.quantite,
+                uniteId: st.idUnite || 0
+              };
+            });
+
+          return {
+            id: 0,
+            journalId: 0,
+            activiteId: activite.activiteID as number,
+            comment: activite.notes || '',
+            localisationJournals: activite.bases?.map(base => ({
+              id: 0,
+              journalActiviteId: 0,
+              localisationId: base.id
+            })) || [],
+            localisationDistanceJournals: activite.liaisons?.map(liaison => ({
+              id: 0,
+              journalActiviteId: 0,
+              localisationDistanceId: liaison.id
+            })) || [],
+            sousTraitantJournals: relatedSousTraitants
+          };
+        }),
+      bottinJournals: journalUsers
+        .filter(user => 
+          typeof user.id === 'number' && 
+          user.id.toString().length <= 5 &&
+          (user.nom?.trim() || user.prenom?.trim())
+        )
+        .map(user => ({
+          bottinId: user.id,
+          journalId: 0
+        }))
+    };
+
+    console.log('Journal Chantier à envoyer:', journalChantier);
+    
+    // Log détaillé des sous-traitants dans le journal
+    console.log('Détail des sous-traitants par activité:');
+    journalChantier.journalActivites?.forEach((activite, index) => {
+      console.log(`Activité ${index + 1} (ID: ${activite.activiteId}):`);
+      activite.sousTraitantJournals?.forEach((st, stIndex) => {
+        console.log(`  Sous-traitant ${stIndex + 1}: ID=${st.sousTraitantId}, Quantité=${st.quantite}, UnitéID=${st.uniteId}`);
+      });
+    });
 
     const journalToSubmit = {
       ...journal,
       sousTraitants: transformSousTraitantsForJournal(journalSousTraitants)
     };
 
-    // ... reste du code de soumission
+    try {
+      const response = await createJournalChantier(journalChantier);
+      console.log('Réponse de la création du journal:', response);
+      setSubmitSuccess(`Journal de chantier créé avec succès. ID: ${response.id}`);
+      // Optionnel: rediriger vers une autre page ou afficher le PDF
+    } catch (error) {
+      console.error('Erreur lors de la création du journal:', error);
+      setSubmitError(`Erreur lors de la création du journal: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const renderActiviteProjet = () => {
@@ -444,31 +536,6 @@ export default function Form() {
       projet: planifChantier.projet,
       defaultEntreprise: planifChantier.defaultEntreprise,
       signalisation: planifChantier.signalisation
-    };
-
-    const pdfData: PDFData = {
-      journalDate: journalDate,
-      journalArrivee: journalArrivee,
-      journalDepart: journalDepart,
-      journalWeather: journalWeather,
-      journalUsers,
-      planifChantier: planifChantierData,
-      planifActivites: planifActivites.map(act => {
-        if (act.activiteID === null) {
-          throw new Error("activiteID cannot be null");
-        }
-        return {
-          ...act,
-          activiteID: act.activiteID
-        };
-      }),
-      journalMateriaux,
-      journalSousTraitants: transformSousTraitantsForJournal(journalSousTraitants),
-      userStats: journalUserStats.userStats,
-      totals: journalUserStats.totals || { act: [], ts: 0, td: 0 },
-      notes: journalNotes,
-      projetId: selectedProject?.ID?.toString() || '0',
-      signatureData: signatureData,
     };
 
     return (
@@ -715,29 +782,41 @@ export default function Form() {
             </section>
           )}
 
-          <div className="text-right mt-6 space-x-4">
+          {/* Message de succès */}
+          {submitSuccess && (
+            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
+              <span className="block sm:inline">{submitSuccess}</span>
+            </div>
+          )}
+          
+          {/* Message d'erreur */}
+          {submitError && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+              <span className="block sm:inline">{submitError}</span>
+            </div>
+          )}
+          
+          <div className="flex justify-end space-x-4 mt-6">
             <button
+              type="button"
               onClick={handlePDFGeneration}
-              disabled={!pdfEnabled}
-              className={`inline-flex items-center px-4 py-2 ${
-                pdfEnabled
-                  ? "bg-red-500 hover:bg-red-700"
-                  : "bg-gray-400 cursor-not-allowed"
-              } text-white rounded transition-colors duration-300`}
+              className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded flex items-center"
             >
+              <FaFilePdf className="mr-2" />
               Générer PDF
-              <FaFilePdf className="ml-2" />
             </button>
             <button
-              disabled={!pdfEnabled}
-              className={`inline-flex items-center px-4 py-2 ${
-                pdfEnabled
-                  ? "bg-blue-500 hover:bg-blue-700"
-                  : "bg-gray-400 cursor-not-allowed"
-              } text-white rounded transition-colors duration-300`}
+              type="submit"
+              className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+              onClick={handleSubmit}
+              disabled={isSubmitting}
             >
-              Envoyer le formulaire
-              <FaArrowRight className="ml-2" />
+              {isSubmitting ? 'Envoi en cours...' : (
+                <>
+                  <FaArrowRight className="mr-2" />
+                  Soumettre
+                </>
+              )}
             </button>
           </div>
         </div>

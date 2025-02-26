@@ -1026,3 +1026,49 @@ export const getAllUnites = async (): Promise<ListUnite[]> => {
     throw error;
   }
 };
+
+export const createJournalChantier = async (journalChantierDto: any) => {
+  try {
+    console.log('Données envoyées à l\'API createJournalChantier:', JSON.stringify(journalChantierDto, null, 2));
+    
+    const response = await fetch(
+      `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateJournalChantier`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(journalChantierDto),
+      }
+    );
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error creating journal chantier: ${response.status} - ${errorText}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error in createJournalChantier:", error);
+    throw error;
+  }
+};
+
+export const getAllJournalChantierByProject = async (projetId: number) => {
+  try {
+    const response = await fetch(
+      `${process.env.REACT_APP_BRUNEAU_API}/Horizon/GetAllJournalChantierByProject/${projetId}`,
+      { method: "GET" }
+    );
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching journals for project:', error);
+    throw error;
+  }
+};
