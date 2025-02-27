@@ -15,14 +15,20 @@ const SignatureSection: React.FC<SignatureSectionProps> = ({ onSignatureComplete
   const [signataire, setSignataire] = useState('');
   const [error, setError] = useState('');
 
-  const handleClear = () => {
+  const handleClear = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (signaturePadRef.current) {
       signaturePadRef.current.clear();
     }
     setError('');
   };
 
-  const handleSave = () => {
+  const handleSave = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (!signaturePadRef.current || signaturePadRef.current.isEmpty()) {
       setError('Veuillez signer avant de continuer');
       return;
@@ -39,7 +45,11 @@ const SignatureSection: React.FC<SignatureSectionProps> = ({ onSignatureComplete
       date: new Date(),
     };
 
+    // Appeler la fonction de callback avec les données de signature
     onSignatureComplete(signatureData);
+    
+    // Afficher un message de confirmation
+    console.log("Signature validée avec succès");
   };
 
   return (
@@ -88,6 +98,7 @@ const SignatureSection: React.FC<SignatureSectionProps> = ({ onSignatureComplete
         {/* Boutons d'action */}
         <div className="flex justify-end gap-2">
           <button
+            type="button"
             onClick={handleClear}
             className="flex items-center px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
           >
@@ -95,6 +106,7 @@ const SignatureSection: React.FC<SignatureSectionProps> = ({ onSignatureComplete
             Effacer
           </button>
           <button
+            type="button"
             onClick={handleSave}
             className="flex items-center px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
           >

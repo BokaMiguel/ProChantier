@@ -108,26 +108,36 @@ const Gestion: React.FC = () => {
       return null;
     }
     
+    console.log('Toutes les bases:', bases);
+    console.log('Lieu actuel:', lieu);
+    
     const localisations = bases
-      .filter((base) => base && base.lieuId === lieu.id)
+      .filter((base) => {
+        console.log('Vérification base:', base, 'pour lieuId:', lieu.id);
+        return base && base.lieuId === lieu.id;
+      })
       .map(base => ({
         id: base.id,
-        nom: base.base, // Uniformisation de la structure
+        nom: base.base, // Accepter les deux formats possibles
         lieuId: base.lieuId
       }));
     
+    console.log(`Localisations filtrées pour ${lieu.nom}:`, localisations);
+    
     return (
-      <ResourceTable
-        title={`Localisations pour ${lieu.nom}`}
-        icon={<FaMapMarkerAlt />}
-        items={localisations}
-        columns={["nom"]} // Utilisation de "nom" au lieu de "base"
-        onAdd={() => handleAdd("localisations", lieu.id)}
-        onEdit={(item) => handleEdit("localisations", item)}
-        onDelete={(id: number, item: any) =>
-          handleDelete("localisations", id, item.nom)
-        }
-      />
+      <div>
+        <ResourceTable
+          title={`Localisations pour ${lieu.nom}`}
+          icon={<FaMapMarkerAlt />}
+          items={localisations}
+          columns={["nom"]} // Utilisation de "nom" au lieu de "base"
+          onAdd={() => handleAdd("localisations", lieu.id)}
+          onEdit={(item) => handleEdit("localisations", item)}
+          onDelete={(id: number, item: any) =>
+            handleDelete("localisations", id, item.nom)
+          }
+        />
+      </div>
     );
   };
 
@@ -218,6 +228,9 @@ const Gestion: React.FC = () => {
           <div className="mx-auto h-12 w-12 text-gray-400">
             <FaUsers className="h-12 w-12" />
           </div>
+          <h3 className="text-2xl font-bold mb-6 text-center bg-blue-800 text-white p-4 rounded">
+            Gestion des Ressources
+          </h3>
           <h3 className="mt-2 text-sm font-medium text-gray-900">Aucune équipe</h3>
           <p className="mt-1 text-sm text-gray-500">Commencez par créer une nouvelle équipe.</p>
           <div className="mt-6">
@@ -274,6 +287,19 @@ const Gestion: React.FC = () => {
     }
   }, [selectedProject, lieux, fetchBases]);
 
+  useEffect(() => {
+    // Vérifier les données des lieux et bases au chargement
+    console.log("Lieux disponibles:", lieux);
+    console.log("Bases disponibles:", bases);
+    
+    if (lieux && bases) {
+      lieux.forEach(lieu => {
+        const basesForLieu = bases.filter(base => base && base.lieuId === lieu.id);
+        console.log(`Lieu ${lieu.nom} (ID: ${lieu.id}) a ${basesForLieu.length} bases:`, basesForLieu);
+      });
+    }
+  }, [lieux, bases]);
+
   if (!selectedProject) {
     return <div>Veuillez sélectionner un projet.</div>;
   }
@@ -287,12 +313,33 @@ const Gestion: React.FC = () => {
   const handleEdit = (category: string, item: Lieu | Activite | Materiau | SousTraitant | Equipement | Fonction | Employe | TabEquipeChantier) => {
     if (category === "employes") {
       const employeeItem = item as Employe;
-      const matchedFonction = fonctions?.find(
-        (f) => f.nom.trim() === employeeItem.fonction?.nom.trim()
-      );
-      const matchedEquipement = equipements?.find(
-        (e) => e.nom.trim() === employeeItem.equipement?.nom.trim()
-      );
+      
+      // Trouver la fonction correspondante dans la liste des fonctions
+      let matchedFonction = null;
+      if (employeeItem.fonction && employeeItem.fonction.id) {
+        // Si l'employé a déjà un ID de fonction, utiliser celui-ci directement
+        matchedFonction = fonctions?.find(f => f.id === employeeItem.fonction!.id);
+      } else if (employeeItem.fonction && employeeItem.fonction.nom) {
+        // Sinon, essayer de trouver par nom
+        matchedFonction = fonctions?.find(
+          f => f.nom.trim() === employeeItem.fonction!.nom.trim()
+        );
+      }
+      
+      // Trouver l'équipement correspondant dans la liste des équipements
+      let matchedEquipement = null;
+      if (employeeItem.equipement && employeeItem.equipement.id) {
+        // Si l'employé a déjà un ID d'équipement, utiliser celui-ci directement
+        matchedEquipement = equipements?.find(e => e.id === employeeItem.equipement!.id);
+      } else if (employeeItem.equipement && employeeItem.equipement.nom) {
+        // Sinon, essayer de trouver par nom
+        matchedEquipement = equipements?.find(
+          e => e.nom.trim() === employeeItem.equipement!.nom.trim()
+        );
+      }
+
+      console.log("Fonction trouvée:", matchedFonction);
+      console.log("Équipement trouvé:", matchedEquipement);
 
       const updatedItem = {
         ...employeeItem,

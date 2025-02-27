@@ -91,6 +91,8 @@ export interface LocalisationDistance {
   baseA: number;
   baseB: number;
   distanceInMeters: number;
+  baseAName?: string;
+  baseBName?: string;
 }
 
 // Types pour les matériaux et sous-traitants

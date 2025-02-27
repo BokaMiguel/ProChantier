@@ -84,6 +84,7 @@ const LocalisationModal: React.FC<LocalisationModalProps> = ({
               <span className="text-blue-700 font-medium">Mode Liaison</span>
             </label>
             <button
+              type="button"
               onClick={handleClearAll}
               disabled={selectedLocalisations.length === 0}
               className={`px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2 ${
@@ -107,6 +108,7 @@ const LocalisationModal: React.FC<LocalisationModalProps> = ({
 
             return (
               <button
+                type="button"
                 key={loc.id}
                 onClick={() => toggleLocalisation(loc)}
                 className={`
@@ -139,6 +141,7 @@ const LocalisationModal: React.FC<LocalisationModalProps> = ({
 
         <div className="flex justify-end space-x-3 pt-4 border-t">
           <button
+            type="button"
             onClick={closeModal}
             className="px-6 py-2 rounded-lg text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors duration-200 flex items-center space-x-2"
           >
@@ -146,6 +149,7 @@ const LocalisationModal: React.FC<LocalisationModalProps> = ({
             <span>Annuler</span>
           </button>
           <button
+            type="button"
             onClick={handleSaveLocalisations}
             className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200 flex items-center space-x-2"
           >

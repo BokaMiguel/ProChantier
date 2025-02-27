@@ -23,7 +23,11 @@ const ModalGestion: React.FC<ModalProps> = ({
   const [formState, setFormState] = useState<any>(item || {});
 
   useEffect(() => {
-    setFormState(item || {});
+    // Initialiser le formulaire avec les données de l'élément
+    if (item) {
+      console.log("Initialisation du modal avec l'élément:", item);
+      setFormState(item);
+    }
   }, [item]);
 
   const handleChange = (
@@ -37,7 +41,7 @@ const ModalGestion: React.FC<ModalProps> = ({
         const selectedFonction = fonctions.find(
           (f) => f.id === parseInt(value)
         );
-        setFormState((prevState: any) => ({
+        setFormState((prevState: typeof formState) => ({
           ...prevState,
           fonction: selectedFonction
             ? { id: selectedFonction.id, nom: selectedFonction.nom }
@@ -47,7 +51,7 @@ const ModalGestion: React.FC<ModalProps> = ({
         const selectedEquipement = equipements.find(
           (e) => e.id === parseInt(value)
         );
-        setFormState((prevState: any) => ({
+        setFormState((prevState: typeof formState) => ({
           ...prevState,
           equipement: selectedEquipement
             ? { id: selectedEquipement.id, nom: selectedEquipement.nom }
@@ -55,12 +59,12 @@ const ModalGestion: React.FC<ModalProps> = ({
         }));
       }
     } else {
-      setFormState((prevState: any) => ({ ...prevState, [name]: value }));
+      setFormState((prevState: typeof formState) => ({ ...prevState, [name]: value }));
     }
   };
 
   const handleEmployeeToggle = (employeeId: number) => {
-    setFormState((prevState: any) => {
+    setFormState((prevState: typeof formState) => {
       const currentEmployes = prevState.employes || [];
       const isSelected = currentEmployes.some((e: any) => e.id === employeeId);
       

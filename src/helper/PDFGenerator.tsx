@@ -463,8 +463,7 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
           {/* Section Info Projet */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <InfoIcon />
-              <Text style={styles.sectionHeaderText}>Informations du Projet</Text>
+              <Text>Informations du Projet</Text>
             </View>
             <View style={styles.sectionContent}>
               <View style={{ flexDirection: "row", marginBottom: 10 }}>

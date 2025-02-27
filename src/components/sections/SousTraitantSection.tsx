@@ -46,7 +46,7 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
       nom: "",
       quantite: 0,
       activiteID: null,
-      idUnite: null,
+      idUnite: 1, // Définir l'unité par défaut à 1
     };
     setSousTraitants([...sousTraitants, newSousTraitant]);
     setNextId(nextId - 1); // Décrémenter pour le prochain ID temporaire
@@ -75,6 +75,11 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
         ...updatedSousTraitants[index], 
         [field]: value 
       };
+      
+      // Si l'unité est définie à null, la remplacer par 1 (valeur par défaut)
+      if (field === 'idUnite' && value === null) {
+        updatedSousTraitants[index].idUnite = 1;
+      }
       
       return updatedSousTraitants;
     });
@@ -182,7 +187,6 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
                     onChange={(e) => handleChange(index, "idUnite", e.target.value ? Number(e.target.value) : null)}
                     className="mt-1 block w-1/3 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                   >
-                    <option value="">Unité</option>
                     {unites?.map((unite) => (
                       <option key={unite.idUnite} value={unite.idUnite}>
                         {unite.descriptionCourt}

@@ -444,4 +444,30 @@ export const styles = StyleSheet.create({
     borderBottomColor: '#000',
     height: 30,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#cccccc',
+    paddingBottom: 10,
+  },
+  headerTitleContainer: {
+    flex: 1,
+  },
+  headerInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerLabel: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginRight: 5,
+  },
+  headerValue: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#1e3a8a',
+  },
 });

@@ -96,14 +96,10 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
         if (activite.id === activiteId) {
           const updatedActivite = { ...activite, [field]: value };
           
-          // Si on change le lieu, réinitialiser les bases et liaisons seulement pour cette activité
-          if (field === 'lieuID') {
-            updatedActivite.bases = [];
-            updatedActivite.liaisons = [];
-            // Charger les nouvelles bases et liaisons pour le nouveau lieu
-            if (value) {
-              loadBasesAndDistances(value);
-            }
+          // Si on change le lieu, charger les nouvelles bases et liaisons pour le nouveau lieu
+          // mais ne pas réinitialiser les bases et liaisons existantes
+          if (field === 'lieuID' && value) {
+            loadBasesAndDistances(value);
           }
           
           return updatedActivite;
@@ -142,9 +138,24 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
     
     const updatedActivites = planifActivites.map(activite => {
       if (activite.id === activiteId) {
+        // Préserver les noms des bases dans les liaisons
+        const updatedLiaisons = newLiaisons.map(liaison => {
+          // Si la liaison n'a pas de noms de base, essayer de les récupérer
+          if (!liaison.baseAName || !liaison.baseBName) {
+            const baseA = lieuBases.find(b => b.id === liaison.baseA);
+            const baseB = lieuBases.find(b => b.id === liaison.baseB);
+            return {
+              ...liaison,
+              baseAName: liaison.baseAName || baseA?.base || `Base ${liaison.baseA}`,
+              baseBName: liaison.baseBName || baseB?.base || `Base ${liaison.baseB}`
+            };
+          }
+          return liaison;
+        });
+        
         const updatedActivite = {
           ...activite,
-          liaisons: [...newLiaisons],
+          liaisons: updatedLiaisons,
           bases: []
         };
         updatedActivite.quantite = calculateQuantity(updatedActivite);
@@ -152,7 +163,6 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
       }
       return activite;
     });
-    
     onPlanifActivitesChange(updatedActivites);
   };
 
@@ -199,20 +209,50 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
   };
 
   const getUsedBases = (currentActiviteId: number): number[] => {
-    return planifActivites
+    // Récupérer l'activité courante pour connaître son lieu
+    const currentActivite = planifActivites.find(a => a.id === currentActiviteId);
+    if (!currentActivite || !currentActivite.lieuID) return [];
+    
+    // Filtrer les activités ayant la même activiteID ET le même lieuID que l'activité courante
+    const sameActivityTypeActivities = planifActivites
       .filter(activite => 
         activite.id !== currentActiviteId &&
-        activite.activiteID === planifActivites.find(a => a.id === currentActiviteId)?.activiteID
-      )
+        activite.lieuID === currentActivite.lieuID
+      );
+    
+    // Récupérer les bases directement sélectionnées
+    const directlySelectedBases = sameActivityTypeActivities
       .flatMap(activite => activite.bases?.map(base => base.id) || []);
+    
+    // Récupérer les bases utilisées dans les liaisons
+    const basesInLiaisons = sameActivityTypeActivities
+      .flatMap(activite => {
+        const basesFromLiaisons: number[] = [];
+        activite.liaisons?.forEach(liaison => {
+          basesFromLiaisons.push(liaison.baseA);
+          basesFromLiaisons.push(liaison.baseB);
+        });
+        return basesFromLiaisons;
+      });
+    
+    // Combiner les deux ensembles de bases et éliminer les doublons
+    return [...new Set([...directlySelectedBases, ...basesInLiaisons])];
   };
 
   const getUsedLiaisons = (currentActiviteId: number): number[] => {
-    return planifActivites
+    // Récupérer l'activité courante pour connaître son lieu
+    const currentActivite = planifActivites.find(a => a.id === currentActiviteId);
+    if (!currentActivite || !currentActivite.lieuID) return [];
+    
+    // Filtrer les activités ayant la même activiteID ET le même lieuID que l'activité courante
+    const sameActivityTypeActivities = planifActivites
       .filter(activite => 
         activite.id !== currentActiviteId &&
-        activite.activiteID === planifActivites.find(a => a.id === currentActiviteId)?.activiteID
-      )
+        activite.lieuID === currentActivite.lieuID
+      );
+    
+    // Récupérer les liaisons directement sélectionnées
+    return sameActivityTypeActivities
       .flatMap(activite => activite.liaisons?.map(liaison => liaison.id) || []);
   };
 
@@ -310,6 +350,7 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
                 </h3>
                 {planifActivites.indexOf(planifActivite) > 0 && (
                   <button
+                    type="button"
                     onClick={() => requestDeleteActivite(planifActivite.id)}
                     className="text-gray-400 hover:text-red-500 transition-colors duration-200"
                     title="Supprimer l'activité"
@@ -397,9 +438,10 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
                     {isLiaisonMode(planifActivite.id) ? "Liaisons" : "Bases"}
                   </label>
                 </div>
-                <div
+                <button
+                  type="button"
                   onClick={() => openModal(planifActivite.id)}
-                  className="w-full min-h-[80px] p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                  className="w-full min-h-[80px] p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-left"
                 >
                   <div className="flex flex-wrap gap-2">
                     {/* Affichage des bases */}
@@ -414,15 +456,13 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
 
                     {/* Affichage des liaisons */}
                     {isLiaisonMode(planifActivite.id) && planifActivite.liaisons && planifActivite.liaisons.map((liaison, index) => {
-                      const baseAName = lieuBases.find(b => b.id === liaison.baseA)?.base;
-                      const baseBName = lieuBases.find(b => b.id === liaison.baseB)?.base;
-                      
+                      // Utiliser les données stockées dans la liaison elle-même plutôt que de chercher dans lieuBases
                       return (
                         <span
                           key={`liaison-${planifActivite.id}-${liaison.id}-${index}`}
                           className="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm"
                         >
-                          {baseAName} → {baseBName} ({liaison.distanceInMeters}m)
+                          {liaison.baseAName || "Base A"} → {liaison.baseBName || "Base B"} ({liaison.distanceInMeters}m)
                         </span>
                       );
                     })}
@@ -434,7 +474,7 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
                       </span>
                     )}
                   </div>
-                </div>
+                </button>
               </div>
 
               <div className="mt-6">
@@ -475,6 +515,7 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
                   isLiaisonMode={isLiaisonMode(planifActivite.id)}
                   clearAllLocalisations={() => clearAllLocalisations(planifActivite.id)}
                   usedLiaisons={getUsedLiaisons(planifActivite.id)}
+                  usedBasesIds={getUsedBases(planifActivite.id)}
                   onUpdateLiaisons={handleUpdateLiaisons}
                   currentActiviteId={planifActivite.id}
                   bases={lieuBases}
@@ -497,13 +538,16 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
         ))}
       </div>
 
-      <button
-        onClick={addNewActivity}
-        className="w-full mt-4 py-3 px-4 bg-blue-50 text-blue-600 rounded-lg border-2 border-blue-100 hover:bg-blue-100 transition-all duration-200 flex items-center justify-center font-medium"
-      >
-        <FaPlusCircle className="mr-2" />
-        Ajouter une activité
-      </button>
+      <div className="flex justify-end mt-6">
+        <button
+          type="button"
+          onClick={addNewActivity}
+          className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200"
+        >
+          <FaPlusCircle />
+          <span>Ajouter une activité</span>
+        </button>
+      </div>
 
       {deleteConfirm.show && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

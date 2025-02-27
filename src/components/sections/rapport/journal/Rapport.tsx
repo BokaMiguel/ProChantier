@@ -76,6 +76,7 @@ const Rapport: React.FC = () => {
     plageHoraire: ""
   });
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
 
   // Récupérer les journaux de chantier lorsque le projet sélectionné change
   useEffect(() => {
@@ -89,6 +90,12 @@ const Rapport: React.FC = () => {
       }
     }
   }, [selectedProject, fetchJournals, journals]);
+
+  useEffect(() => {
+    if (journals && journals.length > 0 && activites && materiaux && sousTraitants && employees && bases && lieux) {
+      setIsDataLoaded(true);
+    }
+  }, [journals, activites, materiaux, sousTraitants, employees, bases, lieux]);
 
   useEffect(() => {
     if (journals && journals.length > 0) {
@@ -277,10 +284,19 @@ const Rapport: React.FC = () => {
     setCurrentFilters(filters);
   };
 
+  if (!isDataLoaded) {
+    return (
+      <div className="flex flex-col justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-600"></div>
+        <p className="mt-4 text-blue-600 font-medium">Chargement des données...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 bg-white rounded-lg shadow-md">
       <div className="mb-8 text-left">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">Journal de Chantier</h1>
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">Rapport de Chantier</h1>
         <p className="text-gray-500 text-lg">Suivi et gestion des activités quotidiennes sur le chantier</p>
         <div className="h-1 w-32 bg-blue-600 mt-2 rounded-full"></div>
       </div>
@@ -349,45 +365,54 @@ const Rapport: React.FC = () => {
             <thead>
               <tr className="bg-blue-50 text-blue-700">
                 <th
-                  className="px-6 py-4 border-b border-blue-100 cursor-pointer"
+                  className="px-6 py-4 border-b border-blue-100 cursor-pointer text-center"
+                  onClick={() => requestSort("id")}
+                >
+                  <div className="flex items-center justify-center">
+                    <span className="font-bold">ID</span>
+                    {getSortIcon("id")}
+                  </div>
+                </th>
+                <th
+                  className="px-6 py-4 border-b border-blue-100 cursor-pointer text-center"
                   onClick={() => requestSort("date")}
                 >
-                  <div className="flex items-center">
+                  <div className="flex items-center justify-center">
                     <FaCalendarAlt className="mr-2 text-blue-500" />
                     <span>Date</span>
                     {getSortIcon("date")}
                   </div>
                 </th>
                 <th
-                  className="px-6 py-4 border-b border-blue-100 cursor-pointer"
+                  className="px-6 py-4 border-b border-blue-100 cursor-pointer text-center"
                   onClick={() => requestSort("projetId")}
                 >
-                  <div className="flex items-center">
+                  <div className="flex items-center justify-center">
                     <FaProjectDiagram className="mr-2 text-blue-500" />
                     <span>Projet</span>
                     {getSortIcon("projetId")}
                   </div>
                 </th>
-                <th className="px-6 py-4 border-b border-blue-100">
-                  <div className="flex items-center">
+                <th className="px-6 py-4 border-b border-blue-100 text-center">
+                  <div className="flex items-center justify-center">
                     <FaClock className="mr-2 text-blue-500" />
-                    <span>Heures</span>
+                    <span>Plage Horaire</span>
                   </div>
                 </th>
-                <th className="px-6 py-4 border-b border-blue-100">
-                  <div className="flex items-center">
+                <th className="px-6 py-4 border-b border-blue-100 text-center">
+                  <div className="flex items-center justify-center">
                     <FaCloudSun className="mr-2 text-blue-500" />
                     <span>Météo</span>
                   </div>
                 </th>
-                <th className="px-6 py-4 border-b border-blue-100">
-                  <div className="flex items-center">
+                <th className="px-6 py-4 border-b border-blue-100 text-center">
+                  <div className="flex items-center justify-center">
                     <FaTasks className="mr-2 text-blue-500" />
                     <span>Statut</span>
                   </div>
                 </th>
-                <th className="px-6 py-4 border-b border-blue-100">Actions</th>
-                <th className="px-6 py-4 border-b border-blue-100">Détails</th>
+                <th className="px-6 py-4 border-b border-blue-100 text-center">Actions</th>
+                <th className="px-6 py-4 border-b border-blue-100 text-center">Détails</th>
               </tr>
             </thead>
             <tbody>
@@ -398,24 +423,29 @@ const Rapport: React.FC = () => {
                       expandedJournal === journal.id ? "bg-blue-50" : ""
                     }`}
                   >
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-center">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                        {journal.id}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
                       {formatDate(journal.date)}
                     </td>
-                    <td className="px-6 py-4 font-medium">
+                    <td className="px-6 py-4 text-center font-medium">
                       {selectedProject?.NumeroProjet || "Projet inconnu"}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-center">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                         {journal.hrsDebut} - {journal.hrsFin}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center text-xl">
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center text-xl">
                         {getMeteoIcon(journal.meteoId)}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center">
                         {getStatutIcon(Number(journal.statutId))}
                         <span className="ml-2">
                           {journal.statutId === 1 ? "En attente" : 
@@ -424,7 +454,7 @@ const Rapport: React.FC = () => {
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-center">
                       <ActionButtons 
                         journalId={journal.id} 
                         handleEdit={() => console.log(`Éditer journal ${journal.id}`)} 
@@ -432,7 +462,7 @@ const Rapport: React.FC = () => {
                         handleSend={() => console.log(`Envoyer journal ${journal.id}`)} 
                       />
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-center">
                       <button
                         onClick={() => toggleJournalExpand(journal.id)}
                         className={`p-2.5 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 ${

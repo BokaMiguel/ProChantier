@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "./App.css";
 import Form from "./components/journalForm/Form";
@@ -13,9 +13,17 @@ import Callback from "./components/Callback";
 import Rapport from "./components/sections/rapport/journal/Rapport";
 
 const AppContent: React.FC = () => {
-  const { user } = useAuth();
+  const { user, projects, selectedProject, selectProject } = useAuth();
 
-  if (!user) {
+  useEffect(() => {
+    // Si l'utilisateur est connecté et qu'il y a des projets mais aucun projet sélectionné
+    if (user && projects && projects.length > 0 && !selectedProject) {
+      // Sélectionner automatiquement le premier projet
+      selectProject(projects[0]);
+    }
+  }, [user, projects, selectedProject, selectProject]);
+
+  if (!user || !selectedProject) {
     return <div>Chargement en cours...</div>;
   }
 

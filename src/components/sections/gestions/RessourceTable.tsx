@@ -37,7 +37,7 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
   onImportExcel,
 }) => {
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [isCategoryExpanded, setIsCategoryExpanded] = useState<boolean>(false);
+  const [isCategoryExpanded, setIsCategoryExpanded] = useState<boolean>(true);
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [isImporterOpen, setIsImporterOpen] = useState(false);
 
@@ -86,6 +86,11 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
           <h2 className="text-xl font-semibold flex items-center">
             {icon}
             <span className="ml-2">{title}</span>
+            {isCategoryExpanded && (
+              <span className="ml-2 bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                {Array.isArray(items) ? items.length : 0}
+              </span>
+            )}
           </h2>
         </div>
       </div>

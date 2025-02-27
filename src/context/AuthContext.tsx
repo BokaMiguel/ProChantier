@@ -147,6 +147,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
             const projectsData = await getAuthorizedProjects(userClaims.sub);
             setProjects(projectsData);
+            
+            // Vérifier s'il y a un projet sauvegardé dans sessionStorage
+            const storedProject = sessionStorage.getItem('selectedProject');
+            if (storedProject && !selectedProject) {
+              try {
+                const parsedProject = JSON.parse(storedProject);
+                // Vérifier si le projet sauvegardé est toujours dans la liste des projets autorisés
+                const projectExists = projectsData.some((p: Project) => p.ID === parsedProject.ID);
+                if (projectExists) {
+                  setSelectedProject(parsedProject);
+                } else {
+                  // Si le projet n'existe plus, sélectionner le premier projet
+                  if (projectsData && projectsData.length > 0) {
+                    setSelectedProject(projectsData[0]);
+                  }
+                }
+              } catch (error) {
+                console.error('Erreur lors de la récupération du projet depuis sessionStorage:', error);
+                // En cas d'erreur, sélectionner le premier projet
+                if (projectsData && projectsData.length > 0) {
+                  setSelectedProject(projectsData[0]);
+                }
+              }
+            } else if (projectsData && projectsData.length > 0 && !selectedProject) {
+              // Si aucun projet n'est sauvegardé, sélectionner le premier projet
+              setSelectedProject(projectsData[0]);
+            }
           }
         } catch (err) {
           console.error("Error loading user:", err);
@@ -159,7 +186,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     };
 
     fetchUser();
-  }, [user, initialFetchAttempted]);
+  }, [user, initialFetchAttempted, selectedProject]);
 
   // Utilisation de useCallback pour mémoriser la fonction fetchProjectDetails
   const fetchProjectDetails = useCallback(async (projectId: number) => {
@@ -222,6 +249,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   }, [selectedProject, fetchProjectDetails]);
 
+  // Ajout d'un effet pour s'assurer que les données sont chargées lorsque l'utilisateur
+  // navigue directement vers une route autre que la page d'accueil
+  useEffect(() => {
+    // Si l'utilisateur est connecté et qu'un projet est sélectionné mais que les données ne sont pas chargées
+    if (user && selectedProject && !lieux) {
+      // Charger les données du projet
+      fetchProjectDetails(selectedProject.ID);
+    }
+  }, [user, selectedProject, lieux, fetchProjectDetails]);
+
   const handleUserLogin = () => {
     login();
   };
@@ -263,20 +300,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   
   const selectProject = (project: Project) => {
     setSelectedProject(project);
+    // Sauvegarder le projet sélectionné dans sessionStorage
+    try {
+      sessionStorage.setItem('selectedProject', JSON.stringify(project));
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde du projet dans sessionStorage:', error);
+    }
   };
 
   const fetchBases = useCallback(async (lieuId: number) => {
     if (lieuId > 0) {
-      const updatedBases = await getBases(lieuId);
-
-      setBases((prevBases) => {
-        // Filtrage des bases qui ne sont pas liées au lieu actuel
-        const otherBases = (prevBases ?? []).filter(
-          (base) => base.lieuId !== lieuId
-        );
-        // Combinaison des bases existantes avec les nouvelles bases pour ce lieu
-        return [...otherBases, ...updatedBases];
-      });
+      try {
+        const basesFromApi = await getBases(lieuId);
+        
+        // S'assurer que chaque base a un lieuId
+        const updatedBases = basesFromApi.map((base: any) => ({
+          ...base,
+          lieuId: lieuId // Ajouter explicitement le lieuId
+        }));
+        
+        setBases((prevBases) => {
+          // Filtrage des bases qui ne sont pas liées au lieu actuel
+          const otherBases = (prevBases ?? []).filter(
+            (base) => base.lieuId !== lieuId
+          );
+          // Combinaison des bases existantes avec les nouvelles bases pour ce lieu
+          const newBases = [...otherBases, ...updatedBases];
+          return newBases;
+        });
+      } catch (error) {
+        console.error("Erreur lors de la récupération des bases:", error);
+      }
     }
   }, []);
 
@@ -292,10 +346,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           const basesData = await Promise.all(
             lieuData.map(async (lieu: Lieu) => {
               const bases = await getBases(lieu.id);
+              // Ajouter explicitement le lieuId à chaque base
               return bases.map((base: any) => ({
-                id: base.id,
-                base: base.base,
-                lieuId: lieu.id,
+                ...base,
+                lieuId: lieu.id, // S'assurer que lieuId est bien défini
               }));
             })
           );

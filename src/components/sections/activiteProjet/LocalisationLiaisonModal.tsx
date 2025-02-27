@@ -13,6 +13,7 @@ interface LocalisationLiaisonModalProps {
   isLiaisonMode: boolean;
   clearAllLocalisations: () => void;
   usedLiaisons: number[];
+  usedBasesIds: number[];
   onUpdateLiaisons: (activiteId: number, liaisons: LocalisationDistance[]) => void;
   currentActiviteId: number;
   bases: Localisation[];
@@ -28,6 +29,7 @@ const LocalisationLiaisonModal: React.FC<LocalisationLiaisonModalProps> = ({
   isLiaisonMode,
   clearAllLocalisations,
   usedLiaisons,
+  usedBasesIds,
   onUpdateLiaisons,
   currentActiviteId,
   bases,
@@ -54,10 +56,17 @@ const LocalisationLiaisonModal: React.FC<LocalisationLiaisonModalProps> = ({
 
   const handleSaveLiaisons = () => {
     console.log("Saving liaisons:", selectedLiaisons);
-    // Mettre à jour le parent avec les liaisons complètes
+    // Mettre à jour le parent avec les liaisons complètes et leurs noms de base
     const updatedLiaisons = selectedLiaisons.map(liaison => {
       const fullLiaison = distances.find(d => d.id === liaison.id);
-      return fullLiaison || liaison;
+      const baseAName = getBaseName(fullLiaison?.baseA || liaison.baseA);
+      const baseBName = getBaseName(fullLiaison?.baseB || liaison.baseB);
+      
+      return {
+        ...(fullLiaison || liaison),
+        baseAName,
+        baseBName
+      };
     });
     
     onUpdateLiaisons(currentActiviteId, updatedLiaisons);
@@ -101,6 +110,7 @@ const LocalisationLiaisonModal: React.FC<LocalisationLiaisonModalProps> = ({
               <span className="text-blue-700 font-medium">Mode Liaison</span>
             </label>
             <button
+              type="button"
               onClick={handleClearAll}
               disabled={selectedLiaisons.length === 0}
               className={`px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2 ${
@@ -118,10 +128,11 @@ const LocalisationLiaisonModal: React.FC<LocalisationLiaisonModalProps> = ({
         <div className="grid grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto p-2">
           {distances.map((distance) => {
             const isSelected = selectedLiaisons.some((l) => l.id === distance.id);
-            const isDisabled = usedLiaisons.includes(distance.id);
+            const isDisabled = usedLiaisons.includes(distance.id) || usedBasesIds.includes(distance.baseA) || usedBasesIds.includes(distance.baseB);
 
             return (
               <button
+                type="button"
                 key={distance.id}
                 onClick={() => toggleLiaison(distance)}
                 className={`
@@ -163,6 +174,7 @@ const LocalisationLiaisonModal: React.FC<LocalisationLiaisonModalProps> = ({
 
         <div className="flex justify-end space-x-3 pt-4 border-t">
           <button
+            type="button"
             onClick={closeModal}
             className="px-6 py-2 rounded-lg text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors duration-200 flex items-center space-x-2"
           >
@@ -170,6 +182,7 @@ const LocalisationLiaisonModal: React.FC<LocalisationLiaisonModalProps> = ({
             <span>Annuler</span>
           </button>
           <button
+            type="button"
             onClick={handleSaveLiaisons}
             className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200 flex items-center space-x-2"
           >

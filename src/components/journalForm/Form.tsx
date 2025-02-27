@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { FaArrowRight, FaFilePdf } from "react-icons/fa";
-import { PDFViewer, Font, BlobProvider } from "@react-pdf/renderer";
+import { FaFilePdf, FaSave, FaSpinner } from "react-icons/fa";
+import { Font, BlobProvider } from "@react-pdf/renderer";
 import InfoProjet from "../sections/InfoProjet";
 import InfoEmployes from "../sections/InfoEmployes";
 import ActiviteProjet from "../sections/activiteProjet/ActiviteProjet";
@@ -88,38 +88,14 @@ export default function Form() {
   } = useAuth();
 
   const { type, idPlanif } = useParams<{ type: string; idPlanif: string }>();
-
-  const [journal, setJournal] = useState<Journal | null>(null);
   const [journalDate, setJournalDate] = useState<Date>(new Date());
   const [journalArrivee, setJournalArrivee] = useState("");
   const [journalDepart, setJournalDepart] = useState("");
   const [journalWeather, setJournalWeather] = useState("");
   const [journalNotes, setJournalNotes] = useState("");
-
   const [journalUsers, setJournalUsers] = useState<Employe[]>([]);
-
   const [planifChantier, setPlanifChantier] = useState<PlanifChantier | null>(null);
-
-  console.log('Form - Auth Context Data:', {
-    lieux,
-    activites,
-    selectedProject,
-    bases,
-    planifChantier
-  });
-
-  useEffect(() => {
-    if (unites) {
-      console.log('Form - Unités disponibles:', unites);
-    }
-  }, [unites]);
-
   const [planifActivites, setPlanifActivites] = useState<PlanifActivites[]>([]);
-  
-  const [journalSavedBases, setJournalSavedBases] = useState<Localisation[]>([]);
-  const [journalSavedLiaisons, setJournalSavedLiaisons] = useState<LocalisationDistance[]>([]);
-  const [savedBasesAttachment, setSavedBasesAttachment] = useState<string[]>([]);
-
   const [journalUserStats, setJournalUserStats] = useState<JournalUserStats>({
     userStats: [],
     totals: {
@@ -128,7 +104,6 @@ export default function Form() {
       td: 0,
     },
   });
-  
   const [journalMateriaux, setJournalMateriaux] = useState<any[]>([]);
   const [journalSousTraitants, setJournalSousTraitants] = useState<SousTraitantFormData[]>([]);
   const [distances, setDistances] = useState<LocalisationDistance[]>([]);
@@ -148,6 +123,7 @@ export default function Form() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [journalId, setJournalId] = useState<number | null>(null);
   const [signatureData, setSignatureData] = useState<{
     signature: string;
     signataire: string;
@@ -159,14 +135,12 @@ export default function Form() {
 
   useEffect(() => {
     if (activites) {
-      console.log('Setting activitesList from activites:', activites);
       setActivitesList(activites);
     }
   }, [activites]);
 
   useEffect(() => {
     if (lieux) {
-      console.log('Setting lieuxList from lieux:', lieux);
       setLieuxList(lieux);
     }
   }, [lieux]);
@@ -377,13 +351,11 @@ export default function Form() {
     return sousTraitants.map(st => {
       const activite = activites?.find(a => a.id === st.activiteID);
       const unite = unites?.find(u => u.idUnite === st.idUnite);
-      
-      console.log(`Sous-traitant à envoyer - ID: ${st.id}, Nom: ${st.nom}, ActivitéID: ${st.activiteID}`);
-      
+            
       return {
         sousTraitantID: st.id,
         activiteID: st.activiteID,
-        idUnite: st.idUnite,
+        idUnite: st.idUnite || 1, // Utiliser 1 comme valeur par défaut si idUnite est null
         quantite: st.quantite,
         nomSousTraitant: st.nom,
         nomActivite: activite?.nom || '',
@@ -392,8 +364,15 @@ export default function Form() {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e: React.MouseEvent) => {
+    e.preventDefault(); // Empêcher la soumission par défaut du formulaire
+    e.stopPropagation(); // Arrêter la propagation de l'événement
+    
+    // Vérifier si la signature a été complétée
+    if (!signatureData) {
+      alert("Veuillez compléter la signature avant de soumettre le formulaire.");
+      return;
+    }
     
     setIsSubmitting(true);
     setSubmitSuccess(null);
@@ -476,24 +455,20 @@ export default function Form() {
       const response = await createJournalChantier(journalChantier);
       console.log('Réponse de la création du journal:', response);
       setSubmitSuccess(`Journal de chantier créé avec succès. ID: ${response.id}`);
+      setJournalId(response.id);
       
       // Après avoir créé le journal, générer le PDF
-      if (signatureData) {
-        // S'assurer que nous avons les bases pour le lieu actuel
-        if (planifChantier?.lieuID) {
-          try {
-            console.log('Chargement des bases pour le lieu:', planifChantier.lieuID);
-            await fetchBases(planifChantier.lieuID);
-          } catch (error) {
-            console.error('Erreur lors du chargement des bases:', error);
-          }
+      if (planifChantier?.lieuID) {
+        try {
+          console.log('Chargement des bases pour le lieu:', planifChantier.lieuID);
+          await fetchBases(planifChantier.lieuID);
+        } catch (error) {
+          console.error('Erreur lors du chargement des bases:', error);
         }
-        
-        setShowPDF(true);
-        setPdfEnabled(true);
-      } else {
-        alert("Veuillez compléter la signature avant de générer le PDF.");
       }
+      
+      setShowPDF(true);
+      setPdfEnabled(true);
     } catch (error) {
       console.error('Erreur lors de la création du journal:', error);
       setSubmitError(`Erreur lors de la création du journal: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
@@ -502,7 +477,13 @@ export default function Form() {
     }
   };
 
-  const handlePDFGeneration = async () => {
+  const handlePDFGeneration = async (e?: React.MouseEvent) => {
+    // Si l'événement existe, empêcher le comportement par défaut
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation(); // Arrêter la propagation de l'événement
+    }
+    
     // Vérifier si la signature a été complétée
     if (!signatureData) {
       alert("Veuillez compléter la signature avant de générer le PDF.");
@@ -519,6 +500,7 @@ export default function Form() {
       }
     }
 
+    // Afficher le PDF sans soumettre le formulaire
     setShowPDF(true);
     setPdfEnabled(true);
   };
@@ -607,14 +589,15 @@ export default function Form() {
             activites={activites}
             lieux={lieux}
             bases={bases}
-            journalPlanifId={Number(idPlanif)}
+            journalPlanifId={journalId || Number(idPlanif)}
           />
         }>
           {({ blob, url, loading }) => {
             if (loading) return <div>Chargement du document...</div>;
             if (!url || !blob) return <div>Erreur lors de la génération du PDF</div>;
             
-            const fileName = `${formatDateForFileName(journalDate)}_${selectedProject?.NumeroProjet || "NOPROJ"}_${idPlanif?.padStart(7, "0")}.pdf`;
+            // Utiliser l'ID du journal dans le nom du fichier si disponible
+            const fileName = `${formatDateForFileName(journalDate)}_${selectedProject?.NumeroProjet || "NOPROJ"}_${journalId ? journalId.toString().padStart(7, "0") : idPlanif?.padStart(7, "0")}.pdf`;
 
             const handleDownload = () => {
               const link = document.createElement('a');
@@ -637,11 +620,8 @@ export default function Form() {
                 alert(`PDF sauvegardé avec succès: ${response.message}`);
                 console.log('Réponse de sauvegarde du PDF:', response);
                 
-                // Fermer la vue PDF et revenir au formulaire
-                setShowPDF(false);
-                
-                // Réinitialiser le formulaire ou rediriger vers une autre page si nécessaire
-                // window.location.href = '/planification'; // Décommenter pour rediriger
+                // Rediriger vers la page des rapports
+                window.location.href = '/rapport';
               } catch (error) {
                 console.error('Erreur lors de la sauvegarde du PDF:', error);
                 alert(`Erreur lors de la sauvegarde du PDF: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
@@ -672,7 +652,7 @@ export default function Form() {
                       className={`bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded flex items-center ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                       disabled={isSubmitting}
                     >
-                      {isSubmitting ? 'Sauvegarde en cours...' : 'Sauvegarder dans le répertoire'}
+                      {isSubmitting ? 'Sauvegarde en cours...' : 'Sauvegarder dans le répertoire de projet'}
                     </button>
                   </div>
                 </div>
@@ -693,6 +673,12 @@ export default function Form() {
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center py-4">
       {!showPDF ? (
         <div className="w-full max-w-4xl bg-white rounded shadow-md p-6 space-y-6">
+          <div className="mb-8 text-left">
+            <h1 className="text-3xl font-bold text-blue-800 mb-2">Journal de Chantier</h1>
+            <p className="text-gray-500 text-lg">Saisie des activités quotidiennes à partir d'une planification de chantier</p>
+            <div className="h-1 w-32 bg-blue-600 mt-2 rounded-full"></div>
+          </div>
+          
           {sections.infoProjet.visible && (
             <section>
               <SectionHeader
@@ -837,8 +823,9 @@ export default function Form() {
               {sections.signature.open && (
                 <SignatureSection
                   onSignatureComplete={(data) => {
+                    // Simplement stocker les données de signature sans déclencher d'autres actions
+                    console.log("Signature reçue, stockage des données sans soumission");
                     setSignatureData(data);
-                    setPdfEnabled(true);
                   }}
                 />
               )}
@@ -862,22 +849,18 @@ export default function Form() {
           <div className="flex justify-end space-x-4 mt-6">
             <button
               type="button"
-              onClick={handlePDFGeneration}
-              className={`bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded flex items-center ${!signatureData ? 'opacity-50 cursor-not-allowed' : ''}`}
-              disabled={!signatureData}
-            >
-              <FaFilePdf className="mr-2" />
-              Générer PDF
-            </button>
-            <button
-              type="submit"
-              className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center ${isSubmitting || !signatureData ? 'opacity-50 cursor-not-allowed' : ''}`}
-              onClick={handleSubmit}
+              onClick={(e) => handleSubmit(e)}
+              className={`bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center ${isSubmitting || !signatureData ? 'opacity-50 cursor-not-allowed' : ''}`}
               disabled={isSubmitting || !signatureData}
             >
-              {isSubmitting ? 'Envoi en cours...' : (
+              {isSubmitting ? (
                 <>
-                  <FaArrowRight className="mr-2" />
+                  <FaSpinner className="animate-spin mr-2" />
+                  Soumission en cours...
+                </>
+              ) : (
+                <>
+                  <FaSave className="mr-2" />
                   Soumettre
                 </>
               )}
