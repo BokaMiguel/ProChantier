@@ -126,27 +126,11 @@ export interface JournalSousTraitant {
 }
 
 // Types pour les unités
-export interface ListUnite {
+export interface Unite {
   idUnite: number;
   description: string;
   descriptionCourt: string;
 }
-
-export interface Unite {
-  id: number;
-  nom: string;
-  symbole: string;
-}
-
-// Mock des unités (à remplacer par l'appel API)
-export const unites: Unite[] = [
-  { id: 1, nom: "Mètre", symbole: "m" },
-  { id: 2, nom: "Mètre carré", symbole: "m²" },
-  { id: 3, nom: "Mètre cube", symbole: "m³" },
-  { id: 4, nom: "Kilogramme", symbole: "kg" },
-  { id: 5, nom: "Unité", symbole: "u" },
-  { id: 6, nom: "Heure", symbole: "h" }
-];
 
 // Types pour la météo et le statut
 export interface Meteo {
@@ -391,6 +375,8 @@ export interface JournalChantier {
   meteoId?: number;
   statutId: number;
   projetId: number;
+  typeId?: number;
+  plageHoraire?: string;
   notes: string;
   equipeJournals?: EquipeJournal[];
   materiauxJournals?: MateriauxJournal[];

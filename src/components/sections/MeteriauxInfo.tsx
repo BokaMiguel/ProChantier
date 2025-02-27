@@ -88,7 +88,7 @@ const MateriauxInfo: React.FC<MateriauxInfoProps> = ({
           >
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
               <div className="md:col-span-8">
-                <label className="block text-gray-700 text-sm font-semibold mb-2 flex items-center">
+                <label className="text-gray-700 text-sm font-semibold mb-2 flex items-center">
                   <span className="bg-blue-100 p-2 rounded-full mr-2">
                     <FaCubes className="text-blue-600" />
                   </span>
@@ -109,7 +109,7 @@ const MateriauxInfo: React.FC<MateriauxInfoProps> = ({
               </div>
 
               <div className="md:col-span-4">
-                <label className="block text-gray-700 text-sm font-semibold mb-2 flex items-center">
+                <label className="text-gray-700 text-sm font-semibold mb-2 flex items-center">
                   <span className="bg-blue-100 p-2 rounded-full mr-2">
                     <FaCubes className="text-blue-600" />
                   </span>

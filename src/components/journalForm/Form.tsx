@@ -32,7 +32,7 @@ import {
 } from "../../models/JournalFormModel";
 import { PDFDocument } from "../../helper/PDFGenerator";
 import {
-  getDistancesForLieu, getPlanifChantier, getPlanifActivites, createJournalChantier
+  getDistancesForLieu, getPlanifChantier, getPlanifActivites, createJournalChantier, saveJournalPdf
 } from "../../services/JournalService";
 import {
   format
@@ -372,9 +372,14 @@ export default function Form() {
   };
 
   const transformSousTraitantsForJournal = (sousTraitants: SousTraitantFormData[]): JournalSousTraitant[] => {
+    console.log('Transformation des sous-traitants pour le journal:', sousTraitants);
+    
     return sousTraitants.map(st => {
       const activite = activites?.find(a => a.id === st.activiteID);
       const unite = unites?.find(u => u.idUnite === st.idUnite);
+      
+      console.log(`Sous-traitant à envoyer - ID: ${st.id}, Nom: ${st.nom}, ActivitéID: ${st.activiteID}`);
+      
       return {
         sousTraitantID: st.id,
         activiteID: st.activiteID,
@@ -467,22 +472,55 @@ export default function Form() {
       });
     });
 
-    const journalToSubmit = {
-      ...journal,
-      sousTraitants: transformSousTraitantsForJournal(journalSousTraitants)
-    };
-
     try {
       const response = await createJournalChantier(journalChantier);
       console.log('Réponse de la création du journal:', response);
       setSubmitSuccess(`Journal de chantier créé avec succès. ID: ${response.id}`);
-      // Optionnel: rediriger vers une autre page ou afficher le PDF
+      
+      // Après avoir créé le journal, générer le PDF
+      if (signatureData) {
+        // S'assurer que nous avons les bases pour le lieu actuel
+        if (planifChantier?.lieuID) {
+          try {
+            console.log('Chargement des bases pour le lieu:', planifChantier.lieuID);
+            await fetchBases(planifChantier.lieuID);
+          } catch (error) {
+            console.error('Erreur lors du chargement des bases:', error);
+          }
+        }
+        
+        setShowPDF(true);
+        setPdfEnabled(true);
+      } else {
+        alert("Veuillez compléter la signature avant de générer le PDF.");
+      }
     } catch (error) {
       console.error('Erreur lors de la création du journal:', error);
       setSubmitError(`Erreur lors de la création du journal: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handlePDFGeneration = async () => {
+    // Vérifier si la signature a été complétée
+    if (!signatureData) {
+      alert("Veuillez compléter la signature avant de générer le PDF.");
+      return;
+    }
+    
+    // S'assurer que nous avons les bases pour le lieu actuel
+    if (planifChantier?.lieuID) {
+      try {
+        console.log('Chargement des bases pour le lieu:', planifChantier.lieuID);
+        await fetchBases(planifChantier.lieuID);
+      } catch (error) {
+        console.error('Erreur lors du chargement des bases:', error);
+      }
+    }
+
+    setShowPDF(true);
+    setPdfEnabled(true);
   };
 
   const renderActiviteProjet = () => {
@@ -574,29 +612,69 @@ export default function Form() {
         }>
           {({ blob, url, loading }) => {
             if (loading) return <div>Chargement du document...</div>;
-            if (!url) return <div>Erreur lors de la génération du PDF</div>;
+            if (!url || !blob) return <div>Erreur lors de la génération du PDF</div>;
             
-            const handleDownload = () => {
-              const fileName = `${formatDateForFileName(journalDate)}_${selectedProject?.NumeroProjet || "NOPROJ"}_${idPlanif?.padStart(7, "0")}`;
+            const fileName = `${formatDateForFileName(journalDate)}_${selectedProject?.NumeroProjet || "NOPROJ"}_${idPlanif?.padStart(7, "0")}.pdf`;
 
+            const handleDownload = () => {
               const link = document.createElement('a');
               link.href = url;
-              link.download = `${fileName}.pdf`;
+              link.download = fileName;
               document.body.appendChild(link);
               link.click();
               document.body.removeChild(link);
             };
 
+            const handleSaveToDB = async () => {
+              if (!selectedProject?.NumeroProjet) {
+                alert("Numéro de projet manquant. Impossible de sauvegarder le PDF.");
+                return;
+              }
+
+              try {
+                setIsSubmitting(true);
+                const response = await saveJournalPdf(blob, String(selectedProject.NumeroProjet), fileName);
+                alert(`PDF sauvegardé avec succès: ${response.message}`);
+                console.log('Réponse de sauvegarde du PDF:', response);
+                
+                // Fermer la vue PDF et revenir au formulaire
+                setShowPDF(false);
+                
+                // Réinitialiser le formulaire ou rediriger vers une autre page si nécessaire
+                // window.location.href = '/planification'; // Décommenter pour rediriger
+              } catch (error) {
+                console.error('Erreur lors de la sauvegarde du PDF:', error);
+                alert(`Erreur lors de la sauvegarde du PDF: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+              } finally {
+                setIsSubmitting(false);
+              }
+            };
+
             return (
               <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
-                <div style={{ padding: "10px", backgroundColor: "#f0f0f0", display: "flex", justifyContent: "flex-end" }}>
+                <div style={{ padding: "10px", backgroundColor: "#f0f0f0", display: "flex", justifyContent: "space-between" }}>
                   <button
-                    onClick={handleDownload}
-                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center"
+                    onClick={() => setShowPDF(false)}
+                    className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
                   >
-                    <FaFilePdf className="mr-2" />
-                    Télécharger le PDF
+                    Retour au formulaire
                   </button>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={handleDownload}
+                      className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center"
+                    >
+                      <FaFilePdf className="mr-2" />
+                      Télécharger
+                    </button>
+                    <button
+                      onClick={handleSaveToDB}
+                      className={`bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded flex items-center ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? 'Sauvegarde en cours...' : 'Sauvegarder dans le répertoire'}
+                    </button>
+                  </div>
                 </div>
                 <iframe 
                   src={url} 
@@ -609,21 +687,6 @@ export default function Form() {
         </BlobProvider>
       </div>
     );
-  };
-
-  const handlePDFGeneration = async () => {
-    // S'assurer que nous avons les bases pour le lieu actuel
-    if (planifChantier?.lieuID) {
-      try {
-        console.log('Chargement des bases pour le lieu:', planifChantier.lieuID);
-        await fetchBases(planifChantier.lieuID);
-      } catch (error) {
-        console.error('Erreur lors du chargement des bases:', error);
-      }
-    }
-
-    setShowPDF(true);
-    setPdfEnabled(true);
   };
 
   return (
@@ -800,16 +863,17 @@ export default function Form() {
             <button
               type="button"
               onClick={handlePDFGeneration}
-              className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded flex items-center"
+              className={`bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded flex items-center ${!signatureData ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={!signatureData}
             >
               <FaFilePdf className="mr-2" />
               Générer PDF
             </button>
             <button
               type="submit"
-              className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center ${isSubmitting || !signatureData ? 'opacity-50 cursor-not-allowed' : ''}`}
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !signatureData}
             >
               {isSubmitting ? 'Envoi en cours...' : (
                 <>

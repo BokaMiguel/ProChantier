@@ -10,6 +10,7 @@ import Footer from "./components/footer/Footer";
 import Gestion from "./components/sections/gestions/Gestions";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Callback from "./components/Callback";
+import Rapport from "./components/sections/rapport/journal/Rapport";
 
 const AppContent: React.FC = () => {
   const { user } = useAuth();
@@ -25,7 +26,7 @@ const AppContent: React.FC = () => {
         <Routes>
           <Route path="/" element={<CalendarPage />} />
           <Route path="/planning" element={<PlanningForm />} />
-          {/* <Route path="/rapport" element={<Rapport />} /> */}
+          <Route path="/rapport" element={<Rapport />} />
           <Route path="/gestions" element={<Gestion />} />
           <Route path="/callback" element={<Callback />} />
           <Route path="/journal-chantier" element={<Form />} />

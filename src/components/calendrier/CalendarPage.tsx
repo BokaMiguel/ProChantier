@@ -7,8 +7,7 @@ import listPlugin from "@fullcalendar/list";
 import frLocale from "@fullcalendar/core/locales/fr";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { format, parseISO } from "date-fns";
-import { fr } from "date-fns/locale";
+import { parseISO } from "date-fns";
 import "./CalendarPage.scss";
 import { getPlanifChantierByProjet, getPlanifActivites } from "../../services/JournalService";
 import { TabPlanifChantier, TabPlanifActivites } from "../../models/JournalFormModel";
@@ -41,7 +40,7 @@ const CalendarPage: React.FC = () => {
     activites,
     lieux,
     sousTraitants,
-    signalisations,
+    signalisations
   } = useAuth();
   const [localSelectedProject, setLocalSelectedProject] = useState<number | null>(
     selectedProject ? selectedProject.ID : null

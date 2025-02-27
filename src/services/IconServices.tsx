@@ -11,72 +11,70 @@ import {
 } from "react-icons/fa";
 import { Statut } from "../models/JournalFormModel";
 
-export const getMeteoIcon = (weatherName: string): JSX.Element | null => {
+export const getMeteoIcon = (meteoId?: number): JSX.Element | null => {
+  // Déterminer le nom de la météo en fonction de l'ID
+  let weatherName = "";
+  switch (meteoId) {
+    case 1:
+      weatherName = "Soleil";
+      break;
+    case 2:
+      weatherName = "Nuage";
+      break;
+    case 3:
+      weatherName = "Pluie";
+      break;
+    case 4:
+      weatherName = "Neige";
+      break;
+    case 5:
+      weatherName = "Chaleur";
+      break;
+    default:
+      weatherName = "Inconnu";
+  }
+
   switch (weatherName) {
     case "Soleil":
-      return (
-        <div className="flex items-center space-x-2">
-          <FaSun className="text-yellow-500" />
-          <span>{weatherName}</span>
-        </div>
-      );
+      return <FaSun className="text-yellow-500" />;
     case "Nuage":
-      return (
-        <div className="flex items-center space-x-2">
-          <FaCloud className="text-gray-500" />
-          <span>{weatherName}</span>
-        </div>
-      );
+      return <FaCloud className="text-gray-500" />;
     case "Pluie":
-      return (
-        <div className="flex items-center space-x-2">
-          <FaCloudRain className="text-blue-500" />
-          <span>{weatherName}</span>
-        </div>
-      );
+      return <FaCloudRain className="text-blue-500" />;
     case "Neige":
-      return (
-        <div className="flex items-center space-x-2">
-          <FaSnowflake className="text-blue-200" />
-          <span>{weatherName}</span>
-        </div>
-      );
+      return <FaSnowflake className="text-blue-200" />;
     case "Chaleur":
-      return (
-        <div className="flex items-center space-x-2">
-          <FaTemperatureHigh className="text-red-500" />
-          <span>{weatherName}</span>
-        </div>
-      );
+      return <FaTemperatureHigh className="text-red-500" />;
     default:
       return null;
   }
 };
 
-export const getStatutIcon = (statut: Statut): JSX.Element | null => {
-  switch (statut.name) {
-    case "En attente":
-      return (
-        <div className="flex items-center space-x-2">
-          <FaHourglassHalf className="text-yellow-500" />
-          <span>{statut.name}</span>
-        </div>
-      );
-    case "En cours":
-      return (
-        <div className="flex items-center space-x-2">
-          <FaPlayCircle className="text-blue-500" />
-          <span>{statut.name}</span>
-        </div>
-      );
-    case "Terminé":
-      return (
-        <div className="flex items-center space-x-2">
-          <FaCheckCircle className="text-green-500" />
-          <span>{statut.name}</span>
-        </div>
-      );
+export const getStatutIcon = (statutId: number): JSX.Element | null => {
+  // Déterminer le nom du statut en fonction de l'ID
+  let statutName = "";
+  switch (statutId) {
+    case 1:
+      statutName = "En attente";
+      break;
+    case 2:
+      statutName = "En cours";
+      break;
+    case 3:
+      statutName = "Terminé";
+      break;
     default:
-      return null;
+      statutName = "Inconnu";
+  }
+
+  switch (statutName) {
+    case "En attente":
+      return <FaHourglassHalf className="text-yellow-500" />;
+    case "En cours":
+      return <FaPlayCircle className="text-blue-500" />;
+    case "Terminé":
+      return <FaCheckCircle className="text-green-500" />;
+    default:
+      return <FaHourglassHalf className="text-gray-500" />;
   }
 };

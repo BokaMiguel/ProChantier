@@ -49,7 +49,7 @@ import {
   Materiau,
   SignalisationProjet,
   SousTraitant,
-  ListUnite,
+  Unite,
   TabEquipeChantier,
   TabBottinsEquipeChantier,
 } from "../models/JournalFormModel";
@@ -69,7 +69,7 @@ interface AuthContextProps {
   sousTraitants: SousTraitant[] | null;
   bases: Localisation[] | null;
   signalisations: SignalisationProjet[] | null;
-  unites: ListUnite[] | null;
+  unites: Unite[] | null;
   equipes: TabEquipeChantier[] | null;
   bottinsEquipe: TabBottinsEquipeChantier[] | null;
   journals: any[] | null; // Ajouter le type pour les journaux
@@ -126,7 +126,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [signalisations, setSignalisations] = useState<
     SignalisationProjet[] | null
   >(null);
-  const [unites, setUnites] = useState<ListUnite[]>([]);
+  const [unites, setUnites] = useState<Unite[]>([]);
   const [equipes, setEquipes] = useState<TabEquipeChantier[] | null>(null);
   const [bottinsEquipe, setBottinsEquipe] = useState<
     TabBottinsEquipeChantier[] | null

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { FaCubes, FaTimes, FaPlusCircle, FaBuilding, FaTools, FaRuler } from "react-icons/fa";
 import { useAuth } from "../../context/AuthContext";
-import { JournalActivite, ListUnite, SousTraitantFormData } from "../../models/JournalFormModel";
+import { JournalActivite, Unite, SousTraitantFormData } from "../../models/JournalFormModel";
 
 interface SousTraitantSectionProps {
   sousTraitants: SousTraitantFormData[];
@@ -33,7 +33,7 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
       
       if (defaultSousTraitant && sousTraitants[0].nom === "") {
         const updatedSousTraitants = sousTraitants.map((st, index) => 
-          index === 0 ? { ...st, nom: defaultSousTraitant.nom } : st
+          index === 0 ? { ...st, nom: defaultSousTraitant.nom, id: defaultSousTraitant.id } : st
         );
         setSousTraitants(updatedSousTraitants);
       }
@@ -52,36 +52,43 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
     setNextId(nextId - 1); // Décrémenter pour le prochain ID temporaire
   };
 
-  const handleChange = (id: number, field: keyof SousTraitantFormData, value: any) => {
+  const handleChange = (index: number, field: keyof SousTraitantFormData, value: any) => {
     setSousTraitants(prevSousTraitants => {
-      return prevSousTraitants.map(st => {
-        if (st.id === id) {
-          // Si on change le nom du sous-traitant, on doit aussi mettre à jour l'ID
-          if (field === 'nom' && value) {
-            const selectedSousTraitant = contextSousTraitants?.find(cst => cst.nom === value);
-            if (selectedSousTraitant) {
-              return { 
-                ...st, 
-                [field]: value,
-                id: selectedSousTraitant.id // Mettre à jour l'ID avec celui du sous-traitant sélectionné
-              };
-            }
-          }
-          return { ...st, [field]: value };
+      const updatedSousTraitants = [...prevSousTraitants];
+      
+      // Si on change le nom du sous-traitant, on doit aussi mettre à jour l'ID
+      if (field === 'nom' && value) {
+        const selectedSousTraitant = contextSousTraitants?.find(cst => cst.nom === value);
+        if (selectedSousTraitant) {
+          updatedSousTraitants[index] = { 
+            ...updatedSousTraitants[index], 
+            nom: value,
+            id: selectedSousTraitant.id // Mettre à jour l'ID avec celui du sous-traitant sélectionné
+          };
+          console.log(`Sous-traitant sélectionné: Nom=${value}, ID=${selectedSousTraitant.id}`);
+          return updatedSousTraitants;
         }
-        return st;
-      });
+      }
+      
+      // Pour les autres champs
+      updatedSousTraitants[index] = { 
+        ...updatedSousTraitants[index], 
+        [field]: value 
+      };
+      
+      return updatedSousTraitants;
     });
   };
 
-  const requestDeleteSousTraitant = (id: number) => {
-    setSousTraitantToDelete(id);
+  const requestDeleteSousTraitant = (index: number) => {
+    setSousTraitantToDelete(index);
     setShowDeleteConfirm(true);
   };
 
   const confirmDeleteSousTraitant = () => {
     if (sousTraitantToDelete !== null && sousTraitants.length > 1) {
-      setSousTraitants(sousTraitants.filter((st) => st.id !== sousTraitantToDelete));
+      const updatedSousTraitants = sousTraitants.filter((_, index) => index !== sousTraitantToDelete);
+      setSousTraitants(updatedSousTraitants);
     }
     setShowDeleteConfirm(false);
     setSousTraitantToDelete(null);
@@ -94,30 +101,30 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
       <div className="space-y-6">
-        {sousTraitants.map((sousTraitant) => (
+        {sousTraitants.map((sousTraitant, index) => (
           <div
-            key={sousTraitant.id}
+            key={index}
             className="bg-white rounded-lg border border-gray-200 p-6 relative transition-all duration-200 hover:shadow-md"
           >
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
               {/* Sous-traitant */}
               <div className="md:col-span-4">
-                <label className="block text-gray-700 text-sm font-semibold mb-2 flex items-center">
+                <label className="text-gray-700 text-sm font-semibold mb-2 flex items-center">
                   <span className="bg-blue-100 p-2 rounded-full mr-2">
                     <FaBuilding className="text-blue-600" />
                   </span>
                   Sous-traitant
                 </label>
                 <select
-                  value={contextSousTraitants?.find(st => st.id === sousTraitant.id)?.nom || ""}
+                  value={sousTraitant.nom || ""}
                   onChange={(e) => {
                     const selectedNom = e.target.value;
                     const selectedSousTraitant = contextSousTraitants?.find(st => st.nom === selectedNom);
                     if (selectedSousTraitant) {
-                      handleChange(sousTraitant.id, "id", selectedSousTraitant.id);
-                      handleChange(sousTraitant.id, "nom", selectedSousTraitant.nom);
+                      handleChange(index, "nom", selectedSousTraitant.nom);
+                      handleChange(index, "id", selectedSousTraitant.id);
                     } else {
-                      handleChange(sousTraitant.id, "nom", "");
+                      handleChange(index, "nom", "");
                     }
                   }}
                   className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
@@ -133,7 +140,7 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
 
               {/* Activité */}
               <div className="md:col-span-4">
-                <label className="block text-gray-700 text-sm font-semibold mb-2 flex items-center">
+                <label className="text-gray-700 text-sm font-semibold mb-2 flex items-center">
                   <span className="bg-blue-100 p-2 rounded-full mr-2">
                     <FaTools className="text-blue-600" />
                   </span>
@@ -141,7 +148,7 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
                 </label>
                 <select
                   value={sousTraitant.activiteID || ""}
-                  onChange={(e) => handleChange(sousTraitant.id, "activiteID", e.target.value ? Number(e.target.value) : null)}
+                  onChange={(e) => handleChange(index, "activiteID", e.target.value ? Number(e.target.value) : null)}
                   className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                 >
                   <option value="">Sélectionner une activité</option>
@@ -155,7 +162,7 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
 
               {/* Quantité et Unité */}
               <div className="md:col-span-4">
-                <label className="block text-gray-700 text-sm font-semibold mb-2 flex items-center">
+                <label className="text-gray-700 text-sm font-semibold mb-2 flex items-center">
                   <span className="bg-blue-100 p-2 rounded-full mr-2">
                     <FaRuler className="text-blue-600" />
                   </span>
@@ -165,14 +172,14 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
                   <input
                     type="number"
                     value={sousTraitant.quantite}
-                    onChange={(e) => handleChange(sousTraitant.id, "quantite", parseFloat(e.target.value) || 0)}
+                    onChange={(e) => handleChange(index, "quantite", parseFloat(e.target.value) || 0)}
                     className="mt-1 block w-2/3 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                     min="0"
                     step="0.01"
                   />
                   <select
                     value={sousTraitant.idUnite || ""}
-                    onChange={(e) => handleChange(sousTraitant.id, "idUnite", e.target.value ? Number(e.target.value) : null)}
+                    onChange={(e) => handleChange(index, "idUnite", e.target.value ? Number(e.target.value) : null)}
                     className="mt-1 block w-1/3 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                   >
                     <option value="">Unité</option>
@@ -189,7 +196,7 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
             {/* Bouton de suppression */}
             {sousTraitants.length > 1 && (
               <button
-                onClick={() => requestDeleteSousTraitant(sousTraitant.id)}
+                onClick={() => requestDeleteSousTraitant(index)}
                 className="absolute top-2 right-2 text-red-500 hover:text-red-700 transition-colors duration-200"
               >
                 <FaTimes />

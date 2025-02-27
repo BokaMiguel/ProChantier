@@ -1,6 +1,6 @@
 // src/services/JournalService.ts
 
-import { ListUnite, TabEquipeChantier, TabBottinsEquipeChantier } from '../models/JournalFormModel';
+import { Unite, TabEquipeChantier, TabBottinsEquipeChantier } from '../models/JournalFormModel';
 
 export const getAuthorizedProjects = async (userId: string) => {
   try {
@@ -1013,7 +1013,7 @@ export const getPlanifChantierByProjet = async (projetId: number, dateDebut?: Da
   }
 };
 
-export const getAllUnites = async (): Promise<ListUnite[]> => {
+export const getAllUnites = async (): Promise<Unite[]> => {
   try {
     const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetAllUnites`);
     if (!response.ok) {
@@ -1057,7 +1057,7 @@ export const createJournalChantier = async (journalChantierDto: any) => {
 export const getAllJournalChantierByProject = async (projetId: number) => {
   try {
     const response = await fetch(
-      `${process.env.REACT_APP_BRUNEAU_API}/Horizon/GetAllJournalChantierByProject/${projetId}`,
+      `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetAllJournalChantierByProject/${projetId}`,
       { method: "GET" }
     );
     
@@ -1069,6 +1069,34 @@ export const getAllJournalChantierByProject = async (projetId: number) => {
     return data;
   } catch (error) {
     console.error('Error fetching journals for project:', error);
+    throw error;
+  }
+};
+
+export const saveJournalPdf = async (pdfBlob: Blob, numeroProjet: string, fileName: string) => {
+  try {
+    const formData = new FormData();
+    formData.append('file', pdfBlob, fileName);
+    formData.append('numeroProjet', numeroProjet);
+
+    console.log('Envoi du PDF à l\'API SaveJournalPdf:', { fileName, numeroProjet });
+    
+    const response = await fetch(
+      `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/SaveJournalPdf`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Erreur lors de la sauvegarde du PDF: ${response.status} - ${errorText}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Erreur dans saveJournalPdf:", error);
     throw error;
   }
 };
