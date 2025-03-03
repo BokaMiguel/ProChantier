@@ -41,7 +41,6 @@ const LocalisationLiaisonModal: React.FC<LocalisationLiaisonModalProps> = ({
   }, [savedLiaisons]);
 
   const toggleLiaison = (liaison: LocalisationDistance) => {
-    console.log("Toggling liaison:", liaison);
     setSelectedLiaisons(prevSelected => {
       const isSelected = prevSelected.some(l => l.id === liaison.id);
       if (isSelected) {
@@ -55,7 +54,6 @@ const LocalisationLiaisonModal: React.FC<LocalisationLiaisonModalProps> = ({
   };
 
   const handleSaveLiaisons = () => {
-    console.log("Saving liaisons:", selectedLiaisons);
     // Mettre à jour le parent avec les liaisons complètes et leurs noms de base
     const updatedLiaisons = selectedLiaisons.map(liaison => {
       const fullLiaison = distances.find(d => d.id === liaison.id);
@@ -105,7 +103,6 @@ const LocalisationLiaisonModal: React.FC<LocalisationLiaisonModalProps> = ({
                 checked={isLiaisonMode}
                 onChange={() => onToggleLiaisonMode(!isLiaisonMode)}
                 className="form-checkbox h-5 w-5 text-blue-500 rounded"
-                disabled={selectedLiaisons.length > 0}
               />
               <span className="text-blue-700 font-medium">Mode Liaison</span>
             </label>
@@ -128,7 +125,7 @@ const LocalisationLiaisonModal: React.FC<LocalisationLiaisonModalProps> = ({
         <div className="grid grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto p-2">
           {distances.map((distance) => {
             const isSelected = selectedLiaisons.some((l) => l.id === distance.id);
-            const isDisabled = usedLiaisons.includes(distance.id) || usedBasesIds.includes(distance.baseA) || usedBasesIds.includes(distance.baseB);
+            const isDisabled = usedLiaisons.includes(distance.id);
 
             return (
               <button

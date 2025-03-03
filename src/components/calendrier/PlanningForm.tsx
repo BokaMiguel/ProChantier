@@ -26,6 +26,7 @@ import { fr } from "date-fns/locale";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import CreatePlanifModal from "./CreatePlanifModal"; 
+import ImportPlanifModal from "./ImportPlanifModal";
 import { ActivitePlanif } from "../../models/JournalFormModel";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -45,19 +46,10 @@ const PlanningForm: React.FC = () => {
     sousTraitants,
     signalisations,
     selectedProject,
-    fetchActivitesPlanif
   } = useAuth();
 
   // Logs pour déboguer
   useEffect(() => {
-    console.log('Données du PlanningForm:', {
-      activitesPlanif,
-      activites,
-      lieux,
-      sousTraitants,
-      signalisations,
-      selectedProject
-    });
   }, [activitesPlanif, activites, lieux, sousTraitants, signalisations, selectedProject]);
 
   // Assurez-vous que les données sont chargées quand un projet est sélectionné
@@ -99,6 +91,9 @@ const PlanningForm: React.FC = () => {
 
   // State pour stocker toutes les planifications brutes
   const [rawPlanifications, setRawPlanifications] = useState<ActivitePlanif[]>([]);
+  
+  // State pour stocker les planifications disponibles pour l'import (celles qui ne sont pas déjà dans la semaine courante)
+  const [importablePlanifications, setImportablePlanifications] = useState<ActivitePlanif[]>([]);
 
   // Calcul des dates de début et fin de semaine
   const start = useMemo(() => {
@@ -226,8 +221,97 @@ const PlanningForm: React.FC = () => {
   useEffect(() => {
     if (rawPlanifications.length > 0) {
       distributePlanificationsToWeek(currentDate, rawPlanifications);
+      
+      // Filtrer les planifications importables (celles qui ne sont pas déjà dans la semaine courante)
+      filterImportablePlanifications();
     }
   }, [currentDate, rawPlanifications, distributePlanificationsToWeek]);
+  
+  // Filtrer les planifications qui peuvent être importées (celles qui ne sont pas déjà dans la semaine courante)
+  const filterImportablePlanifications = useCallback(() => {
+    if (!rawPlanifications.length) return;
+    
+    // Calculer les dates de la semaine courante au format ISO
+    const currentWeekDatesISO = weekDates.map(date => format(date, 'yyyy-MM-dd'));
+    
+    // Filtrer les planifications qui ne sont pas déjà dans la semaine courante
+    const importable = rawPlanifications.filter(planif => {
+      const planifDate = planif.date.split('T')[0];
+      return !currentWeekDatesISO.includes(planifDate);
+    });
+    
+    setImportablePlanifications(importable);
+  }, [rawPlanifications, weekDates]);
+  
+  // Gérer l'import des planifications sélectionnées
+  const handleImportActivities = (planificationsToImport: ActivitePlanif[]) => {
+    if (!planificationsToImport.length) return;
+    
+    console.log("Planifications à importer:", planificationsToImport);
+    
+    // Créer une copie des activités locales
+    const updatedActivities = { ...localActivities };
+    
+    // Pour chaque planification à importer
+    planificationsToImport.forEach(planif => {
+      // Déterminer le jour de la semaine pour cette planification
+      const planifDate = new Date(planif.date);
+      const dayOfWeekNumber = planifDate.getDay(); // 0 pour dimanche, 1 pour lundi, etc.
+      
+      // Utiliser l'index du jour pour obtenir le nom du jour dans notre tableau daysOfWeek
+      const targetDay = daysOfWeek[dayOfWeekNumber];
+      
+      console.log("Jour d'origine:", format(planifDate, 'EEEE', { locale: fr }));
+      console.log("Jour cible:", targetDay);
+      console.log("Index du jour:", dayOfWeekNumber);
+      
+      // Calculer la nouvelle date en ajoutant le nombre de jours à la date de début de semaine
+      const newDate = format(addDays(start, dayOfWeekNumber), 'yyyy-MM-dd');
+      console.log("Nouvelle date calculée:", newDate);
+      
+      // Vérifier si une planification similaire existe déjà pour ce jour
+      const existingSimilarPlanif = updatedActivities[targetDay]?.some(existingPlanif => {
+        // Si les IDs d'activités sont identiques ou très similaires, considérer comme doublon
+        if (!existingPlanif.activiteIDs || !planif.activiteIDs) return false;
+        
+        // Vérifier si au moins une activité est commune (pour éviter les doublons)
+        return planif.activiteIDs.some(id => existingPlanif.activiteIDs?.includes(id));
+      });
+      
+      // Si une planification similaire existe déjà, ne pas l'ajouter
+      if (existingSimilarPlanif) {
+        console.log("Une planification similaire existe déjà, ignorée:", planif);
+        return;
+      }
+      
+      // Créer une nouvelle planification avec la date mise à jour
+      const newPlanif: ActivitePlanif = {
+        ...planif,
+        id: -Date.now() - Math.floor(Math.random() * 1000), // ID temporaire négatif unique
+        date: newDate
+      };
+      
+      // Ajouter la planification au jour cible
+      if (!updatedActivities[targetDay]) {
+        updatedActivities[targetDay] = [];
+      }
+      updatedActivities[targetDay].push(newPlanif);
+      
+      // Mettre à jour l'état des activités sélectionnées
+      const key = `${targetDay}-${newPlanif.id}`;
+      setSelectedActivities(prev => ({
+        ...prev,
+        [key]: new Set(newPlanif.activiteIDs || [])
+      }));
+    });
+    
+    // Mettre à jour l'état local
+    setLocalActivities(updatedActivities);
+    setHasUnsavedChanges(true);
+    
+    console.log(`${planificationsToImport.length} planification(s) importée(s) avec succès`);
+    console.log("Activités après importation:", updatedActivities);
+  };
 
   const handleSavePlanif = async (planif: ActivitePlanif, selectedActivities: Set<number>) => {
     if (!selectedDay || !selectedProject?.ID) {
@@ -239,9 +323,24 @@ const PlanningForm: React.FC = () => {
     console.log("Activités sélectionnées pour la sauvegarde:", selectedActivitiesArray);
     
     // Obtenir le jour de la semaine à partir de la date de la planification
-    const planifDate = parseISO(planif.date);
-    const dayOfWeek = format(planifDate, 'EEEE', { locale: fr });
-    const targetDay = dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1);
+    let planifDate;
+    let targetDay: string;
+    
+    if (planif.date && planif.date !== "") {
+      // Si une date existe déjà, l'utiliser
+      planifDate = parseISO(planif.date);
+      const dayOfWeek = format(planifDate, 'EEEE', { locale: fr });
+      targetDay = dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1);
+    } else {
+      // Pour une nouvelle planification, utiliser le jour sélectionné dans la semaine en cours
+      targetDay = selectedDay;
+      // Trouver l'index du jour dans la semaine (0 pour Dimanche, 1 pour Lundi, etc.)
+      const dayIndex = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'].indexOf(selectedDay);
+      // Calculer la date correspondante dans la semaine en cours
+      planifDate = addDays(start, dayIndex);
+      // Mettre à jour la date de la planification
+      planif.date = format(planifDate, 'yyyy-MM-dd');
+    }
     
     console.log("Date de la planification:", planif.date);
     console.log("Jour ciblé:", targetDay);
@@ -396,6 +495,28 @@ const PlanningForm: React.FC = () => {
     }
   };
 
+  const handleDeleteActivity = (day: string, id: number) => {
+    // Confirmer la suppression
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette planification ?")) {
+      return;
+    }
+    
+    setLocalActivities((prev) => {
+      const updatedActivities = { ...prev };
+      updatedActivities[day] = updatedActivities[day].filter((activity) => activity.id !== id);
+      return updatedActivities;
+    });
+    
+    // Supprimer aussi les activités sélectionnées pour cette planif
+    setSelectedActivities((prev) => {
+      const newState = { ...prev };
+      delete newState[`${day}-${id}`];
+      return newState;
+    });
+    
+    setHasUnsavedChanges(true);
+  };
+
   const handleDateChange = (date: Date | null) => {
     if (date) {
       setCurrentDate(date);
@@ -441,69 +562,6 @@ const PlanningForm: React.FC = () => {
     setShowModal(false);
   };
 
-  const handleDeleteActivity = (day: string, id: number) => {
-    setLocalActivities((prevActivities) => {
-      const updatedActivities = { ...prevActivities };
-      updatedActivities[day] = updatedActivities[day].filter(
-        (activity) => activity.id !== id
-      );
-      return updatedActivities;
-    });
-  };
-
-  const getActivityName = (id: number) => {
-    const activity = activites?.find((act) => act.id === id);
-    return activity ? activity.nom : "Inconnu";
-  };
-
-  const getLieuName = (id: number) => {
-    const lieu = lieux?.find((l) => l.id === id);
-    return lieu ? lieu.nom : "Inconnu";
-  };
-
-  const getEntrepriseName = (id: number) => {
-    const entreprise = sousTraitants?.find((ent) => ent.id === id);
-    return entreprise ? entreprise.nom : "Inconnu";
-  };
-
-  const getSignalisationName = (id: number) => {
-    const signalisation = signalisations?.find((sig) => sig.id === id);
-    return signalisation ? signalisation.nom : "Inconnu";
-  };
-
-  const handleToggleActivity = (day: string, activityId: number) => {
-    setSelectedActivities((prev) => {
-      const newSelected = { ...prev };
-      if (!newSelected[day]) {
-        newSelected[day] = new Set<number>();
-      }
-      
-      if (newSelected[day].has(activityId)) {
-        newSelected[day].delete(activityId);
-      } else {
-        newSelected[day].add(activityId);
-      }
-      
-      return newSelected;
-    });
-  };
-
-  const handleImportActivities = (activitiesToImport: ActivitePlanif[]) => {
-    setLocalActivities((prevActivities) => {
-      const updatedActivities = { ...prevActivities };
-      activitiesToImport.forEach((activity) => {
-        updatedActivities[selectedDay] = [
-          ...updatedActivities[selectedDay],
-          { ...activity, id: Date.now() },
-        ];
-      });
-      return updatedActivities;
-    });
-
-    setSelectedActivities({ [selectedDay]: new Set<number>() });
-    setShowImportModal(false);
-  };
-
   const handleSavePlanning = async () => {
     if (!selectedProject?.ID) return;
 
@@ -513,6 +571,8 @@ const PlanningForm: React.FC = () => {
         const activitiesForDay = localActivities[day];
         
         for (const activity of activitiesForDay) {
+          console.log(`Sauvegarde de la planification pour ${day}:`, activity);
+
           try {
             const dayIndex = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'].indexOf(day);
             const currentDate = addDays(start, dayIndex);
@@ -661,9 +721,6 @@ const PlanningForm: React.FC = () => {
     try {
       if (!selectedProject?.ID) return;
 
-      console.log("Début de la sauvegarde globale");
-      console.log("État local des activités:", localActivities);
-
       // Parcourir toutes les activités locales
       for (const day in localActivities) {
         for (const planif of localActivities[day]) {
@@ -750,59 +807,117 @@ const PlanningForm: React.FC = () => {
     return selectedActivities[key] || new Set(planif.activiteIDs || []);
   };
 
+  const getActivityName = (id: number) => {
+    const activity = activites?.find((act) => act.id === id);
+    return activity ? activity.nom : "Inconnu";
+  };
+
+  const getLieuName = (id: number) => {
+    const lieu = lieux?.find((l) => l.id === id);
+    return lieu ? lieu.nom : "Inconnu";
+  };
+
+  const getEntrepriseName = (id: number) => {
+    const entreprise = sousTraitants?.find((ent) => ent.id === id);
+    return entreprise ? entreprise.nom : "Inconnu";
+  };
+
+  const getSignalisationName = (id: number) => {
+    const signalisation = signalisations?.find((sig) => sig.id === id);
+    return signalisation ? signalisation.nom : "Inconnu";
+  };
+
+  const handleToggleActivity = (day: string, activityId: number) => {
+    setSelectedActivities((prev) => {
+      const newSelected = { ...prev };
+      if (!newSelected[day]) {
+        newSelected[day] = new Set<number>();
+      }
+      
+      if (newSelected[day].has(activityId)) {
+        newSelected[day].delete(activityId);
+      } else {
+        newSelected[day].add(activityId);
+      }
+      
+      return newSelected;
+    });
+  };
+
+  // Fonction pour ouvrir le modal d'import
+  const handleOpenImportModal = () => {
+    // Vérifier si nous avons des planifications importables
+    if (importablePlanifications.length === 0) {
+      alert("Aucune planification disponible pour l'importation. Toutes les planifications existantes sont déjà dans la semaine courante.");
+      return;
+    }
+    
+    setShowImportModal(true);
+  };
+
+  // État pour gérer les tooltips
+  const [tooltipPosition, setTooltipPosition] = useState<{
+    id: string;
+    x: number;
+    y: number;
+    content: React.ReactNode;
+  } | null>(null);
+
   return (
     <div className="bg-white rounded-lg shadow-lg">
       {/* En-tête sticky avec DatePicker et boutons */}
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg shadow-sm">
-        <div className="flex flex-col gap-4 p-4 bg-gray-50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <DatePicker
-                  selected={currentDate}
-                  onChange={handleDateChange}
-                  dateFormat="dd/MM/yyyy"
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                  locale={fr}
-                />
-                <FaCalendarDay className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              </div>
-              <div className="text-sm font-medium text-gray-600">
-                Semaine du {format(start, "d MMMM", { locale: fr })} au{" "}
-                {format(end, "d MMMM yyyy", { locale: fr })}
-              </div>
-            </div>
-            
-            <div className="flex gap-2">  
-              <button
-                onClick={() => setShowImportModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200"
-              >
-                <FaFileImport className="text-sm" />
-                Importer une planification
-              </button>  
-              <button
-                onClick={() => {
-                  setSelectedDay("Dimanche");
-                  setShowModal(true);
-                }}
-                className="continue-application"
-              >
-                <div>
-                  <div className="pencil"></div>
-                  <div className="folder">
-                    <div className="top">
-                      <svg viewBox="0 0 24 27">
-                        <path d="M1,0 L23,0 C23.5522847,-1.01453063e-16 24,0.44771525 24,1 L24,8.17157288 C24,8.70200585 23.7892863,9.21071368 23.4142136,9.58578644 L20.5857864,12.4142136 C20.2107137,12.7892863 20,13.2979941 20,13.8284271 L20,26 C20,26.5522847 19.5522847,27 19,27 L1,27 C0.44771525,27 6.76353751e-17,26.5522847 0,26 L0,1 C-6.76353751e-17,0.44771525 0.44771525,1.01453063e-16 1,0 Z"></path>
-                      </svg>
-                    </div>
-                    <div className="paper"></div>
-                  </div>
-                </div>
-                Créer une planification
-              </button>
-            </div>
+      <div className="sticky top-0 z-10 bg-white p-4 border-b flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center">
+            <FaCalendarDay className="text-blue-500 mr-2" />
+            <DatePicker
+              selected={currentDate}
+              onChange={handleDateChange}
+              locale={fr}
+              dateFormat="dd/MM/yyyy"
+              className="border rounded p-2 w-32"
+            />
           </div>
+          <div className="text-sm text-gray-600">
+            {format(start, "EEEE d MMMM", { locale: fr })} au{" "}
+            {format(end, "EEEE d MMMM yyyy", { locale: fr })}
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded transition duration-200"
+            title="Ajouter une planification"
+          >
+            <FaPlus className="mr-1" /> Ajouter
+          </button>
+          
+          <button
+            onClick={handleOpenImportModal}
+            className="flex items-center bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded transition duration-200"
+            title="Importer des planifications existantes"
+            disabled={importablePlanifications.length === 0}
+          >
+            <FaFileImport className="mr-1" /> Importer
+          </button>
+
+          <button
+            onClick={handleSavePlanning}
+            className={`flex items-center ${
+              hasUnsavedChanges
+                ? "bg-yellow-500 hover:bg-yellow-600"
+                : "bg-gray-400"
+            } text-white px-3 py-2 rounded transition duration-200`}
+            disabled={!hasUnsavedChanges}
+            title={
+              hasUnsavedChanges
+                ? "Enregistrer les modifications"
+                : "Aucune modification à enregistrer"
+            }
+          >
+            <FaSave className="mr-1" /> Enregistrer
+          </button>
         </div>
       </div>
 
@@ -1025,6 +1140,27 @@ const PlanningForm: React.FC = () => {
           onSave={handleSavePlanif}
           planif={planifToEdit}
         />
+      )}
+      {showImportModal && (
+        <ImportPlanifModal
+          isOpen={showImportModal}
+          onClose={() => setShowImportModal(false)}
+          onImport={handleImportActivities}
+          currentWeekDates={weekDates}
+          existingPlanifications={importablePlanifications}
+        />
+      )}
+      {tooltipPosition && (
+        <div 
+          className="fixed bg-white border border-gray-200 shadow-lg rounded-md p-3 min-w-[200px] max-w-[300px]" 
+          style={{ 
+            zIndex: 9999, 
+            left: `${tooltipPosition.x}px`, 
+            top: `${tooltipPosition.y}px`,
+          }}
+        >
+          {tooltipPosition.content}
+        </div>
       )}
     </div>
   );

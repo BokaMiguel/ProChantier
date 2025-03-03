@@ -36,3 +36,206 @@
     transform: rotate(360deg);
   }
 }
+
+/* Styles pour l'écran de diagnostic */
+.diagnostic-screen {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.diagnostic-screen h1 {
+  color: #343a40;
+  border-bottom: 2px solid #dee2e6;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+.diagnostic-screen h2 {
+  color: #495057;
+  margin-top: 20px;
+  margin-bottom: 10px;
+  font-size: 1.2rem;
+}
+
+.diagnostic-info {
+  background-color: #f5f5f5;
+  padding: 20px;
+  border-radius: 4px;
+  margin-top: 20px;
+}
+
+.diagnostic-info ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.diagnostic-info li {
+  padding: 8px 0;
+  border-bottom: 1px solid #ddd;
+}
+
+.diagnostic-info code {
+  background-color: #eee;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.diagnostic-info .success {
+  color: #4caf50;
+  font-weight: bold;
+}
+
+.diagnostic-info .error {
+  color: #d32f2f;
+  font-weight: bold;
+}
+
+.diagnostic-actions, .diagnostic-help {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: white;
+  border-radius: 5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.diagnostic-help ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.diagnostic-help li {
+  margin-bottom: 8px;
+  padding: 8px;
+  border-bottom: 1px solid #f1f3f5;
+}
+
+.diagnostic-button {
+  background-color: #e9ecef;
+  border: none;
+  padding: 10px 15px;
+  margin-right: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.diagnostic-button:hover {
+  background-color: #dee2e6;
+}
+
+.diagnostic-button.primary {
+  background-color: #007bff;
+  color: white;
+}
+
+.diagnostic-button.primary:hover {
+  background-color: #0069d9;
+}
+
+.success {
+  color: #28a745;
+  font-weight: bold;
+}
+
+.error {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+code {
+  background-color: #f1f3f5;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+/* Styles pour l'écran de chargement */
+.app-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: #f8f9fa;
+}
+
+.app-loading h1 {
+  margin-bottom: 20px;
+  color: #343a40;
+}
+
+.app-loading p {
+  color: #6c757d;
+  max-width: 400px;
+  text-align: center;
+}
+
+/* Styles pour le composant Callback */
+.callback-processing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  text-align: center;
+  background-color: #f5f5f5;
+}
+
+.callback-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  text-align: center;
+  background-color: #fff0f0;
+  color: #d32f2f;
+}
+
+.callback-error button {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background-color: #d32f2f;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.callback-error button:hover {
+  background-color: #b71c1c;
+}
+
+/* Spinner pour l'écran de chargement */
+.spinner {
+  width: 50px;
+  height: 50px;
+  margin: 20px auto;
+  border: 5px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top-color: #007bff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Styles pour l'écran de redirection de login */
+.login-redirect {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  text-align: center;
+  background-color: #e8f5e9;
+}

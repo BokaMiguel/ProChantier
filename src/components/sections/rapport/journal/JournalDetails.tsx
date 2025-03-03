@@ -36,6 +36,7 @@ import {
 } from "../../../../models/JournalFormModel";
 import { useAuth } from "../../../../context/AuthContext";
 import { getDistancesForLieu } from "../../../../services/JournalService";
+import { getMeteoName } from "../../../../services/IconServices";
 
 interface JournalDetailsProps {
   journal: JournalChantier;

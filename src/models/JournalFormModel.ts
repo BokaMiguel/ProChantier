@@ -374,7 +374,7 @@ export interface JournalChantier {
   hrsDebut: string;
   hrsFin: string;
   planifId: number;
-  meteoId?: number;
+  meteoTypeId?: number;
   statutId: number;
   projetId: number;
   typeId?: number;

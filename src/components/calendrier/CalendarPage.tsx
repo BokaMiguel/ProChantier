@@ -51,7 +51,25 @@ const CalendarPage: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Essayer d'abord de récupérer l'objet projet complet depuis localStorage
+    const savedProject = localStorage.getItem("selectedProject");
     const savedProjectId = localStorage.getItem("selectedProjectId");
+    
+    if (savedProject) {
+      try {
+        const parsedProject = JSON.parse(savedProject);
+        const project = projects?.find((p) => p.ID === parsedProject.ID);
+        if (project) {
+          selectProject(project);
+          setLocalSelectedProject(project.ID);
+          return; // Sortir si nous avons trouvé le projet
+        }
+      } catch (error) {
+        console.error('Erreur lors de la récupération du projet depuis localStorage dans CalendarPage:', error);
+      }
+    }
+    
+    // Si nous n'avons pas pu utiliser l'objet projet, essayer avec l'ID uniquement
     if (savedProjectId) {
       const project = projects?.find((p) => p.ID === Number(savedProjectId));
       if (project) {
@@ -64,16 +82,13 @@ const CalendarPage: React.FC = () => {
   // Nouvelle fonction pour charger les planifications
   const loadPlanifications = async (projectId: number) => {
     try {
-      console.log('Chargement des planifications pour le projet:', projectId);
       const planifChantierData = await getPlanifChantierByProjet(projectId);
-      console.log('Planifications chantier reçues:', planifChantierData);
       setPlanifChantier(planifChantierData);
       
       if (planifChantierData && planifChantierData.length > 0) {
         // Charger les activités pour toutes les planifications
         const activitesPromises = planifChantierData.map((planif: TabPlanifChantier) => 
           getPlanifActivites(planif.id).then(activites => {
-            console.log(`Activités reçues pour planif ${planif.id}:`, activites);
             return activites;
           })
         );
@@ -81,10 +96,8 @@ const CalendarPage: React.FC = () => {
         const allActivites = await Promise.all(activitesPromises);
         // Fusionner toutes les activités en une seule liste
         const mergedActivites = allActivites.flat();
-        console.log('Toutes les activités fusionnées:', mergedActivites);
         setPlanifActivites(mergedActivites);
       } else {
-        console.log('Aucune planification trouvée');
         setPlanifActivites([]);
       }
     } catch (error) {
@@ -104,8 +117,6 @@ const CalendarPage: React.FC = () => {
   // Mettre à jour les événements quand les planifications changent
   useEffect(() => {
     if (planifChantier.length > 0 && planifActivites && activites) {
-      console.log('Planifications chantier brutes:', planifChantier);
-
       // Regrouper les activités par planifID
       const activitesByPlanif = planifActivites.reduce((acc, curr) => {
         if (!acc[curr.planifID]) {
@@ -135,10 +146,6 @@ const CalendarPage: React.FC = () => {
             // Si la date est au format YYYY-MM-DD
             eventDate = parseISO(planif.date);
           }
-          
-          console.log('Date originale:', planif.date);
-          console.log('Date parsée:', eventDate);
-          console.log('Date ISO:', eventDate.toISOString());
           
           if (isNaN(eventDate.getTime())) {
             console.error('Date invalide pour planif:', planif.id);
@@ -182,8 +189,9 @@ const CalendarPage: React.FC = () => {
       (project) => project.ID === localSelectedProject
     );
     if (selected) {
+      // La fonction selectProject dans AuthContext s'occupe déjà de stocker
+      // le projet et son ID dans localStorage
       selectProject(selected);
-      localStorage.setItem("selectedProjectId", String(selected.ID));
     }
   };
 

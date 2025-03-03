@@ -92,6 +92,7 @@ export default function Form() {
   const [journalArrivee, setJournalArrivee] = useState("");
   const [journalDepart, setJournalDepart] = useState("");
   const [journalWeather, setJournalWeather] = useState("");
+  const [journalMeteoId, setJournalMeteoId] = useState<number>(1); // Défaut: Soleil (ID: 1)
   const [journalNotes, setJournalNotes] = useState("");
   const [journalUsers, setJournalUsers] = useState<Employe[]>([]);
   const [planifChantier, setPlanifChantier] = useState<PlanifChantier | null>(null);
@@ -384,7 +385,7 @@ export default function Form() {
       hrsDebut: planifChantier?.hrsDebut || '',
       hrsFin: planifChantier?.hrsFin || '',
       planifId: planifChantier?.id || 0,
-      meteoId: undefined,
+      meteoTypeId: journalMeteoId, // Utiliser le meteoId stocké dans le state
       statutId: 1,
       projetId: planifChantier?.projetID || 0,
       notes: journalNotes,
@@ -699,6 +700,8 @@ export default function Form() {
                   setDepart={setJournalDepart}
                   weather={journalWeather}
                   setWeather={setJournalWeather}
+                  meteoId={journalMeteoId}
+                  setMeteoId={setJournalMeteoId}
                 />
               )}
             </section>

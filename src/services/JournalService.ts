@@ -1,11 +1,33 @@
 // src/services/JournalService.ts
 
 import { Unite, TabEquipeChantier, TabBottinsEquipeChantier } from '../models/JournalFormModel';
+import { userManager } from './AuthService';
 
 export const getAuthorizedProjects = async (userId: string) => {
   try {
+    // Récupérer l'utilisateur actuel et son token d'accès
+    const user = await userManager.getUser();
+    const accessToken = user?.access_token;
+    
+    if (!accessToken) {
+      console.warn('No access token available for API request');
+    }
+    
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Ajouter le token d'authentification s'il est disponible
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+    
     const response = await fetch(
-      `${process.env.REACT_APP_BRUNEAU_API}/Horizon/projets/GetAuthorizedProjects/${userId}`
+      `${process.env.REACT_APP_BRUNEAU_API}/Horizon/projets/GetAuthorizedProjects/${userId}`,
+      { 
+        method: 'GET',
+        headers
+      }
     );
     
     if (!response.ok) {
@@ -502,14 +524,6 @@ export const deleteJournalProjet = async (journalId: number) => {
   }
 };
 
-export const getActivitePlanif = async (id: number) => {
-  const response = await fetch(
-    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetActivitePlanif/${id}`,
-    { method: "GET" }
-  );
-  return response.json();
-};
-
 export const createOrUpdateActivitePlanif = async (activiteData: any, projectId: number) => {
   const formattedData = {
     ID: activiteData.id || undefined, // Ajout de l'ID facultatif
@@ -558,10 +572,18 @@ export const deleteActivitePlanif = async (id: number) => {
 
 export const getEquipeChantier = async (id: number): Promise<TabEquipeChantier> => {
   try {
+    // Importer userManager directement ici pour éviter les problèmes de dépendances circulaires
+    const { userManager } = require('./AuthService');
+    const user = await userManager.getUser();
+    
+    if (!user || !user.access_token) {
+      throw new Error("Utilisateur non authentifié ou token d'accès non disponible");
+    }
+    
     const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetEquipeChantier/${id}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${user.access_token}`,
         'Content-Type': 'application/json',
       },
     });
@@ -586,11 +608,19 @@ export const getEquipeChantierByProjet = async (projetId: number) => {
 
 export const createOrUpdateEquipeChantier = async (equipe: TabEquipeChantier): Promise<TabEquipeChantier> => {
   try {
+    // Importer userManager directement ici pour éviter les problèmes de dépendances circulaires
+    const { userManager } = require('./AuthService');
+    const user = await userManager.getUser();
+    
+    if (!user || !user.access_token) {
+      throw new Error("Utilisateur non authentifié ou token d'accès non disponible");
+    }
+    
     const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdateEquipeChantier`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        "Content-Type": "application/json",
+        'Authorization': `Bearer ${user.access_token}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify(equipe),
     });
@@ -607,11 +637,19 @@ export const createOrUpdateEquipeChantier = async (equipe: TabEquipeChantier): P
 
 export const deleteEquipeChantier = async (id: number): Promise<void> => {
   try {
+    // Importer userManager directement ici pour éviter les problèmes de dépendances circulaires
+    const { userManager } = require('./AuthService');
+    const user = await userManager.getUser();
+    
+    if (!user || !user.access_token) {
+      throw new Error("Utilisateur non authentifié ou token d'accès non disponible");
+    }
+    
     const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/DeleteEquipeChantier/${id}`, {
-      method: "DELETE",
+      method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        "Content-Type": "application/json",
+        'Authorization': `Bearer ${user.access_token}`,
+        'Content-Type': 'application/json',
       },
     });
     if (!response.ok) {
@@ -625,17 +663,24 @@ export const deleteEquipeChantier = async (id: number): Promise<void> => {
 
 export const addEmployeToEquipe = async (equipeId: number, employeId: number): Promise<void> => {
   try {
-    const bottin = {
-      EquipeID: equipeId,
-      BottinID: employeId
-    };
-    const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdateBottinsEquipeChantier`, {
-      method: "POST",
+    // Importer userManager directement ici pour éviter les problèmes de dépendances circulaires
+    const { userManager } = require('./AuthService');
+    const user = await userManager.getUser();
+    
+    if (!user || !user.access_token) {
+      throw new Error("Utilisateur non authentifié ou token d'accès non disponible");
+    }
+    
+    const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/AddEmployeToEquipe`, {
+      method: 'POST',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        "Content-Type": "application/json",
+        'Authorization': `Bearer ${user.access_token}`,
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(bottin),
+      body: JSON.stringify({
+        EquipeID: equipeId,
+        EmployeID: employeId
+      }),
     });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -685,16 +730,22 @@ export const createOrUpdateBottinsEquipeChantier = async (bottin: {
   BottinID: number;
 }) => {
   try {
-    const response = await fetch(
-      `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdateBottinsEquipeChantier`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(bottin),
-      }
-    );
+    // Importer userManager directement ici pour éviter les problèmes de dépendances circulaires
+    const { userManager } = require('./AuthService');
+    const user = await userManager.getUser();
+    
+    if (!user || !user.access_token) {
+      throw new Error("Utilisateur non authentifié ou token d'accès non disponible");
+    }
+    
+    const response = await fetch(`${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdateBottinsEquipeChantier`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${user.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(bottin),
+    });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -879,7 +930,6 @@ export const getPlanifChantier = async (id: number) => {
 
 export const createOrUpdatePlanifChantier = async (planifData: any) => {
   try {
-    console.log("Création/mise à jour planification:", planifData);
     const response = await fetch(
       `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdatePlanifChantier`,
       {
@@ -935,18 +985,43 @@ export const deletePlanifChantier = async (id: number) => {
 };
 
 export const getPlanifActivites = async (planifId: number) => {
-  const response = await fetch(
-    `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetPlanifActivites/${planifId}`,
-    { method: "GET" }
-  );
-  if (!response.ok) {
-    throw new Error("Failed to get planif activites");
+  try {
+    const response = await fetch(
+      `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/GetPlanifActivites/${planifId}`,
+      { method: "GET" }
+    );
+    
+    if (!response.ok) {
+      // Gérer explicitement les erreurs HTTP
+      if (response.status === 404) {
+        // Si aucune activité n'est trouvée, retourner un tableau vide
+        return [];
+      }
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    // Vérifier si la réponse est vide
+    const text = await response.text();
+    if (!text || text.trim() === '') {
+      return [];
+    }
+    
+    try {
+      // Tenter de parser le JSON
+      const data = JSON.parse(text);
+      return data;
+    } catch (parseError) {
+      console.error(`Erreur de parsing JSON dans getPlanifActivites pour planifId=${planifId}:`, parseError);
+      return [];
+    }
+  } catch (error) {
+    console.error(`Erreur dans getPlanifActivites pour planifId=${planifId}:`, error);
+    // En cas d'erreur, retourner un tableau vide plutôt que de propager l'erreur
+    return [];
   }
-  return await response.json();
 };
 
 export const createOrUpdatePlanifActivites = async (planifActivitesData: any) => {
-  console.log("Création/mise à jour activité planifiée:", planifActivitesData);
   const response = await fetch(
     `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdatePlanifActivites`,
     {
@@ -959,17 +1034,15 @@ export const createOrUpdatePlanifActivites = async (planifActivitesData: any) =>
   );
   
   const responseText = await response.text();
-  console.log("Réponse brute de l'API:", responseText);
   
-  if (!response.ok) {
-    console.error("Erreur API:", response.status, responseText);
-    throw new Error("Failed to create or update planif activites");
+  if (!responseText || responseText.trim() === '') {
+    return null;
   }
   
   try {
-    return responseText ? JSON.parse(responseText) : null;
-  } catch (e) {
-    console.error("Erreur parsing JSON:", e);
+    return JSON.parse(responseText);
+  } catch (error) {
+    console.error("Erreur lors du parsing de la réponse dans createOrUpdatePlanifActivites:", error);
     return null;
   }
 };
@@ -994,22 +1067,37 @@ export const getPlanifChantierByProjet = async (projetId: number, dateDebut?: Da
     if (dateDebut) {
       const formattedDate = dateDebut.toISOString().split('T')[0];
       url += `?dateDebut=${formattedDate}`;
-      console.log("URL avec date:", url);
     }
 
-    console.log("Appel API getPlanifChantierByProjet avec:", { projetId, dateDebut });
     const response = await fetch(url, { method: "GET" });
     
     if (!response.ok) {
+      // Gérer explicitement les erreurs HTTP
+      if (response.status === 404) {
+        // Si aucune planification n'est trouvée, retourner un tableau vide
+        return [];
+      }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
-    const data = await response.json();
-    console.log("Réponse API getPlanifChantierByProjet:", data);
-    return data;
+    // Vérifier si la réponse est vide
+    const text = await response.text();
+    if (!text || text.trim() === '') {
+      return [];
+    }
+    
+    try {
+      // Tenter de parser le JSON
+      const data = JSON.parse(text);
+      return data;
+    } catch (parseError) {
+      console.error("Erreur de parsing JSON dans getPlanifChantierByProjet:", parseError);
+      return [];
+    }
   } catch (error) {
     console.error("Erreur dans getPlanifChantierByProjet:", error);
-    throw error;
+    // En cas d'erreur, retourner un tableau vide plutôt que de propager l'erreur
+    return [];
   }
 };
 
@@ -1066,6 +1154,7 @@ export const getAllJournalChantierByProject = async (projetId: number) => {
     }
     
     const data = await response.json();
+    console.log('Données recueillies à l\'API getAllJournalChantierByProject:', JSON.stringify(data, null, 2));
     return data;
   } catch (error) {
     console.error('Error fetching journals for project:', error);
@@ -1098,5 +1187,47 @@ export const saveJournalPdf = async (pdfBlob: Blob, numeroProjet: string, fileNa
   } catch (error) {
     console.error("Erreur dans saveJournalPdf:", error);
     throw error;
+  }
+};
+
+// Fonction pour vérifier si l'API est accessible
+export const checkApiStatus = async (): Promise<boolean> => {
+  console.log("🔍 Vérification de l'accès à l'API...");
+  
+  try {
+    // Vérifier si l'URL de l'API est définie
+    const apiUrl = process.env.REACT_APP_BRUNEAU_API;
+    if (!apiUrl) {
+      console.error("❌ L'URL de l'API n'est pas définie. Vérifiez votre fichier .env");
+      return false;
+    }
+    
+    // Vérifier si l'API est accessible
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 secondes timeout
+    
+    console.log(`🔍 Tentative d'accès à ${apiUrl}/api/health`);
+    const response = await fetch(`${apiUrl}/api/health`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    console.log(`🔍 Statut de la réponse: ${response.status} ${response.statusText}`);
+    
+    if (response.ok) {
+      console.log("✅ API accessible");
+      return true;
+    } else {
+      console.error(`❌ Impossible d'accéder à l'API: ${response.status} ${response.statusText}`);
+      return false;
+    }
+  } catch (error) {
+    console.error("❌ Erreur lors de la vérification de l'accès à l'API:", error);
+    return false;
   }
 };

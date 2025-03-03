@@ -23,6 +23,7 @@ import {
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Project } from "../models/ProjectInfoModel";
+import { getMeteoName } from "../components/sections/InfoProjet";
 
 Font.register({
   family: "Roboto",
@@ -44,6 +45,7 @@ interface PDFData {
   journalArrivee: string;
   journalDepart: string;
   journalWeather: string;
+  journalMeteoId?: number;
   journalUsers: Employe[];
   planifChantier: PlanifChantier;
   planifActivites: PlanifActivites[];
@@ -72,6 +74,7 @@ interface PDFDocumentProps {
     journalArrivee: string;
     journalDepart: string;
     journalWeather: string;
+    journalMeteoId?: number;
     journalUsers: Employe[];
     planifChantier: PlanifChantier;
     planifActivites: PlanifActivites[];
@@ -496,7 +499,7 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
               <View style={{ flexDirection: "row", marginBottom: 10 }}>
                 <Text style={styles.label}>Météo : </Text>
                 <Text style={styles.text}>
-                  {data.journalWeather || "Aucune information météo"}
+                  {data.journalMeteoId ? getMeteoName(data.journalMeteoId) : data.journalWeather || "Aucune information météo"}
                 </Text>
               </View>
             </View>

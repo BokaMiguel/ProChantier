@@ -71,7 +71,7 @@ const LocalisationModal: React.FC<LocalisationModalProps> = ({
         style={{ zIndex: 10001 }}
       >
         <div className="flex justify-between items-center border-b pb-4">
-          <h3 className="text-2xl font-bold text-gray-800">Sélectionner une localisation</h3>
+          <h3 className="text-2xl font-bold text-gray-800">Sélectionner des localisations</h3>
           <div className="flex items-center space-x-4">
             <label className="flex items-center space-x-2 bg-blue-50 px-4 py-2 rounded-lg">
               <input
@@ -79,7 +79,6 @@ const LocalisationModal: React.FC<LocalisationModalProps> = ({
                 checked={isLiaisonMode}
                 onChange={() => setIsLiaisonMode(!isLiaisonMode)}
                 className="form-checkbox h-5 w-5 text-blue-500 rounded"
-                disabled={selectedLocalisations.length > 0}
               />
               <span className="text-blue-700 font-medium">Mode Liaison</span>
             </label>

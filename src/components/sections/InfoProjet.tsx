@@ -25,7 +25,36 @@ interface InfoProjetProps {
   setDepart: React.Dispatch<React.SetStateAction<string>>;
   weather: string;
   setWeather: React.Dispatch<React.SetStateAction<string>>;
+  meteoId: number;
+  setMeteoId: React.Dispatch<React.SetStateAction<number>>;
 }
+
+// Définition des types de météo avec leurs IDs
+const METEO_TYPES = {
+  SOLEIL: 1,
+  NUAGE: 2,
+  PLUIE: 3,
+  NEIGE: 4,
+  CHALEUR: 5
+};
+
+// Fonction pour obtenir le nom de la météo à partir de l'ID
+export const getMeteoName = (meteoId: number): string => {
+  switch (meteoId) {
+    case METEO_TYPES.SOLEIL:
+      return "Soleil";
+    case METEO_TYPES.NUAGE:
+      return "Nuage";
+    case METEO_TYPES.PLUIE:
+      return "Pluie";
+    case METEO_TYPES.NEIGE:
+      return "Neige";
+    case METEO_TYPES.CHALEUR:
+      return "Chaleur";
+    default:
+      return "Inconnu";
+  }
+};
 
 const InfoProjet: React.FC<InfoProjetProps> = ({
   date,
@@ -36,6 +65,8 @@ const InfoProjet: React.FC<InfoProjetProps> = ({
   setDepart,
   weather,
   setWeather,
+  meteoId,
+  setMeteoId,
 }) => {
   const { idPlanif } = useParams<{ idPlanif: string }>();
   const { selectedProject, activitesPlanif } = useAuth();
@@ -44,6 +75,12 @@ const InfoProjet: React.FC<InfoProjetProps> = ({
     if (date) {
       setDate(date);
     }
+  };
+
+  // Fonction pour gérer les changements de météo
+  const handleMeteoChange = (id: number, name: string) => {
+    setMeteoId(id);
+    setWeather(name);
   };
 
   const currentActivity = activitesPlanif?.find(
@@ -133,50 +170,66 @@ const InfoProjet: React.FC<InfoProjetProps> = ({
               </span>
               Météo
             </label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-5 gap-2">
               <button
                 type="button"
-                onClick={() => setWeather("Ensoleillé")}
+                onClick={() => handleMeteoChange(METEO_TYPES.SOLEIL, "Soleil")}
                 className={`p-2 rounded-lg flex items-center justify-center transition-all duration-200 ${
-                  weather === "Ensoleillé"
+                  meteoId === METEO_TYPES.SOLEIL
                     ? "bg-yellow-100 text-yellow-600 ring-2 ring-yellow-500"
                     : "bg-gray-100 text-gray-600 hover:bg-yellow-50"
                 }`}
+                title="Soleil"
               >
                 <FaSun />
               </button>
               <button
                 type="button"
-                onClick={() => setWeather("Nuageux")}
+                onClick={() => handleMeteoChange(METEO_TYPES.NUAGE, "Nuage")}
                 className={`p-2 rounded-lg flex items-center justify-center transition-all duration-200 ${
-                  weather === "Nuageux"
+                  meteoId === METEO_TYPES.NUAGE
                     ? "bg-gray-200 text-gray-600 ring-2 ring-gray-500"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
+                title="Nuage"
               >
                 <FaCloud />
               </button>
               <button
                 type="button"
-                onClick={() => setWeather("Pluvieux")}
+                onClick={() => handleMeteoChange(METEO_TYPES.PLUIE, "Pluie")}
                 className={`p-2 rounded-lg flex items-center justify-center transition-all duration-200 ${
-                  weather === "Pluvieux"
+                  meteoId === METEO_TYPES.PLUIE
                     ? "bg-blue-100 text-blue-600 ring-2 ring-blue-500"
                     : "bg-gray-100 text-gray-600 hover:bg-blue-50"
                 }`}
+                title="Pluie"
               >
                 <FaCloudRain />
               </button>
               <button
                 type="button"
-                onClick={() => setWeather("Neigeux")}
+                onClick={() => handleMeteoChange(METEO_TYPES.NEIGE, "Neige")}
                 className={`p-2 rounded-lg flex items-center justify-center transition-all duration-200 ${
-                  weather === "Neigeux"
+                  meteoId === METEO_TYPES.NEIGE
                     ? "bg-blue-50 text-blue-600 ring-2 ring-blue-500"
                     : "bg-gray-100 text-gray-600 hover:bg-blue-50"
                 }`}
+                title="Neige"
               >
                 <FaSnowflake />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleMeteoChange(METEO_TYPES.CHALEUR, "Chaleur")}
+                className={`p-2 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                  meteoId === METEO_TYPES.CHALEUR
+                    ? "bg-red-100 text-red-600 ring-2 ring-red-500"
+                    : "bg-gray-100 text-gray-600 hover:bg-red-50"
+                }`}
+                title="Chaleur"
+              >
+                <FaThermometerThreeQuarters />
               </button>
             </div>
           </div>

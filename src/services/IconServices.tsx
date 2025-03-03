@@ -13,26 +13,7 @@ import { Statut } from "../models/JournalFormModel";
 
 export const getMeteoIcon = (meteoId?: number): JSX.Element | null => {
   // Déterminer le nom de la météo en fonction de l'ID
-  let weatherName = "";
-  switch (meteoId) {
-    case 1:
-      weatherName = "Soleil";
-      break;
-    case 2:
-      weatherName = "Nuage";
-      break;
-    case 3:
-      weatherName = "Pluie";
-      break;
-    case 4:
-      weatherName = "Neige";
-      break;
-    case 5:
-      weatherName = "Chaleur";
-      break;
-    default:
-      weatherName = "Inconnu";
-  }
+  let weatherName = getMeteoName(meteoId);
 
   switch (weatherName) {
     case "Soleil":
@@ -47,6 +28,23 @@ export const getMeteoIcon = (meteoId?: number): JSX.Element | null => {
       return <FaTemperatureHigh className="text-red-500" />;
     default:
       return null;
+  }
+};
+
+export const getMeteoName = (meteoId?: number): string => {
+  switch (meteoId) {
+    case 1:
+      return "Soleil";
+    case 2:
+      return "Nuage";
+    case 3:
+      return "Pluie";
+    case 4:
+      return "Neige";
+    case 5:
+      return "Chaleur";
+    default:
+      return "Inconnu";
   }
 };
 

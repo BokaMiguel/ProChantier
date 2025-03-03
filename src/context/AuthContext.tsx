@@ -14,6 +14,7 @@ import {
   login,
   logout,
   handleCallback,
+  checkSsoAuthentication,
 } from "../services/AuthService";
 import {
   getAuthorizedProjects,
@@ -26,7 +27,6 @@ import {
   getBases,
   getSousTraitantProjet,
   getSignalisationProjet,
-  getActivitePlanif,
   getAllUnites,
   getEquipeChantierByProjet,
   getBottinsEquipeChantier,
@@ -87,7 +87,6 @@ interface AuthContextProps {
   fetchMateriaux: () => void;
   fetchSousTraitants: () => void;
   fetchSignalisations: (projectId: number) => void;
-  fetchActivitesPlanif: (projectId: number) => void;
   fetchUnites: () => void;
   fetchEquipes: (projectId: number) => Promise<void>;
   fetchBottinsEquipe: (equipeId: number) => void;
@@ -138,41 +137,140 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       if (!user && !initialFetchAttempted) {
         setInitialFetchAttempted(true);
         setIsLoading(true);
+        
         try {
-          const storedUser = await getUser();
-          if (storedUser) {
-            setUser(storedUser);
-            const userClaims = storedUser.profile as unknown as UserClaims;
+          // Vérifier si l'utilisateur est déjà authentifié via SSO
+          const ssoUser = await checkSsoAuthentication();
+          
+          if (ssoUser) {
+            setUser(ssoUser);
+            const userClaims = ssoUser.profile as unknown as UserClaims;
             setClaims(userClaims);
 
             const projectsData = await getAuthorizedProjects(userClaims.sub);
             setProjects(projectsData);
             
-            // Vérifier s'il y a un projet sauvegardé dans sessionStorage
-            const storedProject = sessionStorage.getItem('selectedProject');
-            if (storedProject && !selectedProject) {
+            // Vérifier s'il y a un projet sauvegardé dans localStorage
+            const storedProject = localStorage.getItem('selectedProject');
+            const storedProjectId = localStorage.getItem('selectedProjectId');
+            
+            if ((storedProject || storedProjectId) && !selectedProject) {
               try {
-                const parsedProject = JSON.parse(storedProject);
-                // Vérifier si le projet sauvegardé est toujours dans la liste des projets autorisés
-                const projectExists = projectsData.some((p: Project) => p.ID === parsedProject.ID);
-                if (projectExists) {
-                  setSelectedProject(parsedProject);
-                } else {
-                  // Si le projet n'existe plus, sélectionner le premier projet
-                  if (projectsData && projectsData.length > 0) {
-                    setSelectedProject(projectsData[0]);
+                // D'abord essayer de récupérer l'objet projet complet
+                if (storedProject) {
+                  const parsedProject = JSON.parse(storedProject);
+                  // Vérifier si le projet sauvegardé est toujours dans la liste des projets autorisés
+                  const projectExists = projectsData.some((p: Project) => p.ID === parsedProject.ID);
+                  if (projectExists) {
+                    setSelectedProject(parsedProject);
+                    return; // Sortir si nous avons trouvé le projet
                   }
                 }
+                
+                // Si nous n'avons pas pu utiliser storedProject, essayer avec l'ID uniquement
+                if (storedProjectId) {
+                  const projectId = parseInt(storedProjectId, 10);
+                  const projectFromId = projectsData.find((p: Project) => p.ID === projectId);
+                  if (projectFromId) {
+                    setSelectedProject(projectFromId);
+                    // Mise à jour de l'objet projet complet dans localStorage
+                    localStorage.setItem('selectedProject', JSON.stringify(projectFromId));
+                    return; // Sortir si nous avons trouvé le projet
+                  }
+                }
+                
+                // Si le projet n'existe plus ou n'a pas été trouvé, sélectionner le premier projet
+                if (projectsData && projectsData.length > 0) {
+                  setSelectedProject(projectsData[0]);
+                  // Stocker le premier projet dans localStorage
+                  localStorage.setItem('selectedProject', JSON.stringify(projectsData[0]));
+                  localStorage.setItem('selectedProjectId', projectsData[0].ID.toString());
+                }
               } catch (error) {
-                console.error('Erreur lors de la récupération du projet depuis sessionStorage:', error);
+                console.error('Erreur lors de la récupération du projet depuis localStorage:', error);
                 // En cas d'erreur, sélectionner le premier projet
                 if (projectsData && projectsData.length > 0) {
                   setSelectedProject(projectsData[0]);
+                  // Stocker le premier projet dans localStorage
+                  localStorage.setItem('selectedProject', JSON.stringify(projectsData[0]));
+                  localStorage.setItem('selectedProjectId', projectsData[0].ID.toString());
                 }
               }
             } else if (projectsData && projectsData.length > 0 && !selectedProject) {
               // Si aucun projet n'est sauvegardé, sélectionner le premier projet
               setSelectedProject(projectsData[0]);
+              // Stocker le premier projet dans localStorage
+              localStorage.setItem('selectedProject', JSON.stringify(projectsData[0]));
+              localStorage.setItem('selectedProjectId', projectsData[0].ID.toString());
+            }
+          } else {
+            // Si l'authentification SSO échoue, essayer de récupérer l'utilisateur du stockage
+            const storedUser = await getUser();
+            if (storedUser) {
+              setUser(storedUser);
+              const userClaims = storedUser.profile as unknown as UserClaims;
+              setClaims(userClaims);
+
+              const projectsData = await getAuthorizedProjects(userClaims.sub);
+              setProjects(projectsData);
+              
+              // Vérifier s'il y a un projet sauvegardé dans localStorage
+              const storedProject = localStorage.getItem('selectedProject');
+              const storedProjectId = localStorage.getItem('selectedProjectId');
+              
+              if ((storedProject || storedProjectId) && !selectedProject) {
+                try {
+                  // D'abord essayer de récupérer l'objet projet complet
+                  if (storedProject) {
+                    const parsedProject = JSON.parse(storedProject);
+                    // Vérifier si le projet sauvegardé est toujours dans la liste des projets autorisés
+                    const projectExists = projectsData.some((p: Project) => p.ID === parsedProject.ID);
+                    if (projectExists) {
+                      setSelectedProject(parsedProject);
+                      return; // Sortir si nous avons trouvé le projet
+                    }
+                  }
+                  
+                  // Si nous n'avons pas pu utiliser storedProject, essayer avec l'ID uniquement
+                  if (storedProjectId) {
+                    const projectId = parseInt(storedProjectId, 10);
+                    const projectFromId = projectsData.find((p: Project) => p.ID === projectId);
+                    if (projectFromId) {
+                      setSelectedProject(projectFromId);
+                      // Mise à jour de l'objet projet complet dans localStorage
+                      localStorage.setItem('selectedProject', JSON.stringify(projectFromId));
+                      return; // Sortir si nous avons trouvé le projet
+                    }
+                  }
+                  
+                  // Si le projet n'existe plus ou n'a pas été trouvé, sélectionner le premier projet
+                  if (projectsData && projectsData.length > 0) {
+                    setSelectedProject(projectsData[0]);
+                    // Stocker le premier projet dans localStorage
+                    localStorage.setItem('selectedProject', JSON.stringify(projectsData[0]));
+                    localStorage.setItem('selectedProjectId', projectsData[0].ID.toString());
+                  }
+                } catch (error) {
+                  console.error('Erreur lors de la récupération du projet depuis localStorage:', error);
+                  // En cas d'erreur, sélectionner le premier projet
+                  if (projectsData && projectsData.length > 0) {
+                    setSelectedProject(projectsData[0]);
+                    // Stocker le premier projet dans localStorage
+                    localStorage.setItem('selectedProject', JSON.stringify(projectsData[0]));
+                    localStorage.setItem('selectedProjectId', projectsData[0].ID.toString());
+                  }
+                }
+              } else if (projectsData && projectsData.length > 0 && !selectedProject) {
+                // Si aucun projet n'est sauvegardé, sélectionner le premier projet
+                setSelectedProject(projectsData[0]);
+                // Stocker le premier projet dans localStorage
+                localStorage.setItem('selectedProject', JSON.stringify(projectsData[0]));
+                localStorage.setItem('selectedProjectId', projectsData[0].ID.toString());
+              }
+            } else {
+              setUser(null);
+              setProjects(null);
+              setSelectedProject(null);
             }
           }
         } catch (err) {
@@ -215,9 +313,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
       const signalisationData = await getSignalisationProjet(projectId);
       setSignalisations(signalisationData);
-
-      const activitePlanifData = await getActivitePlanif(projectId);
-      setActivitesPlanif(activitePlanifData);
 
       // Récupération des bases associées aux lieux
       if (lieuData && lieuData.length > 0) {
@@ -299,12 +394,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   };
   
   const selectProject = (project: Project) => {
-    setSelectedProject(project);
-    // Sauvegarder le projet sélectionné dans sessionStorage
     try {
-      sessionStorage.setItem('selectedProject', JSON.stringify(project));
+      setSelectedProject(project);
+      
+      // Stocker à la fois l'objet projet complet et son ID dans localStorage
+      localStorage.setItem('selectedProject', JSON.stringify(project));
+      localStorage.setItem('selectedProjectId', project.ID.toString());
     } catch (error) {
-      console.error('Erreur lors de la sauvegarde du projet dans sessionStorage:', error);
+      console.error('Erreur lors de la sélection du projet:', error);
     }
   };
 
@@ -389,11 +486,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const fetchActivites = useCallback(async (projectId: number) => {
     const activiteData = await getActiviteProjet(projectId);
     setActivites(activiteData);
-  }, []);
-
-  const fetchActivitesPlanif = useCallback(async (projectId: number) => {
-    const activiteData = await getActivitePlanif(projectId);
-    setActivitesPlanif(activiteData);
   }, []);
 
   const fetchMateriaux = useCallback(async () => {
@@ -590,7 +682,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     fetchMateriaux,
     fetchSousTraitants,
     fetchSignalisations,
-    fetchActivitesPlanif,
     fetchUnites,
     fetchEquipes,
     fetchBottinsEquipe,

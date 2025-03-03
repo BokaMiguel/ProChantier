@@ -105,7 +105,7 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
       note: notes || "",
       isLab: isLab,
       labQuantity: isLab ? labQuantity : null,
-      date: planif?.date || "",
+      date: "", // Laisser vide pour une nouvelle planification
       activiteIDs: Array.from(selectedActivities),
       projetId: 0,
       quantite: 0,
@@ -136,7 +136,7 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
       note: notes,
       isLab: isLab,
       labQuantity: isLab ? labQuantity : null,
-      date: planif?.date || new Date().toISOString(),
+      date: planif?.date || "", // Laisser vide pour une nouvelle planification
       activiteIDs: Array.from(selectedActivities),
       projetId: 0,
       quantite: 0
@@ -216,7 +216,7 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
           />
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto p-4 bg-gray-50 rounded-xl border border-gray-100">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto p-4 bg-gray-50 rounded-xl border border-gray-100">
           {filteredActivities?.map((activite) => (
             <div 
               key={activite.id} 
@@ -421,8 +421,8 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
   );
 
   return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-[9999] p-8">
-      <div className="bg-white w-11/12 max-w-4xl rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto relative">
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-[9999] p-4">
+      <div className="bg-white w-11/12 max-w-5xl rounded-2xl shadow-2xl max-h-[95vh] overflow-y-auto relative">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-50 w-8 h-8 bg-white hover:bg-gray-100 text-gray-600 hover:text-gray-800 rounded-full flex items-center justify-center shadow-md hover:shadow-lg transition-all duration-300"

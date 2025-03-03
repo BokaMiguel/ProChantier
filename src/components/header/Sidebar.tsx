@@ -128,6 +128,7 @@ const Sidebar: React.FC = () => {
               icon={<FaChartBar className="mr-3" />}
               label="Rapport"
             />
+            {/* Sections désactivées temporairement
             <NavItem
               to="/bordereau"
               icon={<FaFileInvoice className="mr-3" />}
@@ -138,6 +139,7 @@ const Sidebar: React.FC = () => {
               icon={<FaClock className="mr-3" />}
               label="Feuille de temps"
             />
+            */}
           </ul>
         </nav>
       </div>

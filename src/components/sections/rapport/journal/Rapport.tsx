@@ -18,7 +18,7 @@ import {
 import FilterMenu from "./FilterMenu";
 import JournalDetails from "./JournalDetails";
 import { JournalChantier, JournalActivites, MateriauxJournal, SousTraitantJournal, BottinJournal, LocalisationJournal } from "../../../../models/JournalFormModel";
-import { getMeteoIcon, getStatutIcon } from "../../../../services/IconServices";
+import { getMeteoIcon, getMeteoName, getStatutIcon } from "../../../../services/IconServices";
 import ActionButtons from "./ActionsButtons";
 import { useAuth } from "../../../../context/AuthContext";
 import { format } from "date-fns";
@@ -112,7 +112,7 @@ const Rapport: React.FC = () => {
         
         if (currentFilters.meteo && currentFilters.meteo.length > 0) {
           results = results.filter((journal: JournalChantier) => 
-            currentFilters.meteo.includes(String(journal.meteoId))
+            currentFilters.meteo.includes(String(journal.meteoTypeId))
           );
         }
         
@@ -307,15 +307,15 @@ const Rapport: React.FC = () => {
             <input
               type="text"
               placeholder="Rechercher un journal..."
-              className="w-full md:w-80 pl-10 pr-4 py-3 border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm"
+              className="w-full md:w-80 pl-10 pr-10 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <FaSearch className="absolute left-3 top-3.5 text-blue-400" />
+            <FaSearch className="absolute left-3 top-3.5 text-blue-500" />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm("")}
-                className="absolute right-3 top-3.5 text-blue-400 hover:text-blue-600"
+                className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600 transition-colors duration-200"
               >
                 <FaTimes />
               </button>
@@ -324,11 +324,22 @@ const Rapport: React.FC = () => {
         </div>
         <button
           onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
-          className="flex items-center space-x-2 px-5 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 shadow-sm"
+          className={`flex items-center space-x-2 px-5 py-3 rounded-lg transition-colors duration-200 shadow-sm ${
+            isFilterMenuOpen 
+              ? "bg-blue-700 text-white hover:bg-blue-800" 
+              : "bg-blue-600 text-white hover:bg-blue-700"
+          }`}
         >
           <FaFilter />
-          <span>Filtres avancés</span>
-          {isFilterMenuOpen ? <FaChevronUp /> : <FaChevronDown />}
+          <span className="font-medium">Filtres avancés</span>
+          <div className="w-5 h-5 flex items-center justify-center bg-white bg-opacity-20 rounded-full">
+            {isFilterMenuOpen ? <FaChevronUp className="text-xs" /> : <FaChevronDown className="text-xs" />}
+          </div>
+          {Object.values(currentFilters).some(val => 
+            Array.isArray(val) ? val.length > 0 : Boolean(val)
+          ) && (
+            <div className="ml-1 w-2 h-2 rounded-full bg-white"></div>
+          )}
         </button>
       </div>
 
@@ -440,8 +451,13 @@ const Rapport: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center text-xl">
-                        {getMeteoIcon(journal.meteoId)}
+                      <div className="flex items-center justify-center">
+                        <span className="text-xl mr-2">
+                          {getMeteoIcon(journal.meteoTypeId)}
+                        </span>
+                        <span>
+                          {getMeteoName(journal.meteoTypeId)}
+                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">

@@ -1,6 +1,8 @@
 import React, { useRef, useState } from 'react';
 import SignaturePad from 'react-signature-canvas';
-import { FaUndo, FaSave, FaTimes } from 'react-icons/fa';
+import { FaUndo, FaSave, FaTimes, FaCheck } from 'react-icons/fa';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 interface SignatureSectionProps {
   onSignatureComplete: (signatureData: {
@@ -14,6 +16,7 @@ const SignatureSection: React.FC<SignatureSectionProps> = ({ onSignatureComplete
   const signaturePadRef = useRef<SignaturePad>(null);
   const [signataire, setSignataire] = useState('');
   const [error, setError] = useState('');
+  const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null);
 
   const handleClear = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -23,6 +26,7 @@ const SignatureSection: React.FC<SignatureSectionProps> = ({ onSignatureComplete
       signaturePadRef.current.clear();
     }
     setError('');
+    setConfirmationMessage(null);
   };
 
   const handleSave = (e: React.MouseEvent) => {
@@ -39,12 +43,19 @@ const SignatureSection: React.FC<SignatureSectionProps> = ({ onSignatureComplete
       return;
     }
 
+    const now = new Date();
     const signatureData = {
       signature: signaturePadRef.current.toDataURL('image/png', 1.0),
       signataire: signataire,
-      date: new Date(),
+      date: now,
     };
 
+    // Formater la date et l'heure
+    const formattedDateTime = format(now, "d MMMM yyyy 'à' HH:mm", { locale: fr });
+    
+    // Afficher le message de confirmation
+    setConfirmationMessage(`Signature confirmée le ${formattedDateTime}`);
+    
     // Appeler la fonction de callback avec les données de signature
     onSignatureComplete(signatureData);
     
@@ -55,6 +66,14 @@ const SignatureSection: React.FC<SignatureSectionProps> = ({ onSignatureComplete
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <div className="space-y-6">
+        {/* Message de confirmation */}
+        {confirmationMessage && (
+          <div className="flex items-center p-4 mb-4 text-green-800 bg-green-100 rounded-lg">
+            <FaCheck className="mr-2 text-green-600" />
+            <span>{confirmationMessage}</span>
+          </div>
+        )}
+
         {/* Champ du nom du signataire */}
         <div>
           <label htmlFor="signataire" className="block text-sm font-medium text-gray-700 mb-2">

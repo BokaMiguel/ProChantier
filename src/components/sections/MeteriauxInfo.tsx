@@ -46,7 +46,6 @@ const MateriauxInfo: React.FC<MateriauxInfoProps> = ({
           // Trouver le matériau correspondant dans le contexte
           const selectedMateriau = contextMateriaux?.find(m => m.nom === value);
           if (selectedMateriau) {
-            console.log(`Matériau sélectionné: ID=${selectedMateriau.id}, Nom=${selectedMateriau.nom}`);
             // Mettre à jour avec l'ID réel du matériau du contexte
             return { 
               ...materiau, 
@@ -100,11 +99,24 @@ const MateriauxInfo: React.FC<MateriauxInfoProps> = ({
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                 >
                   <option value="">Sélectionner un matériau</option>
-                  {contextMateriaux?.map((item, idx) => (
-                    <option key={idx} value={item.nom}>
-                      {item.nom}
-                    </option>
-                  ))}
+                  {contextMateriaux?.map((item, idx) => {
+                    // Vérifier si ce matériau est déjà sélectionné dans un autre combobox
+                    const isAlreadySelected = materiaux.some(
+                      m => m.localId !== materiau.localId && // Ne pas comparer avec l'élément actuel
+                          (m.id === item.id || m.materielId === item.id) // Vérifier si l'ID est déjà utilisé
+                    );
+                    
+                    return (
+                      <option 
+                        key={idx} 
+                        value={item.nom}
+                        disabled={isAlreadySelected} // Désactiver si déjà sélectionné
+                        className={isAlreadySelected ? "text-gray-400" : ""}
+                      >
+                        {item.nom}{isAlreadySelected ? " (déjà sélectionné)" : ""}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 

@@ -25,7 +25,6 @@ const ModalGestion: React.FC<ModalProps> = ({
   useEffect(() => {
     // Initialiser le formulaire avec les données de l'élément
     if (item) {
-      console.log("Initialisation du modal avec l'élément:", item);
       setFormState(item);
     }
   }, [item]);

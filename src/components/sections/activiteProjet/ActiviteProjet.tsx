@@ -121,12 +121,19 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
   };
 
   const calculateQuantity = (activite: JournalActivite) => {
-    if (isLiaisonMode(activite.id) && activite.liaisons && activite.liaisons.length > 0) {
-      return activite.liaisons.reduce((total, liaison) => total + (liaison.distanceInMeters || 0), 0);
-    } else if (!isLiaisonMode(activite.id) && activite.bases && activite.bases.length > 0) {
-      return activite.bases.length;
+    let total = 0;
+    
+    // Ajouter les distances des liaisons
+    if (activite.liaisons && activite.liaisons.length > 0) {
+      total += activite.liaisons.reduce((sum, liaison) => sum + (liaison.distanceInMeters || 0), 0);
     }
-    return 0;
+    
+    // Ajouter le nombre de bases
+    if (activite.bases && activite.bases.length > 0) {
+      total += activite.bases.length;
+    }
+    
+    return total;
   };
 
   const handleQuantityChange = (activiteId: number, value: string) => {
@@ -156,7 +163,7 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
         const updatedActivite = {
           ...activite,
           liaisons: updatedLiaisons,
-          bases: []
+          // Ne pas vider les bases
         };
         updatedActivite.quantite = calculateQuantity(updatedActivite);
         return updatedActivite;
@@ -174,7 +181,7 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
         const updatedActivite = {
           ...activite,
           bases: [...newBases],
-          liaisons: []
+          // Ne pas vider les liaisons
         };
         updatedActivite.quantite = calculateQuantity(updatedActivite);
         return updatedActivite;
@@ -191,21 +198,8 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
       [activiteId]: mode
     }));
     
-    // Réinitialiser les bases/liaisons lors du changement de mode
-    if (planifActivites) {
-      const updatedActivites = planifActivites.map(activite => {
-        if (activite.id === activiteId) {
-          return {
-            ...activite,
-            bases: mode ? [] : activite.bases,
-            liaisons: mode ? activite.liaisons : [],
-            quantite: 0
-          };
-        }
-        return activite;
-      });
-      onPlanifActivitesChange(updatedActivites);
-    }
+    // Ne pas réinitialiser les bases/liaisons lors du changement de mode
+    // Simplement mettre à jour le mode
   };
 
   const getUsedBases = (currentActiviteId: number): number[] => {
@@ -220,23 +214,12 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
         activite.lieuID === currentActivite.lieuID
       );
     
-    // Récupérer les bases directement sélectionnées
+    // Récupérer uniquement les bases directement sélectionnées
     const directlySelectedBases = sameActivityTypeActivities
       .flatMap(activite => activite.bases?.map(base => base.id) || []);
     
-    // Récupérer les bases utilisées dans les liaisons
-    const basesInLiaisons = sameActivityTypeActivities
-      .flatMap(activite => {
-        const basesFromLiaisons: number[] = [];
-        activite.liaisons?.forEach(liaison => {
-          basesFromLiaisons.push(liaison.baseA);
-          basesFromLiaisons.push(liaison.baseB);
-        });
-        return basesFromLiaisons;
-      });
-    
-    // Combiner les deux ensembles de bases et éliminer les doublons
-    return [...new Set([...directlySelectedBases, ...basesInLiaisons])];
+    // Ne retourner que les bases directement sélectionnées
+    return [...new Set(directlySelectedBases)];
   };
 
   const getUsedLiaisons = (currentActiviteId: number): number[] => {
@@ -417,7 +400,7 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
                       )}
                     </span>
                     <label className="text-gray-700 text-sm font-semibold ml-2">
-                      {planifActivite.liaisons && planifActivite.liaisons.length ? "Distance (m)" : "Quantité"}
+                      {planifActivite.liaisons && planifActivite.liaisons.length ? "Distance (m) et quantité" : "Quantité et bases"}
                     </label>
                   </div>
                   <input
@@ -435,7 +418,7 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
                     <FaMapMarkerAlt className="text-blue-600 w-4 h-4" />
                   </span>
                   <label className="text-gray-700 text-sm font-semibold ml-2">
-                    {isLiaisonMode(planifActivite.id) ? "Liaisons" : "Bases"}
+                    Bases et liaisons
                   </label>
                 </div>
                 <button
@@ -445,7 +428,7 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
                 >
                   <div className="flex flex-wrap gap-2">
                     {/* Affichage des bases */}
-                    {!isLiaisonMode(planifActivite.id) && planifActivite.bases && planifActivite.bases.map((base, index) => (
+                    {planifActivite.bases && planifActivite.bases.map((base, index) => (
                       <span
                         key={`base-${planifActivite.id}-${base.id}-${index}`}
                         className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm"
@@ -455,7 +438,7 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
                     ))}
 
                     {/* Affichage des liaisons */}
-                    {isLiaisonMode(planifActivite.id) && planifActivite.liaisons && planifActivite.liaisons.map((liaison, index) => {
+                    {planifActivite.liaisons && planifActivite.liaisons.map((liaison, index) => {
                       // Utiliser les données stockées dans la liaison elle-même plutôt que de chercher dans lieuBases
                       return (
                         <span
@@ -470,7 +453,7 @@ const ActiviteProjet: React.FC<ActiviteProjetProps> = ({
                     {/* Message si vide */}
                     {(!planifActivite.bases?.length && !planifActivite.liaisons?.length) && (
                       <span className="text-gray-400 italic">
-                        Cliquez pour sélectionner des {isLiaisonMode(planifActivite.id) ? "liaisons" : "bases"}
+                        Cliquez pour sélectionner des bases ou des liaisons
                       </span>
                     )}
                   </div>
