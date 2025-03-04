@@ -109,11 +109,6 @@ const Sidebar: React.FC = () => {
               label="Accueil"
             />
             <NavItem
-              to="/journal-chantier"
-              icon={<FaTasks className="mr-3" />}
-              label="Journal de chantier"
-            />
-            <NavItem
               to="/planning"
               icon={<FaClipboardList className="mr-3" />}
               label="Planification"

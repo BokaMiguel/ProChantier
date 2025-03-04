@@ -565,23 +565,25 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
               )}
             </View>
           </View>
+        </View>
+        <PageFooter />
+      </Page>
 
-          {/* Autres sections */}
-          {/* Section des sous-traitants */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <ContractorsIcon />
-              <Text style={styles.sectionHeaderText}>Sous-Traitants</Text>
-            </View>
-            <View style={styles.sectionContent}>
-              {data.journalSousTraitants && data.journalSousTraitants.length > 0 ? (
-                renderSousTraitantsTable()
-              ) : (
-                <Text style={styles.emptySection}>Aucun sous-traitant enregistré</Text>
-              )}
-            </View>
+      {/* Troisième page : Activités */}
+      <Page size="A4" style={styles.page}>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <ActivitiesIcon />
+            <Text style={styles.sectionHeaderText}>Activités du Projet</Text>
           </View>
+          {renderActivitesTable()}
+        </View>
+        <PageFooter />
+      </Page>
 
+      {/* Quatrième page : Matériaux et Sous-Traitants */}
+      <Page size="A4" style={styles.page}>
+        <View style={styles.container}>
           {/* Section des matériaux et outillages */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -596,18 +598,21 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
               )}
             </View>
           </View>
-        </View>
-        <PageFooter />
-      </Page>
 
-      {/* Troisième page : Activités */}
- <Page size="A4" style={styles.page}>
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <ActivitiesIcon />
-            <Text style={styles.sectionHeaderText}>Activités du Projet</Text>
+          {/* Section des sous-traitants */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <ContractorsIcon />
+              <Text style={styles.sectionHeaderText}>Sous-Traitants</Text>
+            </View>
+            <View style={styles.sectionContent}>
+              {data.journalSousTraitants && data.journalSousTraitants.length > 0 ? (
+                renderSousTraitantsTable()
+              ) : (
+                <Text style={styles.emptySection}>Aucun sous-traitant enregistré</Text>
+              )}
+            </View>
           </View>
-          {renderActivitesTable()}
         </View>
         <PageFooter />
       </Page>
