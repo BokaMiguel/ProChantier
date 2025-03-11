@@ -14,8 +14,11 @@ import {
   FaLightbulb} from "react-icons/fa";
 import { format, startOfWeek, endOfWeek, addDays, parseISO, isValid } from "date-fns";
 import { fr } from "date-fns/locale";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+// Imports pour le DatePicker de Material UI
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { TextField } from '@mui/material';
 import CreatePlanifModal from "./CreatePlanifModal"; 
 import ImportPlanifModal from "./ImportPlanifModal";
 import { Planif, PlanifActivite } from "../../models/JournalFormModel";
@@ -66,6 +69,7 @@ const PlanningForm: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [rawPlanifications, setRawPlanifications] = useState<Planif[]>([]);
   const [importablePlanifications, setImportablePlanifications] = useState<Planif[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0); // État pour forcer le rafraîchissement de l'interface
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
@@ -75,6 +79,7 @@ const PlanningForm: React.FC = () => {
   const [selectedActivities, setSelectedActivities] = useState<{
     [key: string]: Set<number>;
   }>({});
+  const [selectedImportDate, setSelectedImportDate] = useState<Date | null>(null);
 
   const [existingPlanifications, setExistingPlanifications] = useState<Map<string, number>>(new Map());
 
@@ -151,9 +156,15 @@ const PlanningForm: React.FC = () => {
 
   useEffect(() => {
     if (selectedProject) {
-      fetchPlanifs(selectedProject.ID);
+      // Ne pas recharger automatiquement si des modifications non sauvegardées sont présentes
+      if (!hasUnsavedChanges) {
+        console.log("Chargement des planifications du projet", selectedProject.ID);
+        fetchPlanifs(selectedProject.ID);
+      } else {
+        console.log("Modifications non sauvegardées, rechargement des planifications ignoré");
+      }
     }
-  }, [selectedProject]);
+  }, [selectedProject]); // Supprimer refreshKey pour éviter le rechargement automatique
 
   // Calcul des dates de début et fin de semaine
   const start = useMemo(() => {
@@ -183,16 +194,9 @@ const PlanningForm: React.FC = () => {
 
   // Fonction pour distribuer les planifications aux bonnes journées
   const distributePlanificationsToWeek = useCallback((date: Date, planifications: Planif[]) => {
-    console.log("=== Distribution des planifications ===");
-    console.log("Date courante:", format(date, 'dd/MM/yyyy'));
-    console.log("Nombre total de planifications:", planifications.length);
-    
     // Calculer le début et la fin de la semaine
     const weekStart = startOfWeek(date, { weekStartsOn: 0 }); // 0 pour dimanche
     const weekEnd = endOfWeek(date, { weekStartsOn: 0 }); // 0 pour dimanche
-    
-    console.log("Semaine du", format(weekStart, 'dd/MM/yyyy'), "au", format(weekEnd, 'dd/MM/yyyy'));
-    console.log("Premier jour de la semaine (dimanche):", format(weekStart, 'yyyy-MM-dd'));
 
     // Initialiser la structure des activités par jour - Dimanche en premier
     const newActivities: { [key: string]: Planif[] } = {
@@ -287,17 +291,12 @@ const PlanningForm: React.FC = () => {
   const filterImportablePlanifications = useCallback(() => {
     if (!rawPlanifications.length) return;
     
-    // Calculer les dates de la semaine courante au format ISO
-    const currentWeekDatesISO = weekDates.map(date => format(date, 'yyyy-MM-dd'));
+    // Toutes les planifications sont importables
+    // Nous permettons de réutiliser des planifications même de la semaine courante
+    setImportablePlanifications(rawPlanifications);
     
-    // Filtrer les planifications qui ne sont pas déjà dans la semaine courante
-    const importable = rawPlanifications.filter(planif => {
-      const planifDate = planif.Date;
-      return !currentWeekDatesISO.includes(planifDate);
-    });
-    
-    setImportablePlanifications(importable);
-  }, [rawPlanifications, weekDates]);
+    console.log(`${rawPlanifications.length} planifications disponibles pour l'importation`);
+  }, [rawPlanifications]);
 
   useEffect(() => {
     if (rawPlanifications.length > 0) {
@@ -363,7 +362,6 @@ const PlanningForm: React.FC = () => {
     });
   }, [currentDate]);
 
-  // Appeler la fonction après le chargement des données
   useEffect(() => {
     if (Object.values(localActivities).some(activities => activities.length > 0)) {
       console.log("Planifications chargées, vérification des dates...");
@@ -382,56 +380,68 @@ const PlanningForm: React.FC = () => {
     
     // Pour chaque planification à importer
     planificationsToImport.forEach(planif => {
-      // Déterminer le jour de la semaine pour cette planification
-      const planifDate = new Date(planif.Date);
-      const dayOfWeekNumber = planifDate.getDay(); // 0 pour dimanche, 1 pour lundi, etc.
-      
-      // Utiliser l'index du jour pour obtenir le nom du jour dans notre tableau daysOfWeek
-      const targetDay = daysOfWeek[dayOfWeekNumber];
-      
-      console.log("Jour d'origine:", format(planifDate, 'EEEE', { locale: fr }));
-      console.log("Jour cible:", targetDay);
-      console.log("Index du jour:", dayOfWeekNumber);
-      
-      // Calculer la nouvelle date en ajoutant le nombre de jours à la date de début de semaine
-      const newDate = format(addDays(start, dayOfWeekNumber), 'yyyy-MM-dd');
-      console.log("Nouvelle date calculée:", newDate);
-      
-      // Vérifier si une planification similaire existe déjà pour ce jour
-      const existingSimilarPlanif = updatedActivities[targetDay]?.some(existingPlanif => {
-        // Si les IDs d'activités sont identiques ou très similaires, considérer comme doublon
-        if (!existingPlanif.PlanifActivites || !planif.PlanifActivites) return false;
-        
-        // Vérifier si au moins une activité est commune (pour éviter les doublons)
-        return planif.PlanifActivites.some(id => existingPlanif.PlanifActivites?.includes(id));
-      });
-      
-      // Si une planification similaire existe déjà, ne pas l'ajouter
-      if (existingSimilarPlanif) {
-        console.log("Une planification similaire existe déjà, ignorée:", planif);
-        return;
+      // Trouver le jour de la semaine correspondant à la date de la planification
+      if (planif.Date) {
+        try {
+          const planifDate = parseISO(planif.Date);
+          
+          if (isValid(planifDate)) {
+            // Obtenir le jour de la semaine en français avec première lettre majuscule
+            const dayName = format(planifDate, 'EEEE', { locale: fr });
+            const formattedDayName = dayName.charAt(0).toUpperCase() + dayName.slice(1).toLowerCase();
+            
+            // Convertir au format utilisé dans l'interface (première lettre majuscule uniquement)
+            const dayKey = Object.keys(updatedActivities).find(
+              key => key.toLowerCase() === formattedDayName.toLowerCase()
+            );
+            
+            if (!dayKey) {
+              console.error(`Jour non trouvé dans les activités locales: ${formattedDayName}`);
+              console.log("Jours disponibles:", Object.keys(updatedActivities));
+              return;
+            }
+            
+            console.log(`Importation de la planification #${planif.ID} pour le jour ${dayKey} (date: ${planif.Date})`);
+            
+            // S'assurer que les activités ont des IDs corrects
+            if (planif.PlanifActivites && planif.PlanifActivites.length > 0) {
+              planif.PlanifActivites = planif.PlanifActivites.map(act => ({
+                ...act,
+                // Conserver ID=0 pour les nouvelles activités
+                PlanifID: planif.ID
+              }));
+            }
+            
+            // Ajouter la planification au jour correspondant
+            updatedActivities[dayKey].push(planif);
+            console.log(`Planification ajoutée à ${dayKey}:`, planif);
+            console.log(`Nombre de planifications pour ${dayKey}:`, updatedActivities[dayKey].length);
+          } else {
+            console.error(`Date invalide: ${planif.Date}`);
+          }
+        } catch (error) {
+          console.error(`Erreur lors du traitement de la date ${planif.Date}:`, error);
+        }
+      } else {
+        console.error("Planification sans date:", planif);
       }
-      
-      // Créer une {planif.ID > 0 ? Planif # : " Nouvelle Planif\}ication avec la date mise à jour
-      const newPlanif: Planif = {
-        ...planif,
-        ID: -Date.now() - Math.floor(Math.random() * 1000), // ID temporaire négatif unique
-        Date: newDate
-      };
-      
-      // Ajouter la planification au jour cible
-      if (!updatedActivities[targetDay]) {
-        updatedActivities[targetDay] = [];
-      }
-      updatedActivities[targetDay].push(newPlanif);
-      
-      // Mettre à jour l'état local
-      setLocalActivities(updatedActivities);
-      setHasUnsavedChanges(true);
-      
-      console.log(`${planificationsToImport.length} planification(s) importée(s) avec succès`);
-      console.log("Activités après importation:", updatedActivities);
     });
+    
+    // Mettre à jour l'état avec les nouvelles activités
+    console.log("Activités avant mise à jour:", JSON.stringify(localActivities));
+    setLocalActivities(updatedActivities);
+    console.log("Activités après mise à jour:", JSON.stringify(updatedActivities));
+    
+    // Forcer un rafraîchissement de l'interface
+    setTimeout(() => {
+      setRefreshKey(prev => {
+        console.log("Rafraîchissement forcé, nouvelle valeur de refreshKey:", prev + 1);
+        return prev + 1;
+      });
+    }, 100);
+    
+    setHasUnsavedChanges(true);
+    setShowImportModal(false);
   };
 
   const handleEditActivity = (activity: Planif) => {
@@ -966,12 +976,6 @@ const PlanningForm: React.FC = () => {
 
   // Fonction pour ouvrir le modal d'import
   const handleOpenImportModal = () => {
-    // Vérifier si nous avons des planifications importables
-    if (importablePlanifications.length === 0) {
-      alert("Aucune planification disponible pour l'importation. Toutes les planifications existantes sont déjà dans la semaine courante.");
-      return;
-    }
-    
     setShowImportModal(true);
   };
 
@@ -1133,20 +1137,37 @@ const PlanningForm: React.FC = () => {
     setShowDeleteConfirmation(true);
   };
 
+  const handleImportForDay = (day: string, date: Date) => {
+    console.log(`Importation de planifications pour le jour ${day} (date: ${format(date, 'yyyy-MM-dd')})`);
+    setSelectedImportDate(date);
+    setShowImportModal(true);
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-lg">
       {/* En-tête sticky avec DatePicker et boutons */}
       <div className="sticky top-0 z-10 bg-white p-4 border-b flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center space-x-4">
           <div className="flex items-center">
-            <FaCalendarDay className="mr-2" />
-            <DatePicker
-              selected={currentDate}
-              onChange={handleDateChange}
-              locale={fr}
-              dateFormat="dd/MM/yyyy"
-              className="border rounded p-2 w-32"
-            />
+            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={fr}>
+              <DatePicker
+                label="Semaine du"
+                value={currentDate}
+                onChange={(newDate) => {
+                  if (newDate) handleDateChange(newDate);
+                }}
+                slots={{
+                  textField: TextField
+                }}
+                slotProps={{
+                  textField: { 
+                    size: "small",
+                    sx: { width: '150px' },
+                    variant: "outlined" 
+                  }
+                }}
+              />
+            </LocalizationProvider>
           </div>
           <div className="text-sm text-gray-600">
             {format(start, "EEEE d MMMM", { locale: fr })} au{" "}
@@ -1219,12 +1240,22 @@ const PlanningForm: React.FC = () => {
                           <span className="font-bold">{dayName}</span>
                           <span className="text-white/90 ml-2">{format(date, 'd MMMM yyyy', { locale: fr })}</span>
                         </div>
-                        <button
-                          onClick={() => handleCreatePlanif(dayName)}
-                          className="p-1 text-white hover:text-blue-200 transition-colors duration-200"
-                        >
-                          <FaPlus size={20} />
-                        </button>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => handleImportForDay(dayName, date)}
+                            className="p-1 text-white hover:text-blue-200 transition-colors duration-200"
+                            title="Importer des planifications pour ce jour"
+                          >
+                            <FaFileImport size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleCreatePlanif(dayName)}
+                            className="p-1 text-white hover:text-blue-200 transition-colors duration-200"
+                            title="Ajouter une nouvelle planification"
+                          >
+                            <FaPlus size={20} />
+                          </button>
+                        </div>
                       </div>
                       
                       {/* Liste des activités */}
@@ -1500,39 +1531,8 @@ const PlanningForm: React.FC = () => {
           isOpen={showImportModal}
           onClose={() => setShowImportModal(false)}
           planifications={importablePlanifications}
-          onImport={(planificationsToImport) => {
-            // Pour chaque planification à importer
-            planificationsToImport.forEach(planif => {
-              // Générer un nouvel ID négatif temporaire
-              planif.ID = -Date.now() - Math.floor(Math.random() * 1000);
-              
-              // Mettre à jour la date pour qu'elle corresponde à la semaine courante
-              if (selectedDay) {
-                const dayIndex = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"]
-                  .indexOf(selectedDay.toLowerCase());
-                
-                if (dayIndex !== -1) {
-                  const newDate = format(addDays(start, dayIndex), 'yyyy-MM-dd');
-                  planif.Date = newDate;
-                }
-              }
-              
-              // Ajouter au jour sélectionné
-              if (selectedDay) {
-                setLocalActivities(prev => {
-                  const updatedActivities = { ...prev };
-                  if (!updatedActivities[selectedDay]) {
-                    updatedActivities[selectedDay] = [];
-                  }
-                  updatedActivities[selectedDay].push(planif);
-                  return updatedActivities;
-                });
-              }
-            });
-            
-            setHasUnsavedChanges(true);
-            setShowImportModal(false);
-          }}
+          onImport={handleImportActivities}
+          preselectedDate={selectedImportDate}
         />
       )}
       {tooltipPosition && (
