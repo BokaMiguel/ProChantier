@@ -49,6 +49,7 @@ export interface Lieu {
   projetId: number;
 }
 
+//Interface obsolète, à supprimer ultérieurement
 export interface ActivitePlanif {
   id: number;
   projetId: number;
@@ -64,6 +65,12 @@ export interface ActivitePlanif {
   activiteIDs: number[];
   quantite: number;
   nomActivite?: string;
+  activitesDetails?: Array<{
+    activiteId: number;
+    hrsDebut?: string;
+    hrsFin?: string;
+    isComplete?: boolean;
+  }>;
 }
 
 export interface PlanifActivites {
@@ -77,6 +84,22 @@ export interface PlanifActivites {
   liaisons?: LocalisationDistance[];
   activiteNom?: string;
   lieuNom?: string;
+  hrsDebut: string;
+  hrsFin: string;
+  defaultEntrepriseId: number;
+  signalisationId: number;
+  note: string;
+  isLab: boolean;
+  labQuantity: number | null;
+  date: string;
+  activiteIDs: number[];
+  nomActivite?: string;
+  activitesDetails?: Array<{
+    activiteId: number;
+    hrsDebut?: string;
+    hrsFin?: string;
+    isComplete?: boolean;
+  }>;
 }
 
 // Types pour la localisation
@@ -220,20 +243,6 @@ export const initialPlanifChantier: TabPlanifChantier = {
   signalisationId: 0,
   note: "",
   activites: []
-};
-
-export const initialPlanif: PlanifChantier = {
-  id: 0,
-  date: new Date().toISOString().split('T')[0],
-  hrsDebut: "",
-  hrsFin: "",
-  lieuID: 0,
-  projetID: 0,
-  defaultEntrepriseId: 0,
-  isLab: false,
-  signalisationId: 0,
-  note: "",
-  quantite: 0
 };
 
 export interface TabPlanifActivites {
@@ -499,6 +508,7 @@ export const initialActivite: ActivitePlanif = {
   activiteIDs: [],
   quantite: 0,
   nomActivite: "",
+  activitesDetails: []
 };
 
 export const initialMateriau: Materiau = {
@@ -565,3 +575,52 @@ export interface TabEquipeJournal {
   journalId: number; // FK vers Journal
   equipeId: number; // FK vers TabEquipes
 }
+
+// Nouveaux modèles pour la planification
+export interface Planif {
+  ID: number;
+  ProjetID: number;
+  HrsDebut: string;
+  HrsFin: string;
+  defaultEntreprise: number;
+  note: string;
+  Date: string;
+  PlanifActivites: PlanifActivite[];
+}
+
+export interface PlanifActivite {
+  ID: number;
+  PlanifID: number;
+  debut: string;
+  fin: string;
+  signalisation: number;
+  lieuId: number;
+  qteLab?: number | null;
+  activiteId: number;
+  isComplete?: boolean;
+  sousTraitantId?: number; // Champ ajouté pour le sous-traitant spécifique à l'activité
+}
+
+export const initialPlanifActivite: PlanifActivite = {
+  ID: 0,
+  PlanifID: 0,
+  debut: "",
+  fin: "",
+  signalisation: 0,
+  lieuId: 0,
+  qteLab: null,
+  activiteId: 0,
+  isComplete: false,
+  sousTraitantId: undefined
+};
+
+export const initialPlanif: Planif = {
+  ID: 0,
+  ProjetID: 0,
+  HrsDebut: "",
+  HrsFin: "",
+  defaultEntreprise: 0,
+  note: "",
+  Date: new Date().toISOString().split('T')[0],
+  PlanifActivites: [],
+};

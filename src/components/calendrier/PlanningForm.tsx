@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   DragDropContext,
   Droppable,
@@ -8,26 +8,17 @@ import {
 import {
   FaCalendarDay,
   FaPlus,
-  FaClock,
-  FaBuilding,
-  FaMapMarkerAlt,
-  FaEdit,
-  FaSign,
-  FaTrash,
-  FaFlask,
-  FaCog,
   FaSave,
   FaFileImport,
-  FaPencilAlt,
-  FaClipboardList,
-} from "react-icons/fa";
+  FaTimes,
+  FaLightbulb} from "react-icons/fa";
 import { format, startOfWeek, endOfWeek, addDays, parseISO, isValid } from "date-fns";
 import { fr } from "date-fns/locale";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import CreatePlanifModal from "./CreatePlanifModal"; 
 import ImportPlanifModal from "./ImportPlanifModal";
-import { ActivitePlanif } from "../../models/JournalFormModel";
+import { Planif, PlanifActivite } from "../../models/JournalFormModel";
 import { useAuth } from "../../context/AuthContext";
 import {
   createOrUpdatePlanifChantier,
@@ -35,12 +26,19 @@ import {
   deletePlanifActivites,
   getPlanifChantierByProjet,
   getPlanifActivites,
+  deletePlanifChantier,
+  createPlanifWithActivities
 } from "../../services/JournalService";
 import './PlanningButton.css';
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { Card, CardContent, CardHeader } from "../ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
+import { Clock, Building2, MapPin, AlertTriangle, Beaker, Edit, Trash, Share2, Hammer, Sun, Moon, MessageSquare } from "lucide-react";
+import { ConfirmationDialog } from "../ui/confirmation-dialog";
 
 const PlanningForm: React.FC = () => {
   const {
-    activitesPlanif,
     activites,
     lieux,
     sousTraitants,
@@ -48,21 +46,8 @@ const PlanningForm: React.FC = () => {
     selectedProject,
   } = useAuth();
 
-  // Logs pour déboguer
-  useEffect(() => {
-  }, [activitesPlanif, activites, lieux, sousTraitants, signalisations, selectedProject]);
-
-  // Assurez-vous que les données sont chargées quand un projet est sélectionné
-  useEffect(() => {
-    if (selectedProject && (!activites || !lieux || !sousTraitants || !signalisations)) {
-      console.log('Projet sélectionné mais données manquantes, rechargement...');
-      // Les données devraient être chargées automatiquement via le contexte Auth
-      // quand selectedProject change
-    }
-  }, [selectedProject, activites, lieux, sousTraitants, signalisations]);
-
   const [activities, setActivities] = useState<{
-    [key: string]: ActivitePlanif[];
+    [key: string]: Planif[];
   }>({
     Dimanche: [],
     Lundi: [],
@@ -74,26 +59,101 @@ const PlanningForm: React.FC = () => {
   });
   
   const [localActivities, setLocalActivities] = useState<{
-    [key: string]: ActivitePlanif[];
+    [key: string]: Planif[];
   }>(activities);
   
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [rawPlanifications, setRawPlanifications] = useState<Planif[]>([]);
+  const [importablePlanifications, setImportablePlanifications] = useState<Planif[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [planifToEdit, setPlanifToEdit] = useState<ActivitePlanif | null>(null);
-  const [selectedDay, setSelectedDay] = useState<string>("");
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [planifToDelete, setPlanifToDelete] = useState<Planif | null>(null);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [planifToEdit, setPlanifToEdit] = useState<Planif | null>(null);
   const [selectedActivities, setSelectedActivities] = useState<{
     [key: string]: Set<number>;
   }>({});
 
   const [existingPlanifications, setExistingPlanifications] = useState<Map<string, number>>(new Map());
 
-  // State pour stocker toutes les planifications brutes
-  const [rawPlanifications, setRawPlanifications] = useState<ActivitePlanif[]>([]);
-  
-  // State pour stocker les planifications disponibles pour l'import (celles qui ne sont pas déjà dans la semaine courante)
-  const [importablePlanifications, setImportablePlanifications] = useState<ActivitePlanif[]>([]);
+  // Logging pour le débogage
+  useEffect(() => {
+    console.log("Activités disponibles:", activites);
+    console.log("Lieux disponibles:", lieux);
+    console.log("État local des planifs:", localActivities);
+    console.log("Dimanche planifs:", localActivities.Dimanche);
+  }, [activites, lieux, sousTraitants, signalisations, selectedProject, localActivities]);
+
+  // Assurez-vous que les données sont chargées quand un projet est sélectionné
+  useEffect(() => {
+    if (selectedProject && (!activites || !lieux || !sousTraitants || !signalisations)) {
+      console.log('Projet sélectionné mais données manquantes, rechargement...');
+      // Les données devraient être chargées automatiquement via le contexte Auth
+      // quand selectedProject change
+    }
+  }, [selectedProject, activites, lieux, sousTraitants, signalisations]);
+
+  // Fonction pour récupérer les planifs
+  const fetchPlanifs = async (projectId: number) => {
+    try {
+      console.log("Récupération des planifs pour le projet:", projectId);
+      const planifResponse = await getPlanifChantierByProjet(projectId);
+      
+      if (planifResponse && Array.isArray(planifResponse)) {
+        console.log("Planifs reçues:", planifResponse);
+        
+        const planifications = planifResponse.map(planif => {
+          // Créer les PlanifActivites à partir des activités reçues
+          const planifActivites: PlanifActivite[] = planif.activites && Array.isArray(planif.activites) ? 
+            planif.activites.map((a: any) => ({
+              ID: a.id || 0,
+              PlanifID: a.planifID || planif.id || 0,
+              debut: a.hrsDebut || planif.hrsDebut || "08:00",
+              fin: a.hrsFin || planif.hrsFin || "17:00",
+              signalisation: a.signalisationID || 0,
+              lieuId: a.lieuID || 0,
+              qteLab: a.qteLab || 0,
+              activiteId: a.activiteID || 0,
+              sousTraitantId: a.sousTraitantID || planif.defaultEntrepriseId || 0,
+              isComplete: false // Valeur par défaut puisque le backend ne fournit pas cette information
+            })) : [];
+          
+          // Créer l'objet Planif avec les propriétés correctes
+          return {
+            ID: planif.id || 0,
+            ProjetID: planif.projetID || projectId,
+            HrsDebut: planif.hrsDebut || "08:00",
+            HrsFin: planif.hrsFin || "17:00",
+            defaultEntreprise: planif.defaultEntrepriseId || 0,
+            note: planif.note || '',
+            Date: planif.date || new Date().toISOString().split('T')[0],
+            PlanifActivites: planifActivites
+          } as Planif;
+        });
+        
+        console.log("Planifications formatées:", planifications);
+        setRawPlanifications(planifications);
+        distributePlanificationsToWeek(currentDate, planifications);
+        return planifications;
+      } else {
+        console.warn("Aucune planification reçue ou format incorrect");
+        setRawPlanifications([]);
+        return [];
+      }
+    } catch (error) {
+      console.error("Erreur lors de la récupération des planifs:", error);
+      setRawPlanifications([]);
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    if (selectedProject) {
+      fetchPlanifs(selectedProject.ID);
+    }
+  }, [selectedProject]);
 
   // Calcul des dates de début et fin de semaine
   const start = useMemo(() => {
@@ -110,66 +170,32 @@ const PlanningForm: React.FC = () => {
 
   // Générer les dates de la semaine
   const weekDates = useMemo(() => {
-    const dates = [];
+    const dates: Date[] = [];
     let current = start;
     
     while (current <= end) {
       dates.push(current);
       current = addDays(current, 1);
     }
+    
     return dates;
   }, [start, end]);
 
-  // 1. useEffect pour le fetch uniquement
-  useEffect(() => {
-    const fetchPlanifications = async () => {
-      if (!selectedProject?.ID) return;
-      
-      try {
-        const planifResponse = await getPlanifChantierByProjet(selectedProject.ID);
-        console.log("Planifications brutes reçues:", planifResponse);
-        
-        if (planifResponse && Array.isArray(planifResponse)) {
-          const planifications = planifResponse.map(planif => ({
-            id: planif.id,
-            projetId: selectedProject.ID,
-            lieuID: planif.lieuID,
-            hrsDebut: planif.hrsDebut,
-            hrsFin: planif.hrsFin,
-            defaultEntrepriseId: planif.defaultEntrepriseId,
-            signalisationId: planif.signalisationId,
-            note: planif.note || '',
-            isLab: planif.isLab || false,
-            labQuantity: planif.labQuantity || null,
-            date: planif.date,
-            activiteIDs: planif.activites ? planif.activites.map((a: { activiteID: number }) => a.activiteID) : [],
-            quantite: planif.quantite || 0,
-            nomActivite: ''
-          }));
-
-          setRawPlanifications(planifications);
-        }
-      } catch (error) {
-        console.error('Erreur lors du fetch:', error);
-      }
-    };
-
-    fetchPlanifications();
-  }, [selectedProject?.ID]); // Dépendance uniquement sur le changement de projet
-
-  // 2. Fonction séparée pour distribuer les planifications aux bonnes journées
-  const distributePlanificationsToWeek = useCallback((date: Date, planifications: ActivitePlanif[]) => {
+  // Fonction pour distribuer les planifications aux bonnes journées
+  const distributePlanificationsToWeek = useCallback((date: Date, planifications: Planif[]) => {
     console.log("=== Distribution des planifications ===");
     console.log("Date courante:", format(date, 'dd/MM/yyyy'));
+    console.log("Nombre total de planifications:", planifications.length);
     
     // Calculer le début et la fin de la semaine
     const weekStart = startOfWeek(date, { weekStartsOn: 0 }); // 0 pour dimanche
     const weekEnd = endOfWeek(date, { weekStartsOn: 0 }); // 0 pour dimanche
     
     console.log("Semaine du", format(weekStart, 'dd/MM/yyyy'), "au", format(weekEnd, 'dd/MM/yyyy'));
+    console.log("Premier jour de la semaine (dimanche):", format(weekStart, 'yyyy-MM-dd'));
 
     // Initialiser la structure des activités par jour - Dimanche en premier
-    const newActivities: { [key: string]: ActivitePlanif[] } = {
+    const newActivities: { [key: string]: Planif[] } = {
       Dimanche: [],
       Lundi: [],
       Mardi: [],
@@ -179,54 +205,84 @@ const PlanningForm: React.FC = () => {
       Samedi: []
     };
 
+    // Mapping des jours en français vers les clés de notre objet
+    const dayMapping: { [key: string]: string } = {
+      'dimanche': 'Dimanche',
+      'lundi': 'Lundi',
+      'mardi': 'Mardi',
+      'mercredi': 'Mercredi',
+      'jeudi': 'Jeudi',
+      'vendredi': 'Vendredi',
+      'samedi': 'Samedi'
+    };
+
     // Pour chaque planification
     planifications.forEach(planif => {
-      const planifDate = parseISO(planif.date);
+      console.log("Traitement planification:", planif);
+      const planifDate = parseISO(planif.Date);
       
       if (!isValid(planifDate)) {
-        console.error('Date invalide:', planif.date);
+        console.error('Date invalide:', planif.Date);
         return;
       }
 
       // Vérifier si la date est dans la semaine courante
       const isInCurrentWeek = planifDate >= weekStart && planifDate <= weekEnd;
       
+      // Obtenir le jour de la semaine en français
+      const dayName = format(planifDate, 'EEEE', { locale: fr }).toLowerCase();
+      const dayNumber = planifDate.getDay(); // 0 pour dimanche, 1 pour lundi, etc.
+      
       console.log("Vérification planification:", {
-        id: planif.id,
-        date: planif.date,
+        id: planif.ID,
+        date: planif.Date,
+        dateObj: format(planifDate, 'yyyy-MM-dd'),
         isInCurrentWeek,
-        planifWeekDay: format(planifDate, 'EEEE', { locale: fr }),
-        weekStart: format(weekStart, 'dd/MM/yyyy'),
-        weekEnd: format(weekEnd, 'dd/MM/yyyy')
+        planifWeekDay: dayName,
+        dayNumber: dayNumber,
+        weekStart: format(weekStart, 'yyyy-MM-dd'),
+        weekEnd: format(weekEnd, 'yyyy-MM-dd'),
+        comparison: {
+          isAfterOrEqualStart: planifDate >= weekStart,
+          isBeforeOrEqualEnd: planifDate <= weekEnd
+        }
       });
 
       if (isInCurrentWeek) {
-        const dayName = format(planifDate, 'EEEE', { locale: fr });
-        const formattedDayName = dayName.charAt(0).toUpperCase() + dayName.slice(1).toLowerCase();
+        // Utiliser le mapping pour obtenir la clé correcte
+        const mappedDayName = dayMapping[dayName];
         
-        if (newActivities[formattedDayName]) {
-          console.log(`Ajout au ${formattedDayName}:`, planif.id);
-          newActivities[formattedDayName].push(planif);
+        if (mappedDayName && newActivities[mappedDayName]) {
+          console.log(`Ajout au ${mappedDayName} (jour ${dayNumber}):`, planif.ID);
+          newActivities[mappedDayName].push({
+            ID: planif.ID,
+            ProjetID: planif.ProjetID,
+            HrsDebut: planif.HrsDebut,
+            HrsFin: planif.HrsFin,
+            defaultEntreprise: planif.defaultEntreprise,
+            note: planif.note,
+            Date: planif.Date,
+            PlanifActivites: planif.PlanifActivites
+          });
+        } else {
+          console.error(`Jour non reconnu: ${dayName} (${dayNumber})`);
         }
+      } else {
+        console.log(`Planification ${planif.ID} hors de la semaine courante:`, planif.Date);
       }
     });
-
-    console.log("Distribution finale:", newActivities);
+    
     setActivities(newActivities);
     setLocalActivities(newActivities);
     setHasUnsavedChanges(false);
   }, []);
 
-  // 3. useEffect pour déclencher la distribution quand la date change
   useEffect(() => {
     if (rawPlanifications.length > 0) {
       distributePlanificationsToWeek(currentDate, rawPlanifications);
-      
-      // Filtrer les planifications importables (celles qui ne sont pas déjà dans la semaine courante)
-      filterImportablePlanifications();
     }
   }, [currentDate, rawPlanifications, distributePlanificationsToWeek]);
-  
+
   // Filtrer les planifications qui peuvent être importées (celles qui ne sont pas déjà dans la semaine courante)
   const filterImportablePlanifications = useCallback(() => {
     if (!rawPlanifications.length) return;
@@ -236,15 +292,87 @@ const PlanningForm: React.FC = () => {
     
     // Filtrer les planifications qui ne sont pas déjà dans la semaine courante
     const importable = rawPlanifications.filter(planif => {
-      const planifDate = planif.date.split('T')[0];
+      const planifDate = planif.Date;
       return !currentWeekDatesISO.includes(planifDate);
     });
     
     setImportablePlanifications(importable);
   }, [rawPlanifications, weekDates]);
-  
+
+  useEffect(() => {
+    if (rawPlanifications.length > 0) {
+      filterImportablePlanifications();
+    }
+  }, [rawPlanifications, filterImportablePlanifications]);
+
+  // Fonction pour vérifier et corriger les dates des planifications
+  const verifyAndFixPlanificationDates = useCallback(() => {
+    console.log("=== Vérification et correction des dates des planifications ===");
+    
+    setLocalActivities(prevActivities => {
+      const correctedActivities = { ...prevActivities };
+      
+      // Pour chaque jour de la semaine
+      for (const day of Object.keys(correctedActivities)) {
+        console.log(`Vérification des planifications pour ${day}...`);
+        
+        // Trouver l'index du jour dans la semaine
+        const dayIndex = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'].indexOf(day);
+        if (dayIndex === -1) {
+          console.error(`Jour non reconnu: ${day}`);
+          continue;
+        }
+        
+        // Calculer la date correcte pour ce jour
+        const correctDate = addDays(startOfWeek(currentDate, { weekStartsOn: 0 }), dayIndex);
+        const correctDateStr = format(correctDate, 'yyyy-MM-dd');
+        console.log(`Date correcte pour ${day}: ${correctDateStr}`);
+        
+        // Vérifier et corriger chaque planification
+        correctedActivities[day] = correctedActivities[day].map(planif => {
+          const planifDate = planif.Date;
+          
+          // Vérifier si la date est valide et correspond au jour
+          let needsCorrection = false;
+          
+          if (!planifDate || !planifDate.includes('-')) {
+            console.log(`Planification ${planif.ID} a une date invalide: ${planifDate}`);
+            needsCorrection = true;
+          } else {
+            // Vérifier si la date correspond au jour de la semaine
+            const dayOfWeek = format(parseISO(planifDate), 'EEEE', { locale: fr }).toLowerCase();
+            const expectedDay = day.toLowerCase();
+            
+            if (dayOfWeek !== expectedDay) {
+              console.log(`Planification ${planif.ID} a une date (${planifDate}) qui correspond à ${dayOfWeek} mais est dans ${expectedDay}`);
+              needsCorrection = true;
+            }
+          }
+          
+          // Corriger la date si nécessaire
+          if (needsCorrection) {
+            console.log(`Correction de la date pour la planification ${planif.ID}: ${correctDateStr}`);
+            return { ...planif, Date: correctDateStr };
+          }
+          
+          return planif;
+        });
+      }
+      
+      return correctedActivities;
+    });
+  }, [currentDate]);
+
+  // Appeler la fonction après le chargement des données
+  useEffect(() => {
+    if (Object.values(localActivities).some(activities => activities.length > 0)) {
+      console.log("Planifications chargées, vérification des dates...");
+      verifyAndFixPlanificationDates();
+    }
+  }, [rawPlanifications, verifyAndFixPlanificationDates]);
+
   // Gérer l'import des planifications sélectionnées
-  const handleImportActivities = (planificationsToImport: ActivitePlanif[]) => {
+  const handleImportActivities = (planificationsToImport: Planif[]) => {
     if (!planificationsToImport.length) return;
     
     console.log("Planifications à importer:", planificationsToImport);
@@ -255,7 +383,7 @@ const PlanningForm: React.FC = () => {
     // Pour chaque planification à importer
     planificationsToImport.forEach(planif => {
       // Déterminer le jour de la semaine pour cette planification
-      const planifDate = new Date(planif.date);
+      const planifDate = new Date(planif.Date);
       const dayOfWeekNumber = planifDate.getDay(); // 0 pour dimanche, 1 pour lundi, etc.
       
       // Utiliser l'index du jour pour obtenir le nom du jour dans notre tableau daysOfWeek
@@ -272,10 +400,10 @@ const PlanningForm: React.FC = () => {
       // Vérifier si une planification similaire existe déjà pour ce jour
       const existingSimilarPlanif = updatedActivities[targetDay]?.some(existingPlanif => {
         // Si les IDs d'activités sont identiques ou très similaires, considérer comme doublon
-        if (!existingPlanif.activiteIDs || !planif.activiteIDs) return false;
+        if (!existingPlanif.PlanifActivites || !planif.PlanifActivites) return false;
         
         // Vérifier si au moins une activité est commune (pour éviter les doublons)
-        return planif.activiteIDs.some(id => existingPlanif.activiteIDs?.includes(id));
+        return planif.PlanifActivites.some(id => existingPlanif.PlanifActivites?.includes(id));
       });
       
       // Si une planification similaire existe déjà, ne pas l'ajouter
@@ -284,11 +412,11 @@ const PlanningForm: React.FC = () => {
         return;
       }
       
-      // Créer une nouvelle planification avec la date mise à jour
-      const newPlanif: ActivitePlanif = {
+      // Créer une {planif.ID > 0 ? Planif # : " Nouvelle Planif\}ication avec la date mise à jour
+      const newPlanif: Planif = {
         ...planif,
-        id: -Date.now() - Math.floor(Math.random() * 1000), // ID temporaire négatif unique
-        date: newDate
+        ID: -Date.now() - Math.floor(Math.random() * 1000), // ID temporaire négatif unique
+        Date: newDate
       };
       
       // Ajouter la planification au jour cible
@@ -297,223 +425,116 @@ const PlanningForm: React.FC = () => {
       }
       updatedActivities[targetDay].push(newPlanif);
       
-      // Mettre à jour l'état des activités sélectionnées
-      const key = `${targetDay}-${newPlanif.id}`;
-      setSelectedActivities(prev => ({
-        ...prev,
-        [key]: new Set(newPlanif.activiteIDs || [])
-      }));
+      // Mettre à jour l'état local
+      setLocalActivities(updatedActivities);
+      setHasUnsavedChanges(true);
+      
+      console.log(`${planificationsToImport.length} planification(s) importée(s) avec succès`);
+      console.log("Activités après importation:", updatedActivities);
     });
-    
-    // Mettre à jour l'état local
-    setLocalActivities(updatedActivities);
-    setHasUnsavedChanges(true);
-    
-    console.log(`${planificationsToImport.length} planification(s) importée(s) avec succès`);
-    console.log("Activités après importation:", updatedActivities);
   };
 
-  const handleSavePlanif = async (planif: ActivitePlanif, selectedActivities: Set<number>) => {
-    if (!selectedDay || !selectedProject?.ID) {
-      console.error("Aucun jour sélectionné ou projet non sélectionné");
-      return;
-    }
-
-    const selectedActivitiesArray = Array.from(selectedActivities);
-    console.log("Activités sélectionnées pour la sauvegarde:", selectedActivitiesArray);
-    
-    // Obtenir le jour de la semaine à partir de la date de la planification
-    let planifDate;
-    let targetDay: string;
-    
-    if (planif.date && planif.date !== "") {
-      // Si une date existe déjà, l'utiliser
-      planifDate = parseISO(planif.date);
-      const dayOfWeek = format(planifDate, 'EEEE', { locale: fr });
-      targetDay = dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1);
-    } else {
-      // Pour une nouvelle planification, utiliser le jour sélectionné dans la semaine en cours
-      targetDay = selectedDay;
-      // Trouver l'index du jour dans la semaine (0 pour Dimanche, 1 pour Lundi, etc.)
-      const dayIndex = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'].indexOf(selectedDay);
-      // Calculer la date correspondante dans la semaine en cours
-      planifDate = addDays(start, dayIndex);
-      // Mettre à jour la date de la planification
-      planif.date = format(planifDate, 'yyyy-MM-dd');
-    }
-    
-    console.log("Date de la planification:", planif.date);
-    console.log("Jour ciblé:", targetDay);
-    
-    // Créer la nouvelle planification avec les activités sélectionnées
-    const updatedPlanif = {
-      ...planif,
-      projetId: selectedProject.ID,
-      activiteIDs: selectedActivitiesArray,
-      // Garder la date exactement comme elle était
-      date: planif.date
-    };
-
-    // Mise à jour uniquement de l'état local pour la prévisualisation
-    setLocalActivities(prev => {
-      const updatedActivities = { ...prev };
-      
-      // Si c'est une modification d'une planif existante, on doit d'abord la supprimer de son ancien emplacement
-      if (planif.id) {
-        // Parcourir tous les jours pour trouver et supprimer l'ancienne entrée
-        Object.keys(updatedActivities).forEach(day => {
-          const index = updatedActivities[day].findIndex(p => p.id === planif.id);
-          if (index !== -1) {
-            updatedActivities[day].splice(index, 1);
-          }
-        });
-      }
-      
-      // S'assurer que le tableau pour le jour cible existe
-      if (!updatedActivities[targetDay]) {
-        updatedActivities[targetDay] = [];
-      }
-      
-      // Ajouter ou mettre à jour la planification dans le jour cible
-      if (planif.id) {
-        updatedActivities[targetDay].push(updatedPlanif);
-      } else {
-        // Nouvelle planif - générer un ID temporaire négatif
-        const tempId = -Date.now();
-        updatedActivities[targetDay].push({
-          ...updatedPlanif,
-          id: tempId
-        });
-      }
-
-      // Nettoyer la clé de date si elle existe
-      if (updatedActivities[planif.date]) {
-        delete updatedActivities[planif.date];
-      }
-
-      console.log("État local mis à jour avec les activités:", updatedActivities);
-      return updatedActivities;
-    });
-
-    // Mettre à jour l'état des activités sélectionnées avec la clé correcte
-    const key = planif.id ? `${targetDay}-${planif.id}` : `${targetDay}-${-Date.now()}`;
-    setSelectedActivities(prev => {
-      const newSelectedActivities = { ...prev };
-      // Supprimer les anciennes références aux activités sélectionnées
-      Object.keys(newSelectedActivities).forEach(k => {
-        if (k.endsWith(`-${planif.id}`)) {
-          delete newSelectedActivities[k];
-        }
-      });
-      // Ajouter la nouvelle référence
-      newSelectedActivities[key] = new Set(selectedActivitiesArray);
-      return newSelectedActivities;
-    });
-
-    setHasUnsavedChanges(true);
-    setShowModal(false);
-  };
-
-  const handleEditActivity = (activity: ActivitePlanif) => {
+  const handleEditActivity = (activity: Planif) => {
     // Stocker les activités sélectionnées dans l'état selectedActivities
-    const key = `${activity.date}-${activity.id}`;
-    if (activity.activiteIDs) {
+    const key = `${activity.Date}-${activity.ID}`;
+    if (activity.PlanifActivites) {
       setSelectedActivities(prev => ({
         ...prev,
-        [key]: new Set(activity.activiteIDs)
+        [key]: new Set(activity.PlanifActivites.map(a => a.activiteId))
       }));
     }
     setPlanifToEdit(activity);
-    setSelectedDay(activity.date);
+    setSelectedDay(activity.Date);
     setShowModal(true);
   };
 
   const handleDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
-
     const { source, destination } = result;
-    const sourceDay = source.droppableId;
-    const destinationDay = destination.droppableId;
-
-    setLocalActivities(prev => {
-      const updatedActivities = { ...prev };
-      
-      // Trouver l'activité déplacée
-      const [movedActivity] = updatedActivities[sourceDay].splice(source.index, 1);
-      
-      // S'assurer que le tableau de destination existe
-      if (!updatedActivities[destinationDay]) {
-        updatedActivities[destinationDay] = [];
-      }
-
-      // Trouver la date correspondant au jour de destination
-      const dayIndex = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"]
-        .indexOf(destinationDay.toLowerCase());
-      
-      if (dayIndex === -1) {
-        console.error("Jour invalide:", destinationDay);
-        return prev;
-      }
-
-      // Calculer la nouvelle date en ajoutant le nombre de jours à la date de début de semaine
-      const newDate = format(addDays(start, dayIndex), 'yyyy-MM-dd');
-      
-      // Mettre à jour l'activité avec la nouvelle date
-      const updatedActivity = {
-        ...movedActivity,
-        date: newDate
-      };
-
-      // Insérer l'activité à sa nouvelle position
-      updatedActivities[destinationDay].splice(destination.index, 0, updatedActivity);
-
-      return updatedActivities;
-    });
-
-    setHasUnsavedChanges(true);
-  };
-
-  const handleDeletePlanif = async (day: string, id: number) => {
-    try {
-      // Supprimer d'abord les activités associées
-      await deletePlanifActivites(id);
-      
-      setLocalActivities((prev) => ({
-        ...prev,
-        [day]: prev[day].filter((planif) => planif.id !== id),
-      }));
-
-      // Supprimer aussi les activités sélectionnées pour cette planif
-      setSelectedActivities((prev) => {
-        const newState = { ...prev };
-        delete newState[`${day}-${id}`];
-        return newState;
-      });
-    } catch (error) {
-      console.error("Failed to delete planif:", error);
-      alert("Une erreur est survenue lors de la suppression de la planification");
-    }
-  };
-
-  const handleDeleteActivity = (day: string, id: number) => {
-    // Confirmer la suppression
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette planification ?")) {
+    
+    // Si pas de destination ou si la source et la destination sont identiques, ne rien faire
+    if (!destination || (source.droppableId === destination.droppableId && source.index === destination.index)) {
       return;
     }
     
-    setLocalActivities((prev) => {
-      const updatedActivities = { ...prev };
-      updatedActivities[day] = updatedActivities[day].filter((activity) => activity.id !== id);
+    // Copier l'état actuel
+    const newActivities = { ...localActivities };
+    
+    // Récupérer l'activité déplacée
+    const [movedActivity] = newActivities[source.droppableId].splice(source.index, 1);
+    
+    // Obtenir le jour de la semaine pour la destination
+    const dayOfWeek = destination.droppableId.toLowerCase();
+    const dayDate = weekDates.find(date => 
+      format(date, 'EEEE', { locale: fr }).toLowerCase() === dayOfWeek
+    );
+    
+    if (dayDate) {
+      // Mettre à jour la date de l'activité
+      const newDate = format(dayDate, 'yyyy-MM-dd');
+      
+      // Créer une copie modifiée de l'activité avec la nouvelle date
+      const updatedActivity = { 
+        ...movedActivity,
+        Date: newDate
+      };
+      
+      // Insérer l'activité à la nouvelle position
+      newActivities[destination.droppableId].splice(destination.index, 0, updatedActivity);
+      
+      // Mettre à jour l'état
+      setLocalActivities(newActivities);
+      setHasUnsavedChanges(true);
+      
+      console.log(`Activité ${updatedActivity.ID} déplacée de ${source.droppableId} à ${destination.droppableId}, nouvelle date: ${newDate}`);
+    } else {
+      console.error(`Jour non trouvé pour ${destination.droppableId}`);
+      // Remettre l'activité à sa place d'origine
+      newActivities[source.droppableId].splice(source.index, 0, movedActivity);
+      setLocalActivities(newActivities);
+    }
+  };
+
+  const handleDeletePlanif = async (day: string, id: number) => {
+    console.log(`Suppression de la planification ${id} du jour ${day}`);
+    
+    // Mise à jour des activités locales
+    setLocalActivities((prevActivities) => {
+      const updatedActivities = { ...prevActivities };
+      
+      // Filtrer les planifications pour supprimer celle avec l'ID correspondant
+      if (updatedActivities[day]) {
+        updatedActivities[day] = updatedActivities[day].filter(
+          (planif) => planif.ID !== id
+        );
+      }
+      
       return updatedActivities;
     });
     
-    // Supprimer aussi les activités sélectionnées pour cette planif
-    setSelectedActivities((prev) => {
-      const newState = { ...prev };
-      delete newState[`${day}-${id}`];
-      return newState;
-    });
+    // Si la planification a un ID positif, on doit la supprimer du serveur
+    if (id > 0) {
+      try {
+        console.log(`Suppression de la planification ${id} de la base de données`);
+        
+        // Utiliser l'API DeletePlanifChantier qui supprime aussi les activités liées
+        await deletePlanifChantier(id);
+        
+        console.log(`Planification ${id} et ses activités supprimées avec succès`);
+      } catch (error) {
+        console.error(`Erreur lors de la suppression de la planification ${id}:`, error);
+        alert("Une erreur est survenue lors de la suppression de la planification. Veuillez réessayer.");
+        
+        // En cas d'erreur, on recharge les planifications pour s'assurer que l'UI est synchronisée
+        if (selectedProject) {
+          fetchPlanifs(selectedProject.ID);
+        }
+      }
+    } else {
+      // Pour les nouvelles planifications (ID <= 0), on les supprime juste de l'interface
+      console.log("Nouvelle planification supprimée de l'interface uniquement");
+    }
     
+    // Marquer qu'il y a des changements
     setHasUnsavedChanges(true);
   };
 
@@ -523,38 +544,39 @@ const PlanningForm: React.FC = () => {
     }
   };
 
-  const handleCheckboxChange = (id: string) => {
-    setLocalActivities((prevActivities) => {
-      const updatedActivities = { ...prevActivities };
-      for (const day in updatedActivities) {
-        updatedActivities[day] = updatedActivities[day].map((activity) => {
-          if (activity.id.toString() === id) {
-            return { ...activity, isLab: !activity.isLab };
-          }
-          return activity;
-        });
-      }
-      return updatedActivities;
-    });
-  };
-
-  const handleSaveActivity = (activity: ActivitePlanif) => {
+  const handleSaveActivity = (activity: Planif) => {
     setLocalActivities((prevActivities) => {
       const updatedActivities = { ...prevActivities };
 
       // Trouver le jour correspondant à l'activité en fonction de sa date
       const dayOfWeek = Object.keys(updatedActivities).find((day) =>
-        updatedActivities[day].some((act) => act.id === activity.id)
+        updatedActivities[day].some((act) => act.ID === activity.ID)
       );
 
       if (dayOfWeek) {
         // Mettre à jour l'activité existante
         updatedActivities[dayOfWeek] = updatedActivities[dayOfWeek].map((act) =>
-          act.id === activity.id ? activity : act
+          act.ID === activity.ID ? activity : act
         );
-      } else {
+      } else if (selectedDay) {
         // Si l'activité n'existe pas dans les activités du jour, on l'ajoute
+        // mais seulement si selectedDay n'est pas null
         updatedActivities[selectedDay].push(activity);
+      } else {
+        // Si selectedDay est null, on utilise le jour de la date de l'activité
+        const activityDate = parseISO(activity.Date);
+        if (isValid(activityDate)) {
+          const dayName = format(activityDate, 'EEEE', { locale: fr });
+          const formattedDayName = dayName.charAt(0).toUpperCase() + dayName.slice(1).toLowerCase();
+          
+          if (updatedActivities[formattedDayName]) {
+            updatedActivities[formattedDayName].push(activity);
+          } else {
+            console.error(`Jour non reconnu: ${formattedDayName}`);
+          }
+        } else {
+          console.error('Date invalide pour l\'activité:', activity.Date);
+        }
       }
       return updatedActivities;
     });
@@ -562,228 +584,141 @@ const PlanningForm: React.FC = () => {
     setShowModal(false);
   };
 
+  const handleSavePlanif = (planif: Planif) => {
+    console.log("Sauvegarde de la planification depuis le modal:", planif);
+    
+    // Vérifier que la date est au format ISO
+    if (!planif.Date || !planif.Date.includes('-')) {
+      console.error('Date invalide pour la planification:', planif.Date);
+      return;
+    }
+    
+    // Déterminer le jour de la semaine à partir de la date
+    const planifDate = parseISO(planif.Date);
+    let dayName = format(planifDate, 'EEEE', { locale: fr });
+    dayName = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+    
+    console.log(`Jour déterminé pour la planification: ${dayName}`);
+    
+    // Mettre à jour les activités locales
+    setLocalActivities((prevActivities) => {
+      const updatedActivities = { ...prevActivities };
+      
+      // Si c'est une modification d'une planif existante, on doit d'abord la supprimer de son ancien emplacement
+      if (planifToEdit) {
+        // Parcourir tous les jours pour trouver et supprimer l'ancienne entrée
+        Object.keys(updatedActivities).forEach(day => {
+          const index = updatedActivities[day].findIndex(p => p.ID === planifToEdit.ID);
+          if (index !== -1) {
+            updatedActivities[day].splice(index, 1);
+          }
+        });
+      }
+      
+      // S'assurer que le tableau pour le jour cible existe
+      if (!updatedActivities[dayName]) {
+        updatedActivities[dayName] = [];
+      }
+      
+      // Ajouter ou mettre à jour la planification dans le jour cible
+      if (planif.ID > 0) {
+        // Planification existante
+        updatedActivities[dayName].push(planif);
+      } else {
+        // {planif.ID > 0 ? Planif # : " Nouvelle Planif\}ication - on garde l'ID à 0 pour la création côté serveur
+        updatedActivities[dayName].push(planif);
+      }
+      
+      // Marquer qu'il y a des changements non sauvegardés
+      setHasUnsavedChanges(true);
+      
+      console.log("État local mis à jour avec les activités:", updatedActivities);
+      return updatedActivities;
+    });
+    
+    // Fermer le modal et réinitialiser les états
+    setShowModal(false);
+    setPlanifToEdit(null);
+    setSelectedDay(null);
+  };
+
   const handleSavePlanning = async () => {
     if (!selectedProject?.ID) return;
-
+  
     try {
-      // Pour chaque jour
+      console.log("Sauvegarde des planifications...");
+      
+      // Pour chaque jour de la semaine
       for (const day of Object.keys(localActivities)) {
         const activitiesForDay = localActivities[day];
         
-        for (const activity of activitiesForDay) {
-          console.log(`Sauvegarde de la planification pour ${day}:`, activity);
-
-          try {
-            const dayIndex = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'].indexOf(day);
-            const currentDate = addDays(start, dayIndex);
-            const formattedDate = format(currentDate, 'yyyy-MM-dd');
-
-            // 1. Créer ou mettre à jour la planification
-            const planifData = {
-              ID: activity.id > 0 ? activity.id : 0, // Si ID négatif, c'est une nouvelle planif
-              LieuID: activity.lieuID,
-              ProjetID: selectedProject.ID,
-              HrsDebut: activity.hrsDebut,
-              HrsFin: activity.hrsFin,
-              DefaultEntrepriseId: activity.defaultEntrepriseId,
-              IsLab: activity.isLab,
-              SignalisationId: activity.signalisationId || 0,
-              Note: activity.note || "",
-              Date: formattedDate
-            };
-
-            console.log("Envoi des données de planification:", planifData);
-            
-            // Créer/mettre à jour la planification
-            const savedPlanif = await createOrUpdatePlanifChantier(planifData);
-            console.log("Planification créée/mise à jour:", savedPlanif);
-
-            if (!savedPlanif || !savedPlanif.id) {
-              throw new Error("La création/mise à jour de la planification a échoué");
-            }
-
-            // 2. Gérer les associations d'activités
-            if (activity.activiteIDs && activity.activiteIDs.length > 0) {
-              const planifId = activity.id > 0 ? activity.id : savedPlanif.id;
-              
-              // Récupérer les activités existantes
-              const existingActivites = await getPlanifActivites(planifId);
-              const existingActiviteIds = existingActivites ? existingActivites.map((a: { activiteID: number; }) => a.activiteID) : [];
-              
-              // Trouver les nouvelles activités à ajouter (éviter les doublons)
-              const newActiviteIds = activity.activiteIDs.filter(id => !existingActiviteIds.includes(id));
-              
-              if (newActiviteIds.length > 0) {
-                console.log("Nouvelles activités à ajouter:", newActiviteIds);
-                
-                // Créer seulement les nouvelles associations
-                for (const activiteId of newActiviteIds) {
-                  const planifActivitesData = {
-                    planifId: planifId,
-                    activiteId: activiteId
-                  };
-
-                  console.log("Création nouvelle association activité:", planifActivitesData);
-                  const savedActivite = await createOrUpdatePlanifActivites(planifActivitesData);
-                  
-                  if (savedActivite) {
-                    // Mettre à jour l'état local pour refléter la nouvelle activité
-                    setLocalActivities(prev => {
-                      const updatedActivities = { ...prev };
-                      const dayActivities = [...(updatedActivities[day] || [])];
-                      const activityIndex = dayActivities.findIndex(a => a.id === planifId);
-                      
-                      if (activityIndex !== -1) {
-                        dayActivities[activityIndex] = {
-                          ...dayActivities[activityIndex],
-                          activiteIDs: [...existingActiviteIds, activiteId]
-                        };
-                        updatedActivities[day] = dayActivities;
-                      }
-                      
-                      return updatedActivities;
-                    });
-                  }
-                }
-              } else {
-                console.log("Aucune nouvelle activité à ajouter");
-              }
-            }
-          } catch (error) {
-            console.error("Erreur lors de la création/mise à jour:", error);
-            throw error;
-          }
-        }
-      }
-
-      // Mise à jour réussie
-      setActivities(localActivities);
-      setHasUnsavedChanges(false);
-      alert("Modifications enregistrées avec succès !");
-    } catch (error) {
-      console.error("Erreur lors de la sauvegarde :", error);
-      alert("Une erreur est survenue lors de la sauvegarde des modifications.");
-    }
-  };
-
-  const handleActivityChange = (day: string, activityId: number, field: string, value: any) => {
-    setLocalActivities((prevActivities) => {
-      const updatedActivities = { ...prevActivities };
-      updatedActivities[day] = updatedActivities[day].map((activity) => {
-        if (activity.id === activityId) {
-          return { ...activity, [field]: value };
-        }
-        return activity;
-      });
-      return updatedActivities;
-    });
-  };
-
-  const getActivitiesNames = (activiteIDs: number[]) => {
-    if (!activites || !activiteIDs) return [];
-    return activiteIDs
-      .map(id => activites.find(a => a.id === id))
-      .filter(a => a !== undefined)
-      .map(a => a!.nom);
-  };
-
-  // Initialisation des jours de la semaine
-  const daysOfWeek = useMemo(() => {
-    return ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-  }, []);
-
-  // Fonction pour capitaliser la première lettre
-  const formatDayName = (date: Date) => {
-    const dayName = format(date, 'EEEE', { locale: fr });
-    return dayName.charAt(0).toUpperCase() + dayName.slice(1).toLowerCase();
-  };
-
-  const renderActivity = (activity: ActivitePlanif) => (
-    <div className="font-bold text-gray-900">
-      {activity.nomActivite || (
-        activity.activiteIDs && activity.activiteIDs.length > 0 ? (
-          <>
-            {getActivitiesNames(activity.activiteIDs)[0]}
-            {activity.activiteIDs.length > 1 && (
-              <span className="ml-2 text-xs font-bold text-blue-600">
-                +{activity.activiteIDs.length - 1} autres
-              </span>
-            )}
-          </>
-        ) : (
-          "Aucune activité"
-        )
-      )}
-    </div>
-  );
-
-  const handleSaveAllChanges = async () => {
-    try {
-      if (!selectedProject?.ID) return;
-
-      // Parcourir toutes les activités locales
-      for (const day in localActivities) {
-        for (const planif of localActivities[day]) {
+        console.log(`Sauvegarde des planifications pour ${day}:`, activitiesForDay.length);
+        
+        for (const planif of activitiesForDay) {
           console.log(`Sauvegarde de la planification pour ${day}:`, planif);
-
+          
+          // Vérifier que la date est bien au format ISO
+          let planifDate = planif.Date;
+          if (!planifDate || !planifDate.includes('-')) {
+            // Si la date n'est pas au bon format, la recalculer
+            const dayIndex = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'].indexOf(day);
+            if (dayIndex !== -1) {
+              const calculatedDate = addDays(startOfWeek(currentDate, { weekStartsOn: 0 }), dayIndex);
+              planifDate = format(calculatedDate, 'yyyy-MM-dd');
+              console.log(`Date recalculée pour ${day}:`, planifDate);
+            }
+          }
+  
           try {
             // Préparer les données de la planification
             const planifData = {
-              ID: planif.id > 0 ? planif.id : 0, // Si ID négatif, c'est une nouvelle planif
-              LieuID: planif.lieuID,
+              ID: planif.ID > 0 ? planif.ID : 0, // Si ID négatif, c'est une nouvelle planification
               ProjetID: selectedProject.ID,
-              HrsDebut: planif.hrsDebut,
-              HrsFin: planif.hrsFin,
-              DefaultEntrepriseId: planif.defaultEntrepriseId,
-              IsLab: planif.isLab,
-              SignalisationId: planif.signalisationId || 0,
+              HrsDebut: planif.HrsDebut,
+              HrsFin: planif.HrsFin,
               Note: planif.note || "",
-              Date: planif.date
+              Date: planifDate
             };
-
+  
             console.log("Données de planification à sauvegarder:", planifData);
-
-            // Sauvegarder la planification
-            const savedPlanif = await createOrUpdatePlanifChantier(planifData);
-            console.log("Réponse de la sauvegarde:", savedPlanif);
-
-            const planifId = savedPlanif?.id || planif.id;
-            if (!planifId) {
-              throw new Error(`Échec de la sauvegarde de la planification pour ${day}`);
-            }
-
-            // Si on a des activités associées
-            if (planif.activiteIDs && planif.activiteIDs.length > 0) {
-              console.log("Sauvegarde des associations d'activités:", planif.activiteIDs);
-
-              // Récupérer les associations existantes
-              const existingActivites = await getPlanifActivites(planifId);
-              console.log("Associations existantes:", existingActivites);
-
-              // Pour chaque activité
-              for (const activiteId of planif.activiteIDs) {
-                // Vérifier si l'association existe déjà
-                const existingAssociation = existingActivites?.find((a: { activiteID: number; }) => a.activiteID === activiteId);
-                
-                const planifActivitesData = {
-                  ID: existingAssociation ? existingAssociation.id : 0,
-                  PlanifID: planifId,
-                  ActiviteID: activiteId
-                };
-
-                console.log("Sauvegarde de l'association:", planifActivitesData);
-                await createOrUpdatePlanifActivites(planifActivitesData);
+  
+            // Vérifier si nous avons des activités à sauvegarder
+            if (planif.PlanifActivites && planif.PlanifActivites.length > 0) {
+              console.log(`Sauvegarde de ${planif.PlanifActivites.length} activités pour la planification`);
+              
+              // Préparer les activités avec les noms de propriétés du backend
+              const activitiesToSave = planif.PlanifActivites.map(act => ({
+                id: act.ID || 0,
+                activiteId: act.activiteId,
+                hrsDebut: act.debut || planif.HrsDebut,
+                hrsFin: act.fin || planif.HrsFin,
+                sousTraitantId: act.sousTraitantId || planif.defaultEntreprise,
+                lieuId: act.lieuId,
+                signalisationId: act.signalisation,
+                qteLab: act.qteLab
+              }));
+              
+              // Utiliser la nouvelle fonction pour créer la planification et ses activités en une seule opération
+              console.log("Utilisation de createPlanifWithActivities pour sauvegarder la planification et ses activités");
+              const result = await createPlanifWithActivities(planifData, activitiesToSave);
+              
+              console.log("Résultat de la sauvegarde:", result);
+              
+              if (!result || !result.planification) {
+                throw new Error(`Échec de la sauvegarde de la planification pour ${day}`);
               }
-
-              // Supprimer les associations qui ne sont plus présentes
-              if (existingActivites) {
-                for (const existingActivite of existingActivites) {
-                  if (!planif.activiteIDs.includes(existingActivite.activiteID)) {
-                    console.log("Suppression de l'association:", existingActivite);
-                    await deletePlanifActivites(existingActivite.id);
-                  }
-                }
+              
+              console.log(`Planification ${result.planification.id} et ${result.activities.length} activités sauvegardées avec succès`);
+            } else {
+              // Si pas d'activités, sauvegarder uniquement la planification
+              console.log("Aucune activité à sauvegarder, sauvegarde de la planification uniquement");
+              const savedPlanif = await createOrUpdatePlanifChantier(planifData);
+              
+              if (!savedPlanif) {
+                throw new Error(`Échec de la sauvegarde de la planification pour ${day}`);
               }
+              
+              console.log("Planification sauvegardée:", savedPlanif);
             }
           } catch (error) {
             console.error("Erreur lors de la sauvegarde d'une planification:", error);
@@ -791,20 +726,111 @@ const PlanningForm: React.FC = () => {
           }
         }
       }
-
+  
       console.log("Sauvegarde globale terminée avec succès");
-      //await fetchActivitesPlanif(selectedProject.ID);
+      // Rechargement des planifications après la sauvegarde
+      await fetchPlanifs(selectedProject.ID);
+      
       setHasUnsavedChanges(false);
-
+      alert("Modifications enregistrées avec succès !");
+  
     } catch (error) {
       console.error("Erreur lors de la sauvegarde globale:", error);
       alert("Une erreur est survenue lors de la sauvegarde des planifications");
     }
   };
 
-  const getSelectedActivitiesForPlanif = (planif: ActivitePlanif) => {
-    const key = `${planif.date}-${planif.id}`;
-    return selectedActivities[key] || new Set(planif.activiteIDs || []);
+  const handleSaveAllChanges = async () => {
+    if (!selectedProject) {
+      alert("Veuillez sélectionner un projet");
+      return;
+    }
+
+    try {
+      console.log("Sauvegarde des modifications...");
+      
+      // Collecter toutes les planifications de la semaine
+      const allPlanifs: Planif[] = [];
+      Object.values(localActivities).forEach(dayPlanifs => {
+        dayPlanifs.forEach(planif => {
+          allPlanifs.push(planif);
+        });
+      });
+      
+      console.log("Planifications à sauvegarder:", allPlanifs);
+      
+      // Pour chaque planification
+      for (const planif of allPlanifs) {
+        console.log("Sauvegarde de la planification:", planif);
+        
+        // Préparer l'objet à envoyer au serveur pour la planification principale
+        const planifData = {
+          id: planif.ID,
+          projetId: planif.ProjetID,
+          date: planif.Date,
+          hrsDebut: planif.HrsDebut,
+          hrsFin: planif.HrsFin,
+          defaultEntrepriseId: planif.defaultEntreprise,
+          note: planif.note || "",
+        };
+        
+        // Vérifier si nous avons des activités à sauvegarder
+        if (planif.PlanifActivites && planif.PlanifActivites.length > 0) {
+          console.log(`Sauvegarde de ${planif.PlanifActivites.length} activités pour la planification`);
+          
+          // Préparer les activités avec les noms de propriétés du backend
+          const activitiesToSave = planif.PlanifActivites.map(act => ({
+            id: act.ID || 0,
+            activiteId: act.activiteId,
+            hrsDebut: act.debut || planif.HrsDebut,
+            hrsFin: act.fin || planif.HrsFin,
+            sousTraitantId: act.sousTraitantId || planif.defaultEntreprise,
+            lieuId: act.lieuId,
+            signalisationId: act.signalisation,
+            qteLab: act.qteLab,
+            isComplete: act.isComplete || false
+          }));
+          
+          // Utiliser la nouvelle fonction pour créer la planification et ses activités en une seule opération
+          console.log("Utilisation de createPlanifWithActivities pour sauvegarder la planification et ses activités");
+          const result = await createPlanifWithActivities(planifData, activitiesToSave);
+          
+          console.log("Résultat de la sauvegarde:", result);
+          
+          if (!result || !result.planification) {
+            throw new Error(`Échec de la sauvegarde de la planification ID=${planif.ID}`);
+          }
+          
+          console.log(`Planification ${result.planification.id} et ${result.activities.length} activités sauvegardées avec succès`);
+        } else {
+          // Si pas d'activités, sauvegarder uniquement la planification
+          console.log("Aucune activité à sauvegarder, sauvegarde de la planification uniquement");
+          const savedPlanif = await createOrUpdatePlanifChantier(planifData);
+          
+          if (!savedPlanif) {
+            throw new Error(`Échec de la sauvegarde de la planification ID=${planif.ID}`);
+          }
+          
+          console.log("Planification sauvegardée:", savedPlanif);
+        }
+      }
+      
+      // Rafraîchir les données
+      if (selectedProject) {
+        await fetchPlanifs(selectedProject.ID);
+      }
+      
+      setHasUnsavedChanges(false);
+      alert("Toutes les modifications ont été sauvegardées avec succès");
+    } catch (error) {
+      console.error("Erreur lors de la sauvegarde des modifications:", error);
+      alert("Une erreur est survenue lors de la sauvegarde des modifications");
+    }
+  };
+
+  const getSelectedActivitiesForPlanif = (planif: Planif) => {
+    const key = `${planif.Date}-${planif.ID}`;
+    return selectedActivities[key] || new Set(planif.PlanifActivites.map(a => a.activiteId));
   };
 
   const getActivityName = (id: number) => {
@@ -827,6 +853,11 @@ const PlanningForm: React.FC = () => {
     return signalisation ? signalisation.nom : "Inconnu";
   };
 
+  const getSousTraitantName = (id: number) => {
+    const sousTraitant = sousTraitants?.find((st) => st.id === id);
+    return sousTraitant ? sousTraitant.nom : "Inconnu";
+  };
+
   const handleToggleActivity = (day: string, activityId: number) => {
     setSelectedActivities((prev) => {
       const newSelected = { ...prev };
@@ -843,6 +874,95 @@ const PlanningForm: React.FC = () => {
       return newSelected;
     });
   };
+
+  // Fonction pour obtenir le statut de complétion d'une activité
+  const getActivityCompletionStatus = (planif: Planif, activiteId: number) => {
+    const activite = planif.PlanifActivites.find(pa => pa.activiteId === activiteId);
+    
+    if (!activite) return "bg-gray-400"; // Gris par défaut si l'activité n'est pas trouvée
+    
+    if (activite.isComplete) {
+      return "bg-green-500"; // Vert si complété
+    } else {
+      return "bg-gray-400"; // Gris si non commencé
+    }
+  };
+
+  // Fonction pour afficher les heures spécifiques d'une activité
+  const renderActivitySpecificHours = (activity: Planif) => {
+    // Si l'activité a des détails spécifiques pour les heures
+    if (activity.PlanifActivites && activity.PlanifActivites.length > 0) {
+      // Si on a plusieurs activités avec des heures différentes
+      if (activity.PlanifActivites.length > 1) {
+        return (
+          <div className="text-gray-700 text-center">
+            <span className="text-xs italic">Horaires multiples</span>
+          </div>
+        );
+      } else {
+        // Si on a une seule activité avec des heures spécifiques
+        const detail: {
+          activiteId: number;
+          debut?: string;
+          fin?: string;
+          isComplete?: boolean;
+        } = activity.PlanifActivites[0];
+        
+        if (detail.debut && detail.fin) {
+          return (
+            <div className="text-gray-700 text-center">
+              {detail.debut} - {detail.fin}
+            </div>
+          );
+        }
+      }
+    }
+    
+    // Par défaut, on affiche les heures globales
+    return (
+      <div className="text-gray-700 text-center">
+        {activity.HrsDebut} - {activity.HrsFin}
+      </div>
+    );
+  };
+
+  const getActivitiesNames = (activiteIDs: number[]) => {
+    if (!activites || !activiteIDs) return [];
+    return activiteIDs
+      .map(id => activites.find(a => a.id === id))
+      .filter(a => a !== undefined)
+      .map(a => a!.nom);
+  };
+
+  // Initialisation des jours de la semaine
+  const daysOfWeek = useMemo(() => {
+    return ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+  }, []);
+
+  // Fonction pour capitaliser la première lettre
+  const formatDayName = (date: Date) => {
+    const dayName = format(date, 'EEEE', { locale: fr });
+    return dayName.charAt(0).toUpperCase() + dayName.slice(1).toLowerCase();
+  };
+
+  const renderActivity = (activity: Planif) => (
+    <div className="font-bold text-gray-900">
+      {activity.ID || (
+        activity.PlanifActivites && activity.PlanifActivites.length > 0 ? (
+          <>
+            {getActivitiesNames(activity.PlanifActivites.map(a => a.activiteId))[0]}
+            {activity.PlanifActivites.length > 1 && (
+              <span className="ml-2 text-xs font-bold text-blue-600">
+                +{activity.PlanifActivites.length - 1} autres
+              </span>
+            )}
+          </>
+        ) : (
+          "Aucune activité"
+        )
+      )}
+    </div>
+  );
 
   // Fonction pour ouvrir le modal d'import
   const handleOpenImportModal = () => {
@@ -863,13 +983,163 @@ const PlanningForm: React.FC = () => {
     content: React.ReactNode;
   } | null>(null);
 
+  const [modalContent, setModalContent] = useState<{
+    title: string;
+    content: React.ReactNode;
+  } | null>(null);
+
+  const handleCreatePlanif = (day: string) => {
+    if (!selectedProject?.ID) return;
+    
+    console.log("Création d'une planification pour le jour:", day);
+    
+    // Trouver l'index du jour dans la semaine (0 pour Dimanche, 1 pour Lundi, etc.)
+    const dayIndex = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'].indexOf(day);
+    console.log("Index du jour:", dayIndex);
+    
+    if (dayIndex === -1) {
+      console.error("Jour non reconnu:", day);
+      return;
+    }
+    
+    // Calculer la date correspondante dans la semaine en cours
+    const dayDate = addDays(startOfWeek(currentDate, { weekStartsOn: 0 }), dayIndex);
+    console.log("Date calculée pour le jour:", format(dayDate, 'yyyy-MM-dd'));
+    
+    const newPlanif: Planif = {
+      ID: -Date.now(), // ID négatif temporaire
+      ProjetID: selectedProject.ID,
+      HrsDebut: "08:00",
+      HrsFin: "16:00",
+      note: "",
+      Date: format(dayDate, 'yyyy-MM-dd'),
+      PlanifActivites: [],
+      defaultEntreprise: 0
+    };
+    
+    console.log("Planification créée:", newPlanif);
+    
+    setSelectedDay(day);
+    setPlanifToEdit(newPlanif);
+    setShowModal(true);
+  };
+
+  const handleEditPlanif = (planif: Planif) => {
+    console.log("Édition de la planification:", planif);
+    setPlanifToEdit(planif);
+    setShowModal(true);
+  };
+
+  const handleDeletePlanifFromCard = (planif: Planif) => {
+    // Trouver le jour correspondant à la date de la planification
+    const planifDate = parseISO(planif.Date);
+    const dayName = format(planifDate, 'EEEE', { locale: fr });
+    const dayKey = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+    
+    // Appeler handleDeletePlanif avec le jour et l'ID
+    handleDeletePlanif(dayKey, planif.ID);
+  };
+
+  const addTestPlanification = () => {
+    if (!selectedProject) {
+      alert("Veuillez sélectionner un projet");
+      return;
+    }
+    
+    // Créer une {planif.ID > 0 ? Planif # : " Nouvelle Planif\}ication de test
+    const newPlanif: Planif = {
+      ID: -Date.now(), // ID négatif temporaire
+      ProjetID: selectedProject.ID,
+      HrsDebut: "08:00",
+      HrsFin: "17:00",
+      defaultEntreprise: sousTraitants && sousTraitants.length > 0 ? sousTraitants[0].id : 0,
+      note: "Test planification",
+      Date: format(new Date(), 'yyyy-MM-dd'),
+      PlanifActivites: []
+    };
+    
+    // Ajouter une activité de test si des activités sont disponibles
+    if (activites && activites.length > 0) {
+      const testActivite: PlanifActivite = {
+        ID: -Date.now() - 1, // ID négatif temporaire
+        PlanifID: newPlanif.ID,
+        debut: newPlanif.HrsDebut,
+        fin: newPlanif.HrsFin,
+        signalisation: signalisations && signalisations.length > 0 ? signalisations[0].id : 0,
+        lieuId: lieux && lieux.length > 0 ? lieux[0].id : 0,
+        qteLab: null,
+        activiteId: activites[0].id,
+        isComplete: false
+      };
+      
+      newPlanif.PlanifActivites.push(testActivite);
+    }
+    
+    // Déterminer le jour de la semaine
+    const dayName = format(new Date(), 'EEEE', { locale: fr });
+    const dayKey = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+    
+    // Ajouter la planification au jour correspondant
+    setLocalActivities(prev => {
+      const newActivities = { ...prev };
+      newActivities[dayKey] = [...newActivities[dayKey], newPlanif];
+      return newActivities;
+    });
+    
+    setHasUnsavedChanges(true);
+    console.log("Planification de test ajoutée:", newPlanif);
+  };
+
+  const handleAddPlanif = (day: string) => {
+    if (!selectedProject) {
+      alert("Veuillez sélectionner un projet");
+      return;
+    }
+    
+    // Trouver la date correspondant au jour
+    const dayIndex = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"]
+      .indexOf(day.toLowerCase());
+    
+    if (dayIndex === -1) {
+      console.error("Jour invalide:", day);
+      return;
+    }
+    
+    // Calculer la date en ajoutant le nombre de jours à la date de début de semaine
+    const planifDate = format(addDays(start, dayIndex), 'yyyy-MM-dd');
+    
+    // Créer une {planif.ID > 0 ? Planif # : " Nouvelle Planif\}ication vide
+    const newPlanif: Planif = {
+      ID: -Date.now(), // ID négatif temporaire
+      ProjetID: selectedProject.ID,
+      HrsDebut: "08:00",
+      HrsFin: "17:00",
+      defaultEntreprise: sousTraitants && sousTraitants.length > 0 ? sousTraitants[0].id : 0,
+      note: "",
+      Date: planifDate,
+      PlanifActivites: []
+    };
+    
+    // Définir le jour sélectionné et la planification à éditer
+    setSelectedDay(day);
+    setPlanifToEdit(newPlanif);
+    setShowModal(true);
+  };
+
+  // Fonction pour ouvrir la modal de confirmation de suppression
+  const handleConfirmDeletePlanif = (day: string, planif: Planif) => {
+    setSelectedDay(day);
+    setPlanifToDelete(planif);
+    setShowDeleteConfirmation(true);
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-lg">
       {/* En-tête sticky avec DatePicker et boutons */}
       <div className="sticky top-0 z-10 bg-white p-4 border-b flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center space-x-4">
           <div className="flex items-center">
-            <FaCalendarDay className="text-blue-500 mr-2" />
+            <FaCalendarDay className="mr-2" />
             <DatePicker
               selected={currentDate}
               onChange={handleDateChange}
@@ -887,7 +1157,7 @@ const PlanningForm: React.FC = () => {
         <div className="flex items-center space-x-2">
           <button
             onClick={() => setShowModal(true)}
-            className="flex items-center bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded transition duration-200"
+            className="flex items-center bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded transition-colors duration-200"
             title="Ajouter une planification"
           >
             <FaPlus className="mr-1" /> Ajouter
@@ -895,7 +1165,7 @@ const PlanningForm: React.FC = () => {
           
           <button
             onClick={handleOpenImportModal}
-            className="flex items-center bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded transition duration-200"
+            className="flex items-center bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded transition-colors duration-200"
             title="Importer des planifications existantes"
             disabled={importablePlanifications.length === 0}
           >
@@ -908,7 +1178,7 @@ const PlanningForm: React.FC = () => {
               hasUnsavedChanges
                 ? "bg-yellow-500 hover:bg-yellow-600"
                 : "bg-gray-400"
-            } text-white px-3 py-2 rounded transition duration-200`}
+            } text-white px-3 py-2 rounded transition-colors duration-200`}
             disabled={!hasUnsavedChanges}
             title={
               hasUnsavedChanges
@@ -916,7 +1186,10 @@ const PlanningForm: React.FC = () => {
                 : "Aucune modification à enregistrer"
             }
           >
-            <FaSave className="mr-1" /> Enregistrer
+            <div className="flex items-center">
+              <FaSave className="mr-2" />
+              <span>Sauvegarder les modifications</span>
+            </div>
           </button>
         </div>
       </div>
@@ -925,7 +1198,7 @@ const PlanningForm: React.FC = () => {
       <div className="p-4">
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="grid grid-cols-1 gap-4">
-            {weekDates.map((date, index) => {
+            {weekDates.map((date: Date, index: number) => {
               const dayName = formatDayName(date);
               const formattedDate = format(date, 'dd/MM/yyyy');
               
@@ -941,166 +1214,225 @@ const PlanningForm: React.FC = () => {
                     >
                       {/* En-tête du jour */}
                       <div className="flex items-center justify-between p-4 bg-blue-600 text-white rounded-t-lg">
-                        <div className="flex items-center gap-2">
-                          <FaCalendarDay />
+                        <div className="flex items-center">
+                          <FaCalendarDay className="mr-2" />
                           <span className="font-bold">{dayName}</span>
-                          <span className="text-sm text-blue-200">- {formattedDate}</span>
+                          <span className="text-white/90 ml-2">{format(date, 'd MMMM yyyy', { locale: fr })}</span>
                         </div>
                         <button
-                          onClick={() => {
-                            setSelectedDay(dayName);
-                            setShowModal(true);
-                          }}
+                          onClick={() => handleCreatePlanif(dayName)}
                           className="p-1 text-white hover:text-blue-200 transition-colors duration-200"
                         >
-                          <FaPlus className="text-lg" />
+                          <FaPlus size={20} />
                         </button>
                       </div>
                       
-                      {/* Headers des colonnes */}
-                      <div className="grid grid-cols-12 gap-4 bg-gray-50 px-4 py-2 border-b border-gray-200 text-sm font-medium text-gray-600">
-                        <div className="col-span-3 flex items-center gap-2 justify-center">
-                          <FaClipboardList size={14} className="text-blue-500" />
-                          <span>Activité</span>
-                        </div>
-                        <div className="col-span-2 flex items-center gap-2 justify-center">
-                          <FaClock size={14} className="text-blue-500" />
-                          <span>Horaire</span>
-                        </div>
-                        <div className="col-span-2 flex items-center gap-2 justify-center">
-                          <FaBuilding size={14} className="text-blue-500" />
-                          <span>Entreprise</span>
-                        </div>
-                        <div className="col-span-2 flex items-center gap-2 justify-center">
-                          <FaMapMarkerAlt size={14} className="text-blue-500" />
-                          <span>Lieu</span>
-                        </div>
-                        <div className="col-span-2 flex items-center gap-2 justify-center">
-                          <FaSign size={14} className="text-blue-500" />
-                          <span>Signalisation</span>
-                        </div>
-                        <div className="col-span-1 flex justify-end items-center gap-2">
-                          <FaCog size={14} className="text-blue-500" />
-                        </div>
-                      </div>
-
                       {/* Liste des activités */}
-                      <div className="p-4 space-y-2">
+                      <div className="p-4 space-y-3">
                         {localActivities[dayName]?.map((activity, index) => (
-                          <Draggable
-                            key={activity.id.toString()}
-                            draggableId={activity.id.toString()}
-                            index={index}
-                          >
-                            {(provided) => (
+                          <Draggable key={activity.ID} draggableId={`planif-${activity.ID}`} index={index}>
+                            {(provided, snapshot) => (
                               <div
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
-                                className="grid grid-cols-12 gap-4 items-center bg-white p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-sm transition-all duration-200"
+                                className={`mb-4 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden ${
+                                  snapshot.isDragging ? "shadow-xl" : ""
+                                }`}
                               >
-                                <div className="col-span-3">
-                                  <div className="group relative">
-                                    {renderActivity(activity)}
-                                    
-                                    {/* Tooltip avec la liste complète des activités */}
-                                    {activity.activiteIDs && activity.activiteIDs.length > 1 && (
-                                      <div 
-                                        className="absolute invisible group-hover:visible bg-white border border-gray-200 rounded-lg shadow-lg p-3 min-w-[200px] mt-1" 
-                                        style={{ 
-                                          zIndex: 1000,
-                                          transform: 'translateY(0)',
-                                          pointerEvents: 'auto'
-                                        }}
-                                      >
-                                        <div className="text-sm font-bold text-gray-700 mb-2">
-                                          Toutes les activités :
-                                        </div>
-                                        <ul className="space-y-1">
-                                          {activity.activiteIDs.map((id) => {
-                                            const act = activites!.find((a) => a.id === id);
-                                            return act ? (
-                                              <li key={id} className="text-sm text-gray-600">
-                                                {act.nom}
-                                              </li>
-                                            ) : null;
-                                          })}
-                                        </ul>
-                                      </div>
-                                    )}
-                                  </div>
+                                {/* Appel direct au rendu sans double Card */}
+                                {(() => {
+                                  // Utiliser l'activité réelle au lieu de l'exemple
+                                  const planif = activity;
                                   
-                                  {activity.note && (
-                                    <div className="group relative inline-block">
-                                      <span className="inline-flex items-center gap-1 text-xs text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded mt-1 cursor-pointer">
-                                        <FaPencilAlt size={10} />
-                                        Note
-                                      </span>
-                                      <div 
-                                        className="absolute invisible group-hover:visible bg-white border border-gray-200 rounded-lg shadow-lg p-3 min-w-[200px] mt-1 left-0" 
-                                        style={{ 
-                                          zIndex: 1000,
-                                          transform: 'translateY(0)',
-                                          pointerEvents: 'auto'
-                                        }}
-                                      >
-                                        <div className="text-sm text-gray-600 whitespace-pre-wrap">
-                                          {activity.note}
+                                  return (
+                                    <>
+                                      <CardHeader className="bg-blue-600 text-white p-4 md:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                        <div className="flex flex-col gap-1">
+                                          <div className="flex items-center gap-2">
+                                            <Badge variant="outline" className="bg-white/20 text-white border-white/30 px-3 py-1 text-sm font-medium">
+                                              {planif.ID > 0 ? `Planif #${planif.ID}` : "Nouvelle Planif"}
+                                            </Badge>
+                                            <div className="flex gap-1 ml-auto md:ml-0">
+                                              <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 h-8 w-8"
+                                                onClick={(e) => { 
+                                                  e.stopPropagation(); 
+                                                  handleEditPlanif(planif); 
+                                                }}>
+                                                <Edit className="h-4 w-4" />
+                                              </Button>
+                                              <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 h-8 w-8">
+                                                <Share2 className="h-4 w-4" />
+                                              </Button>
+                                              <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 h-8 w-8"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleConfirmDeletePlanif(dayName, planif);
+                                                }}>
+                                                <Trash className="h-4 w-4" />
+                                              </Button>
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center gap-4 mt-1">
+                                            <div className="flex items-center gap-2">
+                                              <Clock className="h-5 w-5 text-white/80" />
+                                              <span className="font-medium">{planif.HrsDebut} - {planif.HrsFin}</span>
+                                            </div>
+                                            <Badge className="bg-white/30 hover:bg-white/40 text-white border-0">
+                                              {planif.PlanifActivites.length} activités
+                                            </Badge>
+                                          </div>
                                         </div>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
+                                        <div className="flex items-center gap-2">
+                                          <div className="bg-white/20 p-2 rounded-full">
+                                            <Building2 className="h-5 w-5" />
+                                          </div>
+                                          <div className="flex flex-col">
+                                            <span className="text-sm text-white/80">Entreprise</span>
+                                            <span className="font-medium">{sousTraitants?.find(st => st.id === planif.defaultEntreprise)?.nom || 'Inconnue'}</span>
+                                          </div>
+                                        </div>
+                                      </CardHeader>
+                                      
+                                      {planif.note && planif.note.trim() !== "" && (
+                                        <div className="bg-amber-50 p-4 border-b border-amber-100">
+                                          <div className="flex items-start gap-3">
+                                            <MessageSquare className="h-5 w-5 text-amber-500 mt-0.5" />
+                                            <div className="flex-1">
+                                              <h3 className="text-sm font-medium text-amber-800 mb-1 text-left">Commentaire global</h3>
+                                              <p className="text-sm text-amber-700 text-left">
+                                                {planif.note}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+                                      
+                                      <CardContent className="p-0">
+                                        <div className="overflow-x-auto">
+                                          <Table>
+                                            <TableHeader>
+                                              <TableRow className="bg-gray-50 hover:bg-gray-50">
+                                                <TableHead className="font-medium">
+                                                  <div className="flex items-center gap-2">
+                                                    <Hammer className="h-4 w-4 text-gray-500" />
+                                                    <span>Activité</span>
+                                                  </div>
+                                                </TableHead>
+                                                <TableHead className="font-medium">
+                                                  <div className="flex items-center gap-2">
+                                                    <Clock className="h-4 w-4 text-gray-500" />
+                                                    <span>Horaire</span>
+                                                  </div>
+                                                </TableHead>
+                                                <TableHead className="font-medium">
+                                                  <div className="flex items-center gap-2">
+                                                    <Building2 className="h-4 w-4 text-gray-500" />
+                                                    <span>Entreprise</span>
+                                                  </div>
+                                                </TableHead>
+                                                <TableHead className="font-medium">
+                                                  <div className="flex items-center gap-2">
+                                                    <MapPin className="h-4 w-4 text-gray-500" />
+                                                    <span>Lieu</span>
+                                                  </div>
+                                                </TableHead>
+                                                <TableHead className="font-medium text-center">
+                                                  <div className="flex items-center justify-center">
+                                                    <AlertTriangle className="h-4 w-4 text-gray-500" />
+                                                    <span>Signal.</span>
+                                                  </div>
+                                                </TableHead>
+                                                <TableHead className="font-medium text-center">
+                                                  <div className="flex items-center justify-center">
+                                                    <Beaker className="h-4 w-4 text-gray-500" />
+                                                    <span>Lab</span>
+                                                  </div>
+                                                </TableHead>
+                                              </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                              {planif.PlanifActivites.map((activite, index) => {
+                                                const isNightActivity = (time: string) => {
+                                                  const hour = parseInt(time.split(':')[0]);
+                                                  return hour >= 17 || hour < 7;
+                                                };
 
-                                <div className="col-span-2 text-gray-700 justify-center">
-                                  {activity.hrsDebut} - {activity.hrsFin}
-                                </div>
+                                                const TimeIcon = isNightActivity(activite.debut) ? Moon : Sun;
+                                                const timeIconColor = isNightActivity(activite.debut) ? "text-indigo-500" : "text-amber-500";
+                                                
+                                                // Trouver les informations de l'activité
+                                                const activiteInfo = activites?.find(a => a.id === activite.activiteId);
+                                                const lieuInfo = lieux?.find(l => l.id === activite.lieuId);
+                                                const signalInfo = signalisations?.find(s => s.id === activite.signalisation);
+                                                
+                                                // Utiliser le sous-traitant spécifique à l'activité s'il est défini, sinon utiliser celui par défaut de la planification
+                                                const entrepriseInfo = activite.sousTraitantId 
+                                                  ? sousTraitants?.find(st => st.id === activite.sousTraitantId)
+                                                  : sousTraitants?.find(st => st.id === planif.defaultEntreprise);
 
-                                <div className="col-span-2 text-gray-700 truncate justify-center" title={getEntrepriseName(activity.defaultEntrepriseId!)}>
-                                  {getEntrepriseName(activity.defaultEntrepriseId!)}
-                                </div>
-
-                                <div className="col-span-2 text-gray-700 truncate justify-center" title={getLieuName(activity.lieuID!)}>
-                                  {getLieuName(activity.lieuID!)}
-                                </div>
-
-                                <div className="col-span-2 text-gray-700 truncate justify-center" title={getSignalisationName(activity.signalisationId!)}>
-                                  {getSignalisationName(activity.signalisationId!)}
-                                </div>
-
-                                <div className="col-span-1 flex items-center justify-end gap-1">
-                                  <div className="flex items-center" title="Laboratoire requis">
-                                    <input
-                                      type="checkbox"
-                                      checked={activity.isLab}
-                                      onChange={() => handleCheckboxChange(activity.id.toString())}
-                                      className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                      id={`lab-${activity.id}`}
-                                    />
-                                    <FaFlask className="ml-1 text-gray-500" size={14} />
-                                  </div>
-                                  <button
-                                    onClick={() => handleEditActivity(activity)}
-                                    className="p-1 text-gray-600 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors duration-200"
-                                    title="Modifier l'activité"
-                                  >
-                                    <FaPencilAlt size={14} />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteActivity(dayName, activity.id)}
-                                    className="p-1 text-gray-600 hover:text-red-600 rounded-full hover:bg-red-50 transition-colors duration-200"
-                                    title="Supprimer l'activité"
-                                  >
-                                    <FaTrash size={14} />
-                                  </button>
-                                </div>
+                                                return (
+                                                  <TableRow key={index} className="border-b hover:bg-gray-50/50 transition-colors">
+                                                    <TableCell className="font-medium">
+                                                      <div className="flex items-center gap-2">
+                                                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 font-medium">
+                                                          ACT {index + 1}
+                                                        </Badge>
+                                                        <span>{activiteInfo?.nom || `Activité ${index + 1}`}</span>
+                                                      </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                      <div className="flex items-center gap-2">
+                                                        <TimeIcon className={`h-4 w-4 ${timeIconColor}`} />
+                                                        <span>{activite.debut} - {activite.fin}</span>
+                                                      </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                      <div className="flex items-center gap-2">
+                                                        <Building2 className="h-4 w-4 text-gray-400" />
+                                                        <span>{entrepriseInfo?.nom || 'Inconnue'}</span>
+                                                      </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                      <div className="flex items-center gap-2">
+                                                        <MapPin className="h-4 w-4 text-gray-400" />
+                                                        <span>{lieuInfo?.nom || `EL-${activite.lieuId}`}</span>
+                                                      </div>
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                      <div className="flex items-center justify-center">
+                                                        <div className="flex items-center gap-2">
+                                                          <AlertTriangle className="h-4 w-4 text-gray-400" />
+                                                          <span>{signalInfo?.nom || 'Gauche'}</span>
+                                                        </div>
+                                                      </div>
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                      {activite.qteLab !== null && activite.qteLab !== undefined ? (
+                                                        <Badge variant="secondary" className="rounded-full px-2 py-0.5 font-normal">
+                                                          {activite.qteLab}
+                                                        </Badge>
+                                                      ) : (
+                                                        <span className="text-gray-400">-</span>
+                                                      )}
+                                                    </TableCell>
+                                                  </TableRow>
+                                                );
+                                              })}
+                                            </TableBody>
+                                          </Table>
+                                        </div>
+                                      </CardContent>
+                                    </>
+                                  );
+                                })()}
                               </div>
                             )}
                           </Draggable>
                         ))}
                         {provided.placeholder}
                         {localActivities[dayName]?.length === 0 && (
-                          <div className="text-center py-8 text-gray-500">
+                          <div className="text-center text-gray-400 p-4">
                             Aucune activité planifiée
                           </div>
                         )}
@@ -1114,7 +1446,7 @@ const PlanningForm: React.FC = () => {
         </DragDropContext>
       </div>
 
-      {hasUnsavedChanges && (
+      {hasUnsavedChanges && !showDeleteConfirmation && (
         <div 
           className="sticky bottom-0 bg-white p-4 border-t border-gray-200 shadow-lg" 
           style={{ zIndex: 900 }}
@@ -1122,10 +1454,12 @@ const PlanningForm: React.FC = () => {
           <div className="flex justify-end">
             <button
               onClick={handleSaveAllChanges}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 flex items-center gap-2"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200"
             >
-              <FaSave />
-              Sauvegarder les modifications
+              <div className="flex items-center">
+                <FaSave className="mr-2" />
+                <span>Sauvegarder les modifications</span>
+              </div>
             </button>
           </div>
         </div>
@@ -1133,21 +1467,72 @@ const PlanningForm: React.FC = () => {
       {showModal && (
         <CreatePlanifModal
           isOpen={showModal}
-          onClose={() => {
-            setShowModal(false);
-            setPlanifToEdit(null);
-          }}
-          onSave={handleSavePlanif}
+          onClose={() => setShowModal(false)}
           planif={planifToEdit}
+          onSave={handleSavePlanif}
+        />
+      )}
+      {showDeleteConfirmation && (
+        <ConfirmationDialog
+          isOpen={showDeleteConfirmation}
+          onClose={() => setShowDeleteConfirmation(false)}
+          title="Confirmation de suppression"
+          content={
+            <div className="text-gray-700">
+              <p className="mb-2">Êtes-vous sûr de vouloir supprimer cette planification ?</p>
+              <p className="text-sm text-gray-500">Cette action est irréversible.</p>
+            </div>
+          }
+          onConfirm={() => {
+            if (planifToDelete && selectedDay) {
+              handleDeletePlanif(selectedDay, planifToDelete.ID);
+              setShowDeleteConfirmation(false);
+              setPlanifToDelete(null);
+            }
+          }}
+          confirmText="Supprimer"
+          cancelText="Annuler"
+          variant="destructive"
         />
       )}
       {showImportModal && (
         <ImportPlanifModal
           isOpen={showImportModal}
           onClose={() => setShowImportModal(false)}
-          onImport={handleImportActivities}
-          currentWeekDates={weekDates}
-          existingPlanifications={importablePlanifications}
+          planifications={importablePlanifications}
+          onImport={(planificationsToImport) => {
+            // Pour chaque planification à importer
+            planificationsToImport.forEach(planif => {
+              // Générer un nouvel ID négatif temporaire
+              planif.ID = -Date.now() - Math.floor(Math.random() * 1000);
+              
+              // Mettre à jour la date pour qu'elle corresponde à la semaine courante
+              if (selectedDay) {
+                const dayIndex = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"]
+                  .indexOf(selectedDay.toLowerCase());
+                
+                if (dayIndex !== -1) {
+                  const newDate = format(addDays(start, dayIndex), 'yyyy-MM-dd');
+                  planif.Date = newDate;
+                }
+              }
+              
+              // Ajouter au jour sélectionné
+              if (selectedDay) {
+                setLocalActivities(prev => {
+                  const updatedActivities = { ...prev };
+                  if (!updatedActivities[selectedDay]) {
+                    updatedActivities[selectedDay] = [];
+                  }
+                  updatedActivities[selectedDay].push(planif);
+                  return updatedActivities;
+                });
+              }
+            });
+            
+            setHasUnsavedChanges(true);
+            setShowImportModal(false);
+          }}
         />
       )}
       {tooltipPosition && (
@@ -1160,6 +1545,24 @@ const PlanningForm: React.FC = () => {
           }}
         >
           {tooltipPosition.content}
+        </div>
+      )}
+      {modalContent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-800">{modalContent.title}</h2>
+              <button 
+                onClick={() => setModalContent(null)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <FaTimes size={20} />
+              </button>
+            </div>
+            <div>
+              {modalContent.content}
+            </div>
+          </div>
         </div>
       )}
     </div>

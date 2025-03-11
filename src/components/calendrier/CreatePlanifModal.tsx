@@ -3,25 +3,26 @@ import {
   FaBuilding,
   FaMapMarkerAlt,
   FaClock,
-  FaSign,
-  FaPencilAlt,
-  FaSave,
-  FaTimes,
-  FaClipboardList,
+  FaCalendarAlt,
   FaSearch,
+  FaClipboardList,
   FaArrowRight,
   FaArrowLeft,
+  FaCheck,
+  FaTimes,
+  FaSign,
   FaFlask,
+  FaPencilAlt,
 } from "react-icons/fa";
-import { ActivitePlanif } from "../../models/JournalFormModel";
 import { useAuth } from "../../context/AuthContext";
+import { Planif, PlanifActivite } from "../../models/JournalFormModel";
 import "../../styles/checkbox.css";
 
 interface CreatePlanifModalProps {
   isOpen: boolean;
-  planif: ActivitePlanif | null;
+  planif: Planif | null;
   onClose: () => void;
-  onSave: (planif: ActivitePlanif, selectedActivities: Set<number>) => void;
+  onSave: (planif: Planif) => void;
 }
 
 const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
@@ -30,7 +31,10 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
   planif,
   onSave,
 }) => {
-  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+  // État pour suivre l'étape actuelle (1, 2 ou 3)
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+  
+  // États pour les données de base
   const [entrepriseId, setEntrepriseId] = useState<number | null>(null);
   const [lieuId, setLieuId] = useState<number | null>(null);
   const [signalisationId, setSignalisationId] = useState<number | null>(null);
@@ -41,31 +45,62 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isLab, setIsLab] = useState<boolean>(false);
   const [labQuantity, setLabQuantity] = useState<number | null>(null);
-  const { lieux, sousTraitants, signalisations, activites } = useAuth();
+  
+  // État pour l'étape 2 - activités en cours d'édition
+  const [currentActivityIndex, setCurrentActivityIndex] = useState<number>(0);
+  const [activitiesData, setActivitiesData] = useState<PlanifActivite[]>([]);
+  
+  // État pour l'étape 3 - finalisation
+  const [planifDate, setPlanifDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [globalStartHour, setGlobalStartHour] = useState<string>("");
+  const [globalEndHour, setGlobalEndHour] = useState<string>("");
+  const [defaultEntreprise, setDefaultEntreprise] = useState<number | null>(null);
+  const [globalNote, setGlobalNote] = useState<string>("");
+  
+  const { lieux, sousTraitants, signalisations, activites, selectedProject } = useAuth();
 
   useEffect(() => {
     if (planif) {
-      setEntrepriseId(planif.defaultEntrepriseId ?? null);
-      setLieuId(planif.lieuID ?? null);
-      setStartHour(planif.hrsDebut ?? "");
-      setEndHour(planif.hrsFin ?? "");
-      setSignalisationId(planif.signalisationId ?? null);
+      setEntrepriseId(planif.defaultEntreprise ?? null);
+      setStartHour(planif.HrsDebut ?? "");
+      setEndHour(planif.HrsFin ?? "");
       setNotes(planif.note ?? "");
-      setIsLab(planif.isLab ?? false);
-      setLabQuantity(planif.labQuantity ?? null);
-      if (planif.activiteIDs) {
-        setSelectedActivities(new Set(planif.activiteIDs));
+      setPlanifDate(planif.Date);
+      setGlobalNote(planif.note ?? "");
+      setGlobalStartHour(planif.HrsDebut ?? "");
+      setGlobalEndHour(planif.HrsFin ?? "");
+      setDefaultEntreprise(planif.defaultEntreprise ?? null);
+      
+      // Pré-sélectionner les activités existantes
+      if (planif.PlanifActivites && planif.PlanifActivites.length > 0) {
+        // Créer un ensemble des IDs d'activités existantes
+        const existingActivitiesSet = new Set(
+          planif.PlanifActivites.map(activity => activity.activiteId)
+        );
+        setSelectedActivities(existingActivitiesSet);
+        
+        // Initialiser les données des activités existantes
+        setActivitiesData(planif.PlanifActivites.map(activity => ({
+          ...activity,
+          isComplete: true // Marquer comme complète puisqu'elle existe déjà
+        })));
+        
+        // Passer directement à l'étape 3 si nous modifions une planification existante
+        setCurrentStep(3);
       }
     } else {
       setEntrepriseId(null);
-      setLieuId(null);
       setStartHour("");
       setEndHour("");
-      setSignalisationId(null);
       setNotes("");
-      setIsLab(false);
-      setLabQuantity(null);
       setSelectedActivities(new Set());
+      setActivitiesData([]);
+      setPlanifDate(new Date().toISOString().split('T')[0]);
+      setGlobalNote("");
+      setGlobalStartHour("");
+      setGlobalEndHour("");
+      setDefaultEntreprise(null);
+      setCurrentStep(1);
     }
   }, [planif]);
 
@@ -75,75 +110,129 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
     }
   }, [isLab]);
 
+  useEffect(() => {
+    if (currentStep === 2 && selectedActivities.size > 0) {
+      // Obtenir les IDs d'activités déjà présentes dans activitiesData
+      const existingActivityIds = new Set(activitiesData.map(a => a.activiteId));
+      
+      // Convertir les activités sélectionnées en tableau
+      const selectedActivitiesArray = Array.from(selectedActivities);
+      
+      // Filtrer pour ne garder que les nouvelles activités qui ne sont pas déjà dans activitiesData
+      const newSelectedActivities = selectedActivitiesArray.filter(id => !existingActivityIds.has(id));
+      
+      if (newSelectedActivities.length > 0) {
+        // Initialiser les données des nouvelles activités sélectionnées
+        const newActivitiesData = newSelectedActivities.map((activityId, index) => {
+          // Pour la première nouvelle activité, utiliser l'heure de fin de la dernière activité existante ou l'heure de début globale
+          // Pour les activités suivantes, utiliser l'heure de fin de l'activité précédente comme heure de début
+          let activityStartHour = startHour || "";
+          let activityEndHour = endHour || "";
+          
+          // Si nous avons des activités existantes, commencer après la dernière
+          if (activitiesData.length > 0) {
+            const lastActivity = activitiesData[activitiesData.length - 1];
+            activityStartHour = lastActivity.fin;
+          } else if (index > 0) {
+            // Si ce n'est pas la première activité, son heure de début est l'heure de fin de l'activité précédente
+            activityStartHour = activityEndHour;
+          }
+          
+          return {
+            ID: 0,
+            PlanifID: planif?.ID || 0,
+            debut: activityStartHour, 
+            fin: activityEndHour, 
+            signalisation: signalisationId || 0,
+            lieuId: lieuId || 0,
+            qteLab: null,
+            activiteId: activityId,
+            isComplete: false,
+            sousTraitantId: undefined,
+          } as PlanifActivite;
+        });
+        
+        // Combiner les activités existantes avec les nouvelles
+        setActivitiesData(prevData => [...prevData, ...newActivitiesData]);
+      }
+      
+      // Si nous avons des activités, définir l'index sur la première activité non complétée
+      if (activitiesData.length > 0) {
+        const firstIncompleteIndex = activitiesData.findIndex(a => !a.isComplete);
+        setCurrentActivityIndex(firstIncompleteIndex >= 0 ? firstIncompleteIndex : 0);
+      } else {
+        setCurrentActivityIndex(0);
+      }
+    }
+  }, [currentStep, selectedActivities, startHour, endHour, signalisationId, lieuId, planif, activitiesData]);
+
+  useEffect(() => {
+    if (currentStep === 3 && activitiesData.length > 0) {
+      let earliestStart = "23:59";
+      let latestEnd = "00:00";
+      
+      activitiesData.forEach(activity => {
+        if (activity.debut && activity.debut < earliestStart) {
+          earliestStart = activity.debut;
+        }
+        if (activity.fin && activity.fin > latestEnd) {
+          latestEnd = activity.fin;
+        }
+      });
+      
+      setGlobalStartHour(earliestStart);
+      setGlobalEndHour(latestEnd);
+      
+      const brunoEntreprise = sousTraitants?.find(st => st.nom.toLowerCase() === "bruneau");
+      if (brunoEntreprise) {
+        setDefaultEntreprise(brunoEntreprise.id);
+      } else if (sousTraitants && sousTraitants.length > 0) {
+        setDefaultEntreprise(sousTraitants[0].id);
+      }
+    }
+  }, [currentStep, activitiesData, sousTraitants]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const validTimeFormat = /^([0-1]\d|2[0-3]):([0-5]\d)$/;
+    if (currentStep !== 3) {
+      return; 
+    }
 
-    if (!validTimeFormat.test(startHour) || !validTimeFormat.test(endHour)) {
-      alert("Format d'heure invalide");
+    if (!defaultEntreprise) {
+      alert("Veuillez sélectionner une entreprise par défaut");
       return;
     }
 
-    if (selectedActivities.size === 0) {
-      alert("Veuillez sélectionner au moins une activité");
+    if (!globalStartHour || !globalEndHour) {
+      alert("Les heures globales sont requises");
       return;
     }
 
-    if (isLab && (labQuantity === null || labQuantity < 0)) {
-      alert("Veuillez entrer une quantité valide pour le laboratoire");
+    if (!selectedProject) {
+      alert("Aucun projet sélectionné");
       return;
     }
 
-    const planifData: ActivitePlanif = {
-      id: planif?.id || Date.now(),
-      lieuID: lieuId!,
-      hrsDebut: startHour,
-      hrsFin: endHour,
-      defaultEntrepriseId: entrepriseId!,
-      signalisationId: signalisationId ?? 0,
-      note: notes || "",
-      isLab: isLab,
-      labQuantity: isLab ? labQuantity : null,
-      date: "", // Laisser vide pour une nouvelle planification
-      activiteIDs: Array.from(selectedActivities),
-      projetId: 0,
-      quantite: 0,
+    // Créer une copie des activités sans la propriété isComplete
+    const planifActivitiesWithoutIsComplete = activitiesData.map(activity => {
+      const { isComplete, ...activityWithoutIsComplete } = activity;
+      return activityWithoutIsComplete;
+    });
+
+    const finalPlanif: Planif = {
+      ID: planif?.ID || 0, // Conserver l'ID existant pour une mise à jour
+      ProjetID: selectedProject.ID, // Utiliser l'ID du projet sélectionné
+      HrsDebut: globalStartHour,
+      HrsFin: globalEndHour,
+      defaultEntreprise: defaultEntreprise,
+      note: globalNote,
+      Date: planifDate,
+      PlanifActivites: planifActivitiesWithoutIsComplete
     };
 
-    onSave(planifData, selectedActivities);
+    onSave(finalPlanif);
     onClose();
-  };
-
-  const handleSave = () => {
-    if (!lieuId || !entrepriseId) {
-      alert("Veuillez remplir tous les champs obligatoires");
-      return;
-    }
-
-    if (isLab && (labQuantity === null || labQuantity < 0)) {
-      alert("Veuillez entrer une quantité valide pour le laboratoire");
-      return;
-    }
-
-    const updatedPlanif: ActivitePlanif = {
-      id: planif?.id || 0,
-      lieuID: lieuId,
-      defaultEntrepriseId: entrepriseId,
-      hrsDebut: startHour,
-      hrsFin: endHour,
-      signalisationId: signalisationId || 0,
-      note: notes,
-      isLab: isLab,
-      labQuantity: isLab ? labQuantity : null,
-      date: planif?.date || "", // Laisser vide pour une nouvelle planification
-      activiteIDs: Array.from(selectedActivities),
-      projetId: 0,
-      quantite: 0
-    };
-
-    onSave(updatedPlanif, selectedActivities);
-    setCurrentStep(1);
   };
 
   const handleToggleActivity = (activityId: number) => {
@@ -163,15 +252,116 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
   };
 
   const handleNextStep = () => {
-    if (selectedActivities.size === 0) {
-      alert("Veuillez sélectionner au moins une activité");
-      return;
+    if (currentStep === 1) {
+      if (selectedActivities.size === 0) {
+        alert("Veuillez sélectionner au moins une activité");
+        return;
+      }
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      // Vérifier que toutes les activités ont été complétées
+      // Si nous modifions une planification existante, nous n'avons pas besoin de vérifier
+      // les activités déjà complètes
+      const activitiesToCheck = activitiesData.filter(a => !a.isComplete);
+      
+      if (activitiesToCheck.length > 0) {
+        const isAllActivitiesComplete = activitiesToCheck.every(
+          activity => activity.debut && activity.fin && activity.lieuId
+        );
+        
+        if (!isAllActivitiesComplete) {
+          alert("Veuillez compléter toutes les informations obligatoires pour chaque nouvelle activité");
+          return;
+        }
+        
+        // Marquer toutes les activités comme complètes
+        setActivitiesData(prevData => 
+          prevData.map(activity => ({
+            ...activity,
+            isComplete: true
+          }))
+        );
+      }
+      
+      setCurrentStep(3);
     }
-    setCurrentStep(2);
   };
 
   const handlePreviousStep = () => {
-    setCurrentStep(1);
+    if (currentStep === 2) {
+      setCurrentStep(1);
+    } else if (currentStep === 3) {
+      setCurrentStep(2);
+    }
+  };
+
+  // Fonction pour passer à l'activité suivante dans l'étape 2
+  const handleNextActivity = () => {
+    // Vérifier que l'activité actuelle est complète
+    const currentActivity = activitiesData[currentActivityIndex];
+    if (!currentActivity.debut || !currentActivity.fin || !currentActivity.lieuId) {
+      alert("Veuillez compléter les informations obligatoires pour cette activité (heures de début et fin, lieu)");
+      return;
+    }
+    
+    // Mettre à jour le statut de complétion de l'activité
+    updateActivityData(currentActivityIndex, { isComplete: true });
+    
+    // Passer à l'activité suivante si elle existe
+    if (currentActivityIndex < activitiesData.length - 1) {
+      // Mettre à jour l'heure de début de l'activité suivante pour qu'elle soit égale à l'heure de fin de l'activité actuelle
+      updateActivityData(currentActivityIndex + 1, { debut: currentActivity.fin });
+      
+      // Passer à l'activité suivante
+      setCurrentActivityIndex(currentActivityIndex + 1);
+    } else {
+      // Si c'était la dernière activité, passer à l'étape 3
+      handleNextStep();
+    }
+  };
+
+  const handlePreviousActivity = () => {
+    // Vérifier si l'activité actuelle a des données à sauvegarder
+    const currentActivity = activitiesData[currentActivityIndex];
+    if (currentActivity.debut || currentActivity.fin || currentActivity.lieuId) {
+      // Sauvegarder les données de l'activité actuelle avant de changer
+      const isComplete = currentActivity.debut && currentActivity.fin && currentActivity.lieuId;
+      if (isComplete) {
+        updateActivityData(currentActivityIndex, { isComplete: true });
+      }
+    }
+    
+    if (currentActivityIndex > 0) {
+      setCurrentActivityIndex(currentActivityIndex - 1);
+    } else {
+      // Si c'était la première activité, revenir à l'étape 1
+      handlePreviousStep();
+    }
+  };
+
+  // Fonction pour mettre à jour les données d'une activité spécifique
+  const updateActivityData = (index: number, data: Partial<PlanifActivite>) => {
+    setActivitiesData(prevData => {
+      const newData = [...prevData];
+      newData[index] = { ...newData[index], ...data };
+      return newData;
+    });
+  };
+
+  // Fonction pour sélectionner une activité spécifique dans la liste
+  const handleSelectActivity = (index: number) => {
+    // Vérifier si l'activité actuelle a des données à sauvegarder
+    const currentActivity = activitiesData[currentActivityIndex];
+    if (currentActivity.debut || currentActivity.fin || currentActivity.lieuId) {
+      // Sauvegarder les données de l'activité actuelle avant de changer
+      const isComplete = currentActivity.debut && currentActivity.fin && currentActivity.lieuId;
+      if (isComplete) {
+        updateActivityData(currentActivityIndex, { isComplete: true });
+      }
+    }
+    
+    // Passer à l'activité sélectionnée
+    setCurrentActivityIndex(index);
   };
 
   const filteredActivities = activites?.filter((activite) =>
@@ -258,15 +448,253 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
 
   const renderPlanningDetailsStep = () => (
     <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Colonne de gauche: Liste des activités */}
+        <div className="md:col-span-1 bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-700">Activités à configurer</h3>
+            <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+              {activitiesData.filter(a => a.debut && a.fin && a.lieuId && a.isComplete).length}/{activitiesData.length}
+            </span>
+          </div>
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {activitiesData.map((activity, index) => {
+              const activityInfo = activites?.find(a => a.id === activity.activiteId);
+              const isComplete = activity.debut && activity.fin && activity.lieuId && activity.isComplete;
+              const isCurrent = index === currentActivityIndex;
+              
+              return (
+                <div 
+                  key={index}
+                  onClick={() => handleSelectActivity(index)}
+                  className={`p-3 rounded-lg cursor-pointer transition-all duration-200 flex items-center justify-between ${
+                    isCurrent 
+                      ? 'bg-blue-100 border-blue-300 border' 
+                      : isComplete 
+                        ? 'bg-green-50 text-gray-700' 
+                        : 'bg-white hover:bg-gray-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {isComplete && <FaCheck className="text-green-500" />}
+                    <span className={isComplete && !isCurrent ? 'text-gray-500' : ''}>
+                      {activityInfo?.nom || `Activité ${index + 1}`}
+                    </span>
+                  </div>
+                  {isCurrent && <FaArrowRight className="text-blue-500" />}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        
+        {/* Colonne de droite: Formulaire pour l'activité courante */}
+        <div className="md:col-span-2">
+          {activitiesData.length > 0 && currentActivityIndex < activitiesData.length && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-700 mb-4">
+                {activites?.find(a => a.id === activitiesData[currentActivityIndex].activiteId)?.nom || `Activité ${currentActivityIndex + 1}`}
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-gray-700 font-medium flex items-center gap-2">
+                    <FaClock className="text-blue-500" />
+                    Début de l'activité
+                  </label>
+                  <input
+                    type="time"
+                    value={activitiesData[currentActivityIndex].debut}
+                    onChange={(e) => updateActivityData(currentActivityIndex, { debut: e.target.value })}
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-gray-700 font-medium flex items-center gap-2">
+                    <FaClock className="text-blue-500" />
+                    Fin de l'activité
+                  </label>
+                  <input
+                    type="time"
+                    value={activitiesData[currentActivityIndex].fin}
+                    onChange={(e) => updateActivityData(currentActivityIndex, { fin: e.target.value })}
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-gray-700 font-medium flex items-center gap-2">
+                    <FaSign className="text-blue-500" />
+                    Signalisation
+                  </label>
+                  <select
+                    value={activitiesData[currentActivityIndex].signalisation || ""}
+                    onChange={(e) => updateActivityData(currentActivityIndex, { signalisation: Number(e.target.value) })}
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Sélectionner une signalisation</option>
+                    {signalisations?.map((sign) => (
+                      <option key={sign.id} value={sign.id}>
+                        {sign.nom}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-gray-700 font-medium flex items-center gap-2">
+                    <FaMapMarkerAlt className="text-blue-500" />
+                    Lieu
+                  </label>
+                  <select
+                    value={activitiesData[currentActivityIndex].lieuId || ""}
+                    onChange={(e) => updateActivityData(currentActivityIndex, { lieuId: Number(e.target.value) })}
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="">Sélectionner un lieu</option>
+                    {lieux?.map((lieu) => (
+                      <option key={lieu.id} value={lieu.id}>
+                        {lieu.nom}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-gray-700 font-medium flex items-center gap-2">
+                    <FaFlask className="text-blue-500" />
+                    Quantité pour le lab
+                  </label>
+                  <input
+                    type="number"
+                    value={activitiesData[currentActivityIndex].qteLab || ''}
+                    onChange={(e) => updateActivityData(currentActivityIndex, { 
+                      qteLab: e.target.value ? Number(e.target.value) : null 
+                    })}
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="Quantité (optionnel)"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-gray-700 font-medium flex items-center gap-2">
+                    <FaBuilding className="text-blue-500" />
+                    Sous-traitant pour cette activité
+                  </label>
+                  <select
+                    value={activitiesData[currentActivityIndex].sousTraitantId || ""}
+                    onChange={(e) => updateActivityData(currentActivityIndex, { 
+                      sousTraitantId: e.target.value ? Number(e.target.value) : undefined 
+                    })}
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Utiliser l'entreprise par défaut</option>
+                    {sousTraitants?.map((st) => (
+                      <option key={st.id} value={st.id}>
+                        {st.nom}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 italic mt-1">
+                    Si non spécifié, l'entreprise par défaut sera utilisée
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex justify-between mt-8">
+        <button
+          type="button"
+          onClick={handlePreviousActivity}
+          className="px-6 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg transition-all duration-200 flex items-center gap-2 border border-gray-300"
+        >
+          <FaArrowLeft />
+          {currentActivityIndex === 0 ? "Retour à la sélection" : "Activité précédente"}
+        </button>
+        
+        <button
+          type="button"
+          onClick={handleNextActivity}
+          className={`px-6 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 shadow-md ${
+            currentActivityIndex === activitiesData.length - 1
+              ? 'bg-green-600 hover:bg-green-700 text-white'
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
+          }`}
+        >
+          {currentActivityIndex === activitiesData.length - 1 ? (
+            <>
+              Finaliser <FaCheck />
+            </>
+          ) : (
+            <>
+              Activité suivante <FaArrowRight />
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderFinalizationStep = () => (
+    <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <label className="text-gray-700 font-medium flex items-center gap-2">
+            <FaCalendarAlt className="text-blue-500" />
+            Date de planification
+          </label>
+          <input
+            type="date"
+            value={planifDate}
+            onChange={(e) => setPlanifDate(e.target.value)}
+            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-gray-700 font-medium flex items-center gap-2">
+            <FaClock className="text-blue-500" />
+            Heure de début globale
+          </label>
+          <input
+            type="time"
+            value={globalStartHour}
+            onChange={(e) => setGlobalStartHour(e.target.value)}
+            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-gray-700 font-medium flex items-center gap-2">
+            <FaClock className="text-blue-500" />
+            Heure de fin globale
+          </label>
+          <input
+            type="time"
+            value={globalEndHour}
+            onChange={(e) => setGlobalEndHour(e.target.value)}
+            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-gray-700 font-medium flex items-center gap-2">
             <FaBuilding className="text-blue-500" />
-            Entreprise
+            Entreprise par défaut
           </label>
           <select
-            value={entrepriseId || ""}
-            onChange={(e) => setEntrepriseId(Number(e.target.value))}
+            value={defaultEntreprise || ""}
+            onChange={(e) => setDefaultEntreprise(Number(e.target.value))}
             className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
             required
           >
@@ -281,140 +709,33 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
 
         <div className="space-y-2">
           <label className="text-gray-700 font-medium flex items-center gap-2">
-            <FaMapMarkerAlt className="text-blue-500" />
-            Lieu
-          </label>
-          <select
-            value={lieuId || ""}
-            onChange={(e) => setLieuId(Number(e.target.value))}
-            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-            required
-          >
-            <option value="">Sélectionner un lieu</option>
-            {lieux?.map((lieu) => (
-              <option key={lieu.id} value={lieu.id}>
-                {lieu.nom}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-gray-700 font-medium flex items-center gap-2">
-            <FaClock className="text-blue-500" />
-            Heure de début
-          </label>
-          <input
-            type="time"
-            value={startHour}
-            onChange={(e) => setStartHour(e.target.value)}
-            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-            required
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-gray-700 font-medium flex items-center gap-2">
-            <FaClock className="text-blue-500" />
-            Heure de fin
-          </label>
-          <input
-            type="time"
-            value={endHour}
-            onChange={(e) => setEndHour(e.target.value)}
-            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-            required
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-gray-700 font-medium flex items-center gap-2">
-            <FaSign className="text-blue-500" />
-            Signalisation
-          </label>
-          <select
-            value={signalisationId || ""}
-            onChange={(e) => setSignalisationId(Number(e.target.value))}
-            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Sélectionner une signalisation</option>
-            {signalisations?.map((sign) => (
-              <option key={sign.id} value={sign.id}>
-                {sign.nom}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-gray-700 font-medium flex items-center gap-2">
             <FaPencilAlt className="text-blue-500" />
-            Notes
+            Notes globales
           </label>
           <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
+            value={globalNote}
+            onChange={(e) => setGlobalNote(e.target.value)}
             className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
             rows={3}
           />
         </div>
-
-        <div className="space-y-2">
-          <div className="flex flex-col space-y-4">
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={isLab}
-                onChange={(e) => setIsLab(e.target.checked)}
-                className="form-checkbox h-4 w-4 text-blue-500 rounded"
-              />
-              <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <FaFlask className="text-blue-500" />
-                Laboratoire requis
-              </span>
-            </label>
-
-            {isLab && (
-              <div className="pl-6 pt-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FaFlask className="text-blue-500" />
-                    Quantité laboratoire
-                    <span className="text-red-500">*</span>
-                  </div>
-                  <input
-                    type="number"
-                    value={labQuantity || ''}
-                    onChange={(e) => setLabQuantity(e.target.value ? Number(e.target.value) : null)}
-                    min="0"
-                    step="1"
-                    className="mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                    required={isLab}
-                    placeholder="Entrez la quantité..."
-                  />
-                </label>
-              </div>
-            )}
-          </div>
-        </div>
       </div>
 
-      <div className="flex justify-between mt-8">
+      <div className="flex justify-end mt-8">
         <button
           type="button"
           onClick={handlePreviousStep}
-          className="px-6 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg transition-all duration-200 flex items-center gap-2 border border-gray-300"
+          className="px-6 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg transition-all duration-200 flex items-center gap-2 border border-gray-300 mr-4"
         >
           <FaArrowLeft />
           Retour
         </button>
         <button
-          type="button"
-          onClick={handleSave}
+          type="submit"
           className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 flex items-center gap-2 shadow-md"
         >
-          <FaSave />
-          Enregistrer
+          <FaCheck />
+          Finaliser
         </button>
       </div>
     </div>
@@ -434,14 +755,19 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
           <h2 className="text-2xl font-bold text-white flex items-center gap-4">
             {planif ? "Modifier la Planification" : "Nouvelle Planification"}
             <span className="text-sm font-normal bg-white/20 px-3 py-1 rounded-full">
-              Étape {currentStep}/2
+              Étape {currentStep}/3
             </span>
           </h2>
         </div>
 
         <div className="p-8">
           <form onSubmit={handleSubmit} className="space-y-8">
-            {currentStep === 1 ? renderActivitySelectionStep() : renderPlanningDetailsStep()}
+            {currentStep === 1 
+              ? renderActivitySelectionStep() 
+              : currentStep === 2 
+                ? renderPlanningDetailsStep() 
+                : renderFinalizationStep()
+            }
           </form>
         </div>
       </div>

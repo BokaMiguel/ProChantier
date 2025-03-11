@@ -959,9 +959,33 @@ export const createOrUpdatePlanifChantier = async (planifData: any) => {
     try {
       const result = JSON.parse(responseText);
       console.log("Réponse parsée:", result);
+      
+      // Assurer que l'ID est correctement exposé dans la réponse
+      if (result && typeof result === 'object') {
+        // Si l'ID est présent sous une forme ou une autre, standardiser à 'id'
+        if (result.ID !== undefined && result.id === undefined) {
+          result.id = result.ID;
+        } else if (result.Id !== undefined && result.id === undefined) {
+          result.id = result.Id;
+        }
+        
+        // Si aucun ID n'est présent mais que nous avons un nombre, c'est probablement l'ID
+        if (result.id === undefined && typeof result === 'number') {
+          return { id: result };
+        }
+      }
+      
       return result;
     } catch (parseError) {
       console.error("Erreur de parsing JSON:", parseError);
+      
+      // Vérifier si la réponse est un nombre (ID)
+      const numericId = Number(responseText.trim());
+      if (!isNaN(numericId)) {
+        console.log("La réponse est un ID numérique:", numericId);
+        return { id: numericId };
+      }
+      
       // Si on ne peut pas parser la réponse mais qu'on a un ID, on le retourne
       return { id: planifData.ID };
     }
@@ -1022,6 +1046,9 @@ export const getPlanifActivites = async (planifId: number) => {
 };
 
 export const createOrUpdatePlanifActivites = async (planifActivitesData: any) => {
+  console.log("Envoi de l'activité au serveur:", planifActivitesData);
+  
+  // Aucune conversion nécessaire, les données sont déjà au format attendu par le backend
   const response = await fetch(
     `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdatePlanifActivites`,
     {
@@ -1034,6 +1061,7 @@ export const createOrUpdatePlanifActivites = async (planifActivitesData: any) =>
   );
   
   const responseText = await response.text();
+  console.log("Réponse brute du serveur:", responseText);
   
   if (!responseText || responseText.trim() === '') {
     return null;
@@ -1089,6 +1117,10 @@ export const getPlanifChantierByProjet = async (projetId: number, dateDebut?: Da
     try {
       // Tenter de parser le JSON
       const data = JSON.parse(text);
+      console.log("Données brutes reçues de l'API:", data);
+      
+      // Retourner les données brutes sans transformation
+      // Le composant PlanningForm s'occupera de la transformation
       return data;
     } catch (parseError) {
       console.error("Erreur de parsing JSON dans getPlanifChantierByProjet:", parseError);
@@ -1229,5 +1261,69 @@ export const checkApiStatus = async (): Promise<boolean> => {
   } catch (error) {
     console.error("❌ Erreur lors de la vérification de l'accès à l'API:", error);
     return false;
+  }
+};
+
+// Fonction pour créer une planification et ses activités en une seule opération
+export const createPlanifWithActivities = async (planifData: any, activitiesData: any[]) => {
+  try {
+    console.log("Création d'une planification avec activités");
+    console.log("Données de planification:", planifData);
+    console.log("Données d'activités:", activitiesData);
+    
+    // Étape 1: Créer la planification
+    const planifResponse = await createOrUpdatePlanifChantier(planifData);
+    
+    if (!planifResponse || !planifResponse.id) {
+      throw new Error("Échec de la création de la planification: ID non retourné");
+    }
+    
+    console.log("Planification créée avec succès, ID:", planifResponse.id);
+    
+    // Étape 2: Créer les activités avec l'ID de la planification
+    const createdActivities = [];
+    
+    for (const activityData of activitiesData) {
+      // Créer une copie des données pour éviter de modifier l'objet original
+      const activityToCreate: any = { ...activityData };
+      
+      // Assurer que l'ID de la planification est correctement assigné
+      activityToCreate.planifId = planifResponse.id;
+      
+      // Supprimer isComplete car cette propriété n'est pas gérée par le backend
+      if ('isComplete' in activityToCreate) {
+        delete activityToCreate.isComplete;
+      }
+      
+      // S'assurer que les noms de propriétés correspondent à ceux attendus par le backend
+      if ('signalisation' in activityToCreate) {
+        activityToCreate.signalisationId = activityToCreate.signalisation;
+        delete activityToCreate.signalisation;
+      }
+      
+      console.log("Création de l'activité:", activityToCreate);
+      
+      try {
+        const activityResponse = await createOrUpdatePlanifActivites(activityToCreate);
+        console.log("Activité créée:", activityResponse);
+        
+        if (activityResponse) {
+          createdActivities.push(activityResponse);
+        }
+      } catch (activityError) {
+        console.error("Erreur lors de la création d'une activité:", activityError);
+        // Continuer avec les autres activités même si une échoue
+      }
+    }
+    
+    // Retourner la planification avec ses activités
+    return {
+      planification: planifResponse,
+      activities: createdActivities
+    };
+    
+  } catch (error) {
+    console.error("Erreur lors de la création de la planification avec activités:", error);
+    throw error;
   }
 };
