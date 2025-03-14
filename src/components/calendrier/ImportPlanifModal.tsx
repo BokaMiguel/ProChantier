@@ -38,7 +38,7 @@ const ImportPlanifModal: FC<ImportPlanifModalProps> = ({
   planifications,
   preselectedDate,
 }) => {
-  const { activites, lieux, sousTraitants } = useAuth();
+  const { activites, lieux, sousTraitants, signalisations } = useAuth();
   
   // États pour les filtres
   const [searchTerm, setSearchTerm] = useState("");
@@ -207,14 +207,8 @@ const ImportPlanifModal: FC<ImportPlanifModalProps> = ({
   
   // Obtenir le nom d'une signalisation
   const getSignalisationName = (signalisationId: number) => {
-    // Récupérer la signalisation depuis les données disponibles
-    const signalisations = [
-      { id: 1, nom: "Gauche" },
-      { id: 2, nom: "Droite" },
-      { id: 3, nom: "Deux côtés" },
-      { id: 4, nom: "Aucune" }
-    ];
-    const signalisation = signalisations.find(s => s.id === signalisationId);
+
+    const signalisation = signalisations?.find(s => s.id === signalisationId);
     return signalisation ? signalisation.nom : "Signalisation inconnue";
   };
   

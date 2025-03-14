@@ -697,16 +697,21 @@ const PlanningForm: React.FC = () => {
               console.log(`Sauvegarde de ${planif.PlanifActivites.length} activités pour la planification`);
               
               // Préparer les activités avec les noms de propriétés du backend
-              const activitiesToSave = planif.PlanifActivites.map(act => ({
-                id: act.ID || 0,
-                activiteId: act.activiteId,
-                hrsDebut: act.debut || planif.HrsDebut,
-                hrsFin: act.fin || planif.HrsFin,
-                sousTraitantId: act.sousTraitantId || planif.defaultEntreprise,
-                lieuId: act.lieuId,
-                signalisationId: act.signalisation,
-                qteLab: act.qteLab
-              }));
+              const activitiesToSave = planif.PlanifActivites.map(act => {
+                // Destructurer pour extraire isComplete et conserver le reste
+                const { isComplete, ...actData } = act;
+                
+                return {
+                  id: actData.ID || 0,
+                  activiteId: actData.activiteId,
+                  hrsDebut: actData.debut || planif.HrsDebut,
+                  hrsFin: actData.fin || planif.HrsFin,
+                  sousTraitantId: actData.sousTraitantId || planif.defaultEntreprise,
+                  lieuId: actData.lieuId,
+                  signalisationId: actData.signalisation,
+                  qteLab: actData.qteLab
+                };
+              });
               
               // Utiliser la nouvelle fonction pour créer la planification et ses activités en une seule opération
               console.log("Utilisation de createPlanifWithActivities pour sauvegarder la planification et ses activités");
@@ -797,8 +802,7 @@ const PlanningForm: React.FC = () => {
             sousTraitantId: act.sousTraitantId || planif.defaultEntreprise,
             lieuId: act.lieuId,
             signalisationId: act.signalisation,
-            qteLab: act.qteLab,
-            isComplete: act.isComplete || false
+            qteLab: act.qteLab
           }));
           
           // Utiliser la nouvelle fonction pour créer la planification et ses activités en une seule opération

@@ -13,6 +13,9 @@ import {
   FaSign,
   FaFlask,
   FaPencilAlt,
+  FaInfoCircle,
+  FaPlus,
+  FaSave,
 } from "react-icons/fa";
 import { useAuth } from "../../context/AuthContext";
 import { Planif, PlanifActivite } from "../../models/JournalFormModel";
@@ -82,11 +85,16 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
         // Initialiser les données des activités existantes
         setActivitiesData(planif.PlanifActivites.map(activity => ({
           ...activity,
-          isComplete: true // Marquer comme complète puisqu'elle existe déjà
+          isComplete: false // En mode édition, nous commençons avec isComplete à false pour permettre la modification
         })));
         
-        // Passer directement à l'étape 3 si nous modifions une planification existante
-        setCurrentStep(3);
+        // En mode édition, commencer à l'étape 2 pour permettre la modification des activités
+        setCurrentStep(2);
+        
+        // Définir l'index sur la première activité
+        if (planif.PlanifActivites.length > 0) {
+          setCurrentActivityIndex(0);
+        }
       }
     } else {
       setEntrepriseId(null);
@@ -164,7 +172,7 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
         setCurrentActivityIndex(0);
       }
     }
-  }, [currentStep, selectedActivities, startHour, endHour, signalisationId, lieuId, planif, activitiesData]);
+  }, [currentStep, selectedActivities, startHour, endHour, signalisationId, lieuId, planif]);
 
   useEffect(() => {
     if (currentStep === 3 && activitiesData.length > 0) {
@@ -193,7 +201,7 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
   }, [currentStep, activitiesData, sousTraitants]);
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
 
     if (currentStep !== 3) {
       return; 
@@ -221,8 +229,8 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
     });
 
     const finalPlanif: Planif = {
-      ID: planif?.ID || 0, // Conserver l'ID existant pour une mise à jour
-      ProjetID: selectedProject.ID, // Utiliser l'ID du projet sélectionné
+      ID: planif?.ID || 0,
+      ProjetID: selectedProject.ID,
       HrsDebut: globalStartHour,
       HrsFin: globalEndHour,
       defaultEntreprise: defaultEntreprise,
@@ -252,38 +260,52 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
   };
 
   const handleNextStep = () => {
-    if (currentStep === 1) {
-      if (selectedActivities.size === 0) {
-        alert("Veuillez sélectionner au moins une activité");
-        return;
-      }
-      setCurrentStep(2);
-    } else if (currentStep === 2) {
-      // Vérifier que toutes les activités ont été complétées
-      // Si nous modifions une planification existante, nous n'avons pas besoin de vérifier
-      // les activités déjà complètes
-      const activitiesToCheck = activitiesData.filter(a => !a.isComplete);
-      
-      if (activitiesToCheck.length > 0) {
-        const isAllActivitiesComplete = activitiesToCheck.every(
-          activity => activity.debut && activity.fin && activity.lieuId
-        );
-        
-        if (!isAllActivitiesComplete) {
-          alert("Veuillez compléter toutes les informations obligatoires pour chaque nouvelle activité");
+    // En mode édition, permettre une navigation plus libre entre les étapes
+    if (planif) {
+      if (currentStep === 1) {
+        // Vérifier qu'au moins une activité est sélectionnée
+        if (selectedActivities.size === 0) {
+          alert("Veuillez sélectionner au moins une activité");
           return;
         }
-        
-        // Marquer toutes les activités comme complètes
-        setActivitiesData(prevData => 
-          prevData.map(activity => ({
-            ...activity,
-            isComplete: true
-          }))
-        );
+        setCurrentStep(2);
+      } else if (currentStep === 2) {
+        // En mode édition, permettre de passer à l'étape 3 sans validation stricte
+        setCurrentStep(3);
       }
-      
-      setCurrentStep(3);
+    } else {
+      // En mode création, conserver les validations
+      if (currentStep === 1) {
+        if (selectedActivities.size === 0) {
+          alert("Veuillez sélectionner au moins une activité");
+          return;
+        }
+        setCurrentStep(2);
+      } else if (currentStep === 2) {
+        // Vérifier que toutes les activités ont été complétées
+        const activitiesToCheck = activitiesData.filter(a => !a.isComplete);
+        
+        if (activitiesToCheck.length > 0) {
+          const isAllActivitiesComplete = activitiesToCheck.every(
+            activity => activity.debut && activity.fin && activity.lieuId
+          );
+          
+          if (!isAllActivitiesComplete) {
+            alert("Veuillez compléter toutes les informations obligatoires pour chaque nouvelle activité");
+            return;
+          }
+          
+          // Marquer toutes les activités comme complètes
+          setActivitiesData(prevData => 
+            prevData.map(activity => ({
+              ...activity,
+              isComplete: true
+            }))
+          );
+        }
+        
+        setCurrentStep(3);
+      }
     }
   };
 
@@ -299,24 +321,74 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
   const handleNextActivity = () => {
     // Vérifier que l'activité actuelle est complète
     const currentActivity = activitiesData[currentActivityIndex];
-    if (!currentActivity.debut || !currentActivity.fin || !currentActivity.lieuId) {
-      alert("Veuillez compléter les informations obligatoires pour cette activité (heures de début et fin, lieu)");
-      return;
-    }
     
-    // Mettre à jour le statut de complétion de l'activité
-    updateActivityData(currentActivityIndex, { isComplete: true });
-    
-    // Passer à l'activité suivante si elle existe
-    if (currentActivityIndex < activitiesData.length - 1) {
-      // Mettre à jour l'heure de début de l'activité suivante pour qu'elle soit égale à l'heure de fin de l'activité actuelle
-      updateActivityData(currentActivityIndex + 1, { debut: currentActivity.fin });
+    // En mode édition, validation moins stricte
+    if (planif) {
+      // Enregistrer explicitement les modifications de l'activité courante
+      console.log("Enregistrement des modifications pour l'activité", currentActivityIndex, currentActivity);
       
-      // Passer à l'activité suivante
-      setCurrentActivityIndex(currentActivityIndex + 1);
+      // Passer à l'activité suivante si elle existe
+      if (currentActivityIndex < activitiesData.length - 1) {
+        const nextActivityIndex = currentActivityIndex + 1;
+        
+        // Si l'heure de fin est définie, proposer de l'utiliser comme heure de début pour l'activité suivante
+        if (currentActivity.fin) {
+          // S'assurer que les modifications sont bien appliquées avant de passer à l'activité suivante
+          setActivitiesData(prevData => {
+            const newData = [...prevData];
+            // Mettre à jour l'activité suivante avec l'heure de fin de l'activité courante
+            // seulement si l'activité suivante n'a pas déjà une heure de début définie
+            if (!newData[nextActivityIndex].debut) {
+              newData[nextActivityIndex] = { 
+                ...newData[nextActivityIndex], 
+                debut: currentActivity.fin 
+              };
+            }
+            return newData;
+          });
+        }
+        
+        // Passer à l'activité suivante
+        setTimeout(() => {
+          setCurrentActivityIndex(nextActivityIndex);
+        }, 100); // Petit délai pour s'assurer que l'état est bien mis à jour
+      } else {
+        // Si c'était la dernière activité, passer à l'étape 3
+        handleNextStep();
+      }
     } else {
-      // Si c'était la dernière activité, passer à l'étape 3
-      handleNextStep();
+      // En mode création, conserver les validations
+      if (!currentActivity.debut || !currentActivity.fin || !currentActivity.lieuId) {
+        alert("Veuillez compléter les informations obligatoires pour cette activité (heures de début et fin, lieu)");
+        return;
+      }
+      
+      // En mode édition, nous ne modifions pas isComplete pour éviter les rafraîchissements indésirables
+      // Nous mettons simplement à jour les autres données de l'activité
+      
+      // Passer à l'activité suivante si elle existe
+      if (currentActivityIndex < activitiesData.length - 1) {
+        const nextActivityIndex = currentActivityIndex + 1;
+        
+        // S'assurer que les modifications sont bien appliquées avant de passer à l'activité suivante
+        setActivitiesData(prevData => {
+          const newData = [...prevData];
+          // Mettre à jour l'activité suivante avec l'heure de fin de l'activité courante
+          newData[nextActivityIndex] = { 
+            ...newData[nextActivityIndex], 
+            debut: currentActivity.fin 
+          };
+          return newData;
+        });
+        
+        // Passer à l'activité suivante
+        setTimeout(() => {
+          setCurrentActivityIndex(nextActivityIndex);
+        }, 100); // Petit délai pour s'assurer que l'état est bien mis à jour
+      } else {
+        // Si c'était la dernière activité, passer à l'étape 3
+        handleNextStep();
+      }
     }
   };
 
@@ -350,23 +422,90 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
 
   // Fonction pour sélectionner une activité spécifique dans la liste
   const handleSelectActivity = (index: number) => {
-    // Vérifier si l'activité actuelle a des données à sauvegarder
-    const currentActivity = activitiesData[currentActivityIndex];
-    if (currentActivity.debut || currentActivity.fin || currentActivity.lieuId) {
-      // Sauvegarder les données de l'activité actuelle avant de changer
-      const isComplete = currentActivity.debut && currentActivity.fin && currentActivity.lieuId;
-      if (isComplete) {
-        updateActivityData(currentActivityIndex, { isComplete: true });
+    // En mode édition, permettre une navigation plus flexible entre les activités
+    if (planif) {
+      console.log("Mode édition: Changement direct vers l'activité", index);
+      // Passer directement à l'activité sélectionnée sans validation
+      setCurrentActivityIndex(index);
+    } else {
+      // En mode création, conserver les validations
+      // Vérifier si l'activité actuelle a des données à sauvegarder
+      const currentActivity = activitiesData[currentActivityIndex];
+      if (currentActivity.debut || currentActivity.fin || currentActivity.lieuId) {
+        // Sauvegarder les données de l'activité actuelle avant de changer
+        const isComplete = currentActivity.debut && currentActivity.fin && currentActivity.lieuId;
+        if (isComplete) {
+          updateActivityData(currentActivityIndex, { isComplete: true });
+        }
       }
+      
+      // Passer à l'activité sélectionnée
+      setCurrentActivityIndex(index);
     }
-    
-    // Passer à l'activité sélectionnée
-    setCurrentActivityIndex(index);
   };
 
   const filteredActivities = activites?.filter((activite) =>
     activite.nom.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Fonction pour initialiser les détails de l'activité lorsqu'on passe à l'étape de configuration
+  const initActivityDetails = () => {
+    console.log("Initialisation des détails des activités");
+    
+    if (!activites) {
+      console.warn("Aucune activité disponible");
+      return;
+    }
+    
+    const newActivities = Array.from(selectedActivities).map(id => {
+      // Rechercher l'activité par son ID
+      const activiteInfo = activites.find(act => act.id === id);
+      if (!activiteInfo) {
+        console.warn(`Activité avec ID ${id} non trouvée dans la liste des activités`);
+        return null;
+      }
+      
+      // Si nous sommes en mode édition et que cette activité existe déjà, utiliser ses valeurs
+      const existingActivity = activitiesData.find(act => act.activiteId === id);
+      
+      if (existingActivity) {
+        console.log(`Activité existante trouvée pour ID ${id}:`, existingActivity);
+        
+        // Utiliser les valeurs existantes, mais marquer comme non complète pour permettre l'édition
+        return {
+          ...existingActivity,
+          isComplete: false // Toujours false pendant l'édition pour éviter les rafraîchissements indésirables
+        };
+      } else {
+        console.log(`Création d'une nouvelle configuration pour l'activité ID ${id}`);
+        
+        // Créer une nouvelle configuration par défaut
+        return {
+          ID: 0, // Nouvelle activité
+          PlanifID: planif?.ID || 0,
+          activiteId: id,
+          debut: startHour,
+          fin: endHour,
+          signalisation: 0,
+          lieuId: 0,
+          qteLab: null,
+          isComplete: false,
+          sousTraitantId: defaultEntreprise || 0
+        } as PlanifActivite;
+      }
+    }).filter(Boolean) as PlanifActivite[];
+    
+    console.log("Nouvelles activités initialisées:", newActivities);
+    setActivitiesData(newActivities);
+  };
+
+  useEffect(() => {
+    if (currentStep === 2) {
+      // Éviter les appels répétés qui causent une boucle infinie
+      console.log("Initialisation des activités pour l'étape 2");
+      initActivityDetails();
+    }
+  }, [currentStep, selectedActivities, activites, startHour, endHour, defaultEntreprise, planif]);
 
   if (!isOpen) return null;
 
@@ -448,19 +587,32 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
 
   const renderPlanningDetailsStep = () => (
     <div className="space-y-6">
+      {/* En mode édition, ajouter un message explicatif */}
+      {planif && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <h3 className="text-blue-700 font-medium flex items-center gap-2 mb-2">
+            <FaInfoCircle className="text-blue-500" />
+            Mode Édition
+          </h3>
+          <p className="text-sm text-blue-600">
+            Vous pouvez modifier librement les détails des activités. Utilisez les boutons de navigation en haut pour passer entre les étapes.
+            Cliquez sur une activité dans la liste pour la modifier.
+          </p>
+        </div>
+      )}
+      
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Colonne de gauche: Liste des activités */}
         <div className="md:col-span-1 bg-gray-50 p-4 rounded-lg border border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-700">Activités à configurer</h3>
             <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-              {activitiesData.filter(a => a.debut && a.fin && a.lieuId && a.isComplete).length}/{activitiesData.length}
+              {activitiesData.length} activité(s)
             </span>
           </div>
           <div className="space-y-2 max-h-[60vh] overflow-y-auto">
             {activitiesData.map((activity, index) => {
               const activityInfo = activites?.find(a => a.id === activity.activiteId);
-              const isComplete = activity.debut && activity.fin && activity.lieuId && activity.isComplete;
               const isCurrent = index === currentActivityIndex;
               
               return (
@@ -470,14 +622,14 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
                   className={`p-3 rounded-lg cursor-pointer transition-all duration-200 flex items-center justify-between ${
                     isCurrent 
                       ? 'bg-blue-100 border-blue-300 border' 
-                      : isComplete 
+                      : (activity.debut && activity.fin && activity.lieuId)
                         ? 'bg-green-50 text-gray-700' 
                         : 'bg-white hover:bg-gray-100'
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    {isComplete && <FaCheck className="text-green-500" />}
-                    <span className={isComplete && !isCurrent ? 'text-gray-500' : ''}>
+                    {(activity.debut && activity.fin && activity.lieuId) && <FaCheck className="text-green-500" />}
+                    <span>
                       {activityInfo?.nom || `Activité ${index + 1}`}
                     </span>
                   </div>
@@ -486,6 +638,26 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
               );
             })}
           </div>
+          
+          {/* Boutons d'action rapide pour l'édition */}
+          {planif && (
+            <div className="mt-4 space-y-2">
+              <button
+                type="button"
+                onClick={() => setCurrentStep(1)}
+                className="w-full px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm"
+              >
+                <FaPlus /> Ajouter des activités
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentStep(3)}
+                className="w-full px-3 py-2 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm"
+              >
+                <FaSave /> Enregistrer les modifications
+              </button>
+            </div>
+          )}
         </div>
         
         {/* Colonne de droite: Formulaire pour l'activité courante */}
@@ -758,6 +930,45 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
               Étape {currentStep}/3
             </span>
           </h2>
+          
+          {/* Navigation rapide entre les étapes (visible uniquement en mode édition) */}
+          {planif && (
+            <div className="flex mt-4 gap-2">
+              <button
+                type="button"
+                onClick={() => setCurrentStep(1)}
+                className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-200 ${
+                  currentStep === 1 
+                    ? 'bg-white text-blue-600' 
+                    : 'bg-white/20 text-white hover:bg-white/30'
+                }`}
+              >
+                1. Sélection
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentStep(2)}
+                className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-200 ${
+                  currentStep === 2 
+                    ? 'bg-white text-blue-600' 
+                    : 'bg-white/20 text-white hover:bg-white/30'
+                }`}
+              >
+                2. Activités
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentStep(3)}
+                className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-200 ${
+                  currentStep === 3 
+                    ? 'bg-white text-blue-600' 
+                    : 'bg-white/20 text-white hover:bg-white/30'
+                }`}
+              >
+                3. Finalisation
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="p-8">

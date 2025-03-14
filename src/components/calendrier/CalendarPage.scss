@@ -3,35 +3,53 @@
   .fc {
     // Styles généraux du calendrier
     --fc-border-color: #e2e8f0;
-    --fc-button-bg-color: #3b82f6;
-    --fc-button-border-color: #3b82f6;
-    --fc-button-hover-bg-color: #2563eb;
-    --fc-button-hover-border-color: #2563eb;
-    --fc-button-active-bg-color: #1d4ed8;
-    --fc-button-active-border-color: #1d4ed8;
+    --fc-button-bg-color: #1d4ed8; // Bleu plus foncé pour meilleur contraste
+    --fc-button-border-color: #1d4ed8;
+    --fc-button-hover-bg-color: #1e40af;
+    --fc-button-hover-border-color: #1e40af;
+    --fc-button-active-bg-color: #1e3a8a;
+    --fc-button-active-border-color: #1e3a8a;
+    --fc-today-bg-color: rgba(59, 130, 246, 0.15); // Jour actuel plus visible
     
     // Style des cellules
     .fc-daygrid-day {
       transition: background-color 0.2s;
       &:hover {
-        background-color: #f8fafc;
+        background-color: #f1f5f9;
       }
+    }
+
+    // Style des en-têtes de jour
+    .fc-col-header-cell {
+      background-color: #f8fafc;
+      .fc-col-header-cell-cushion {
+        padding: 10px 4px;
+        font-weight: 600;
+        color: #1e40af;
+      }
+    }
+
+    // Style des numéros de jour
+    .fc-daygrid-day-number {
+      font-size: 1rem;
+      font-weight: 500;
+      color: #334155;
+      padding: 8px;
     }
 
     // Style des événements
     .fc-event {
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-      border: none;
       border-radius: 8px;
       padding: 0.5rem;
       transition: all 0.2s ease;
       cursor: pointer;
       overflow: hidden;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      border-width: 2px !important;
 
       &:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
       }
 
       .fc-event-main {
@@ -41,33 +59,33 @@
       .event-content {
         display: flex;
         flex-direction: column;
-        gap: 0.25rem;
+        gap: 0.5rem;
+        padding: 0.25rem;
 
         .event-title {
           font-weight: 600;
-          font-size: 0.875rem;
-          color: white;
+          font-size: 1rem; // Taille de police plus grande
           display: flex;
           align-items: center;
           gap: 0.5rem;
 
           svg {
-            width: 0.875rem;
-            height: 0.875rem;
+            width: 1.25rem; // Icônes plus grandes
+            height: 1.25rem;
+            flex-shrink: 0;
           }
         }
 
         .event-details {
-          font-size: 0.75rem;
-          color: rgba(255, 255, 255, 0.9);
+          font-size: 0.875rem; // Taille de police plus grande
           display: flex;
           align-items: center;
           gap: 0.5rem;
 
           svg {
-            width: 0.75rem;
-            height: 0.75rem;
-            opacity: 0.9;
+            width: 1rem; // Icônes plus grandes
+            height: 1rem;
+            flex-shrink: 0;
           }
         }
       }
@@ -76,13 +94,32 @@
     // Style de l'en-tête
     .fc-toolbar {
       margin-bottom: 1.5rem !important;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      
+      @media (max-width: 768px) {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .fc-toolbar-title {
+        font-size: 1.5rem !important;
+        font-weight: 700;
+        color: #1e40af;
+      }
+
+      .fc-button-group {
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        overflow: hidden;
+      }
 
       .fc-button {
-        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1),
-                   0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        box-shadow: none;
         text-transform: capitalize;
-        font-weight: 500;
-        padding: 0.5rem 1rem;
+        font-weight: 600;
+        padding: 0.625rem 1.25rem;
+        font-size: 0.95rem;
 
         &:focus {
           box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
@@ -100,129 +137,221 @@
   border-radius: 12px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
               0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  padding: 1.25rem;
   z-index: 1000;
-  max-width: 350px;
+  max-width: 420px;
   width: 100%;
   border: 1px solid rgba(59, 130, 246, 0.1);
-  backdrop-filter: blur(8px);
+  overflow: hidden;
 
   // Animation d'apparition
-  animation: fadeIn 0.2s ease-out;
+  animation: popup-appear 0.2s ease-out;
+  
+  // Style de la barre de défilement
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(241, 245, 249, 0.8);
+    border-radius: 0 12px 12px 0;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.5);
+    border-radius: 4px;
+    
+    &:hover {
+      background: rgba(59, 130, 246, 0.7);
+    }
+  }
 
   .popup-header {
-    margin-bottom: 1rem;
-    text-align: center;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, #1e40af, #3b82f6);
+    position: sticky;
+    top: 0;
+    z-index: 5;
 
     h3 {
       font-size: 1.25rem;
-      font-weight: 600;
-      color: #1e40af;
+      font-weight: 700;
+      color: white;
       margin: 0;
-      background: linear-gradient(45deg, #1e40af, #3b82f6);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
+      gap: 0.75rem;
 
       svg {
-        width: 1.25rem;
-        height: 1.25rem;
-        color: #3b82f6;
+        width: 1.5rem; // Icônes plus grandes
+        height: 1.5rem;
+        flex-shrink: 0;
       }
     }
   }
 
   .activities-section {
-    background: #f8fafc;
-    border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 1rem;
+    padding: 1.25rem;
+    border-bottom: 1px solid #e2e8f0;
+
+    h4 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #1e40af;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      svg {
+        width: 1.25rem; // Icônes plus grandes
+        height: 1.25rem;
+        flex-shrink: 0;
+      }
+    }
 
     .activities-list {
       margin: 0;
-      padding-left: 1.5rem;
+      padding: 0;
       list-style-type: none;
       
       li {
         margin-bottom: 0.75rem;
-        position: relative;
-        color: #1e293b;
-        font-size: 0.95rem;
+        padding: 0.75rem;
+        border-radius: 8px;
+        transition: all 0.2s ease;
 
-        &:before {
-          content: "•";
-          color: #3b82f6;
-          font-weight: bold;
-          position: absolute;
-          left: -1rem;
+        &:hover {
+          transform: translateX(2px);
         }
 
         &:last-child {
           margin-bottom: 0;
+        }
+
+        .font-medium {
+          font-weight: 600;
+          font-size: 1rem;
+          color: #1e293b;
+        }
+
+        svg {
+          width: 1.25rem; // Icônes plus grandes
+          height: 1.25rem;
+          flex-shrink: 0;
         }
       }
     }
   }
 
   .info-section {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+    padding: 1.25rem;
+    background-color: #f8fafc;
 
-    .info-item {
+    h4 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #1e40af;
+      margin-bottom: 1rem;
       display: flex;
       align-items: center;
-      padding: 0.5rem 0;
-      border-bottom: 1px solid #e2e8f0;
-      justify-content: space-between;
+      gap: 0.5rem;
+
+      svg {
+        width: 1.25rem; // Icônes plus grandes
+        height: 1.25rem;
+        flex-shrink: 0;
+      }
+    }
+
+    .info-item {
+      margin-bottom: 0.75rem;
+      border-radius: 8px;
+      overflow: hidden;
+      transition: transform 0.2s ease;
+
+      &:hover {
+        transform: translateY(-2px);
+      }
 
       &:last-child {
-        border-bottom: none;
+        margin-bottom: 0;
       }
 
-      label {
+      svg {
+        width: 1.25rem; // Icônes plus grandes
+        height: 1.25rem;
+        flex-shrink: 0;
+        color: #1e40af;
+      }
+
+      .text-gray-500 {
+        font-size: 0.875rem;
+        color: #64748b;
+      }
+
+      .font-medium {
+        font-size: 1rem;
         font-weight: 600;
         color: #1e293b;
-        font-size: 0.95rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        white-space: nowrap;
-
-        svg {
-          width: 1rem;
-          height: 1rem;
-          flex-shrink: 0;
-          transition: transform 0.2s ease;
-        }
-
-        &:hover svg {
-          transform: scale(1.1);
-        }
-      }
-
-      span {
-        color: #475569;
-        font-size: 0.95rem;
-        text-align: right;
-        margin-left: 1rem;
       }
     }
   }
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
+// Styles pour les badges
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  transition: all 0.2s;
+  
+  &:hover {
+    filter: brightness(1.05);
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+}
+
+// Animation pour le hover des éléments
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+// Styles responsifs
+@media (max-width: 768px) {
+  .calendar-container {
+    .fc {
+      .fc-toolbar {
+        flex-direction: column;
+        gap: 1rem;
+        
+        .fc-toolbar-title {
+          font-size: 1.25rem !important;
+        }
+      }
+      
+      .fc-daygrid-day-number {
+        font-size: 0.875rem;
+      }
+    }
+  }
+  
+  .event-popup {
+    max-width: 90%;
+    max-height: 80vh !important;
+    left: 5% !important;
+    right: 5%;
+    top: 10vh !important;
+    transform: none !important;
   }
 }
