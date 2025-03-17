@@ -79,7 +79,7 @@ const ImportPlanifModal: FC<ImportPlanifModalProps> = ({
   const uniqueEntreprises = useMemo(() => {
     const entreprisesSet = new Set<number>();
     planifications.forEach(planif => {
-      if (planif.defaultEntreprise) entreprisesSet.add(planif.defaultEntreprise);
+      if (planif.DefaultEntrepriseId) entreprisesSet.add(planif.DefaultEntrepriseId);
     });
     return Array.from(entreprisesSet);
   }, [planifications]);
@@ -99,7 +99,7 @@ const ImportPlanifModal: FC<ImportPlanifModalProps> = ({
         (planif.PlanifActivites && planif.PlanifActivites.some(pa => pa.lieuId === lieuFilter));
       
       // Filtre par entreprise
-      const entrepriseMatch = !entrepriseFilter || planif.defaultEntreprise === entrepriseFilter;
+      const entrepriseMatch = !entrepriseFilter || planif.DefaultEntrepriseId === entrepriseFilter;
       
       return activiteMatch && lieuMatch && entrepriseMatch;
     });
@@ -442,7 +442,7 @@ const ImportPlanifModal: FC<ImportPlanifModalProps> = ({
                           {planif.HrsDebut} - {planif.HrsFin}
                         </Box>
                       </TableCell>
-                      <TableCell>{getEntrepriseName(planif.defaultEntreprise)}</TableCell>
+                      <TableCell>{getEntrepriseName(planif.DefaultEntrepriseId)}</TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           <Typography variant="body2" noWrap sx={{ maxWidth: '150px' }}>
@@ -471,10 +471,10 @@ const ImportPlanifModal: FC<ImportPlanifModalProps> = ({
                         </Box>
                       </TableCell>
                       <TableCell>
-                        {planif.note && (
-                          <Tooltip title={planif.note}>
+                        {planif.Note && (
+                          <Tooltip title={planif.Note}>
                             <Typography variant="body2" noWrap sx={{ maxWidth: '150px' }}>
-                              {planif.note}
+                              {planif.Note}
                             </Typography>
                           </Tooltip>
                         )}
@@ -543,7 +543,7 @@ const ImportPlanifModal: FC<ImportPlanifModalProps> = ({
                                         </Box>
                                       </TableCell>
                                       <TableCell>{getLieuName(activity.lieuId)}</TableCell>
-                                      <TableCell>{getEntrepriseName(activity.sousTraitantId || planif.defaultEntreprise)}</TableCell>
+                                      <TableCell>{getEntrepriseName(activity.sousTraitantId || planif.DefaultEntrepriseId)}</TableCell>
                                       <TableCell>
                                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                           <AlertTriangle size={14} style={{ marginRight: 6, color: '#666' }} />

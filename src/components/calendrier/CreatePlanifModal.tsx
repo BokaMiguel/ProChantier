@@ -64,15 +64,15 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
 
   useEffect(() => {
     if (planif) {
-      setEntrepriseId(planif.defaultEntreprise ?? null);
+      setEntrepriseId(planif.DefaultEntrepriseId ?? null);
       setStartHour(planif.HrsDebut ?? "");
       setEndHour(planif.HrsFin ?? "");
-      setNotes(planif.note ?? "");
+      setNotes(planif.Note ?? "");
       setPlanifDate(planif.Date);
-      setGlobalNote(planif.note ?? "");
+      setGlobalNote(planif.Note ?? "");
       setGlobalStartHour(planif.HrsDebut ?? "");
       setGlobalEndHour(planif.HrsFin ?? "");
-      setDefaultEntreprise(planif.defaultEntreprise ?? null);
+      setDefaultEntreprise(planif.DefaultEntrepriseId ?? null);
       
       // Pré-sélectionner les activités existantes
       if (planif.PlanifActivites && planif.PlanifActivites.length > 0) {
@@ -233,8 +233,8 @@ const CreatePlanifModal: React.FC<CreatePlanifModalProps> = ({
       ProjetID: selectedProject.ID,
       HrsDebut: globalStartHour,
       HrsFin: globalEndHour,
-      defaultEntreprise: defaultEntreprise,
-      note: globalNote,
+      DefaultEntrepriseId: defaultEntreprise,
+      Note: globalNote,
       Date: planifDate,
       PlanifActivites: planifActivitiesWithoutIsComplete
     };

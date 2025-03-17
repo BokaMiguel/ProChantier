@@ -1,6 +1,6 @@
 // src/services/JournalService.ts
 
-import { Unite, TabEquipeChantier, TabBottinsEquipeChantier } from '../models/JournalFormModel';
+import { Unite, TabEquipeChantier, TabBottinsEquipeChantier, Planif } from '../models/JournalFormModel';
 import { userManager } from './AuthService';
 
 export const getAuthorizedProjects = async (userId: string) => {
@@ -928,7 +928,8 @@ export const getPlanifChantier = async (id: number) => {
   return await response.json();
 };
 
-export const createOrUpdatePlanifChantier = async (planifData: any) => {
+export const createOrUpdatePlanifChantier = async (planifData: Planif ) => {
+  console.log("Planif data:", planifData);
   try {
     const response = await fetch(
       `${process.env.REACT_APP_BRUNEAU_API}/ProChantier/CreateOrUpdatePlanifChantier`,

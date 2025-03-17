@@ -7,7 +7,7 @@ interface SousTraitantSectionProps {
   sousTraitants: SousTraitantFormData[];
   setSousTraitants: React.Dispatch<React.SetStateAction<SousTraitantFormData[]>>;
   defaultEntrepriseId?: number;
-  planifActivites?: JournalActivite[];
+  planifActivites?: any[]; // Utiliser any[] pour accepter n'importe quel format d'activités
 }
 
 const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
@@ -21,24 +21,69 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [sousTraitantToDelete, setSousTraitantToDelete] = useState<number | null>(null);
 
+  // Déboguer les données reçues
   useEffect(() => {
-    if (sousTraitants.length === 0) {
+    console.log("SousTraitantSection - planifActivites reçues:", planifActivites);
+    console.log("SousTraitantSection - sousTraitants actuels:", sousTraitants);
+    console.log("SousTraitantSection - contextSousTraitants:", contextSousTraitants);
+  }, [planifActivites, sousTraitants, contextSousTraitants]);
+
+  // Initialiser les sous-traitants en fonction des activités planifiées
+  useEffect(() => {
+    if (planifActivites && planifActivites.length > 0) {
+      // Filtrer les activités qui ont un sous-traitant associé
+      const activitesWithSousTraitants = planifActivites.filter(act => 
+        act.sousTraitantID !== null && act.sousTraitantID !== undefined && act.sousTraitantID > 0
+      );
+      
+      console.log("Activités avec sous-traitants:", activitesWithSousTraitants);
+      
+      if (activitesWithSousTraitants.length > 0) {
+        // Créer des sous-traitants basés sur les activités planifiées
+        const newSousTraitants = activitesWithSousTraitants.map(act => {
+          const sousTraitant = contextSousTraitants?.find(st => st.id === act.sousTraitantID);
+          const activite = activites?.find(a => a.id === act.activiteID);
+          
+          return {
+            id: act.sousTraitantID,
+            nom: sousTraitant?.nom || "",
+            quantite: act.quantite || 0,
+            activiteID: act.activiteID,
+            activiteNom: activite?.nom || "",
+            idUnite: 1 // Unité par défaut
+          } as SousTraitantFormData;
+        });
+        
+        console.log("Nouveaux sous-traitants créés:", newSousTraitants);
+        
+        // Mettre à jour l'état des sous-traitants seulement si nous avons de nouvelles données
+        if (newSousTraitants.length > 0) {
+          // Si nous n'avons pas de sous-traitants ou seulement des sous-traitants vides
+          if (sousTraitants.length === 0 || 
+              (sousTraitants.length === 1 && (!sousTraitants[0].nom || sousTraitants[0].nom === ""))) {
+            setSousTraitants(newSousTraitants);
+          } 
+          // Sinon, ajouter seulement les nouveaux sous-traitants qui ne sont pas déjà présents
+          else {
+            const existingSousTraitantIds = sousTraitants.map(st => st.id);
+            const sousTraitantsToAdd = newSousTraitants.filter(
+              st => !existingSousTraitantIds.includes(st.id)
+            );
+            
+            if (sousTraitantsToAdd.length > 0) {
+              setSousTraitants([...sousTraitants, ...sousTraitantsToAdd]);
+            }
+          }
+        }
+      } else if (sousTraitants.length === 0) {
+        // Si aucun sous-traitant n'est défini dans les activités, en ajouter un vide
+        handleAddSousTraitant();
+      }
+    } else if (sousTraitants.length === 0) {
+      // Si aucune activité planifiée n'est définie, ajouter un sous-traitant vide
       handleAddSousTraitant();
     }
-  }, []);
-
-  useEffect(() => {
-    if (defaultEntrepriseId && contextSousTraitants && sousTraitants.length > 0) {
-      const defaultSousTraitant = contextSousTraitants.find(st => st.id === defaultEntrepriseId);
-      
-      if (defaultSousTraitant && sousTraitants[0].nom === "") {
-        const updatedSousTraitants = sousTraitants.map((st, index) => 
-          index === 0 ? { ...st, nom: defaultSousTraitant.nom, id: defaultSousTraitant.id } : st
-        );
-        setSousTraitants(updatedSousTraitants);
-      }
-    }
-  }, [defaultEntrepriseId, contextSousTraitants]);
+  }, [planifActivites, contextSousTraitants, activites]);
 
   const handleAddSousTraitant = () => {
     const newSousTraitant: SousTraitantFormData = {
@@ -67,6 +112,30 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
           };
           console.log(`Sous-traitant sélectionné: Nom=${value}, ID=${selectedSousTraitant.id}`);
           return updatedSousTraitants;
+        }
+      }
+      
+      // Si on change l'activité, vérifier si cette activité a un sous-traitant associé
+      if (field === 'activiteID' && value) {
+        const activityId = Number(value);
+        const planifActivity = planifActivites.find(act => act.activiteID === activityId);
+        
+        // Si l'activité a un sous-traitant associé et que le sous-traitant actuel n'est pas défini
+        if (planifActivity && planifActivity.sousTraitantID && 
+            (!updatedSousTraitants[index].id || updatedSousTraitants[index].id < 0 || !updatedSousTraitants[index].nom)) {
+          
+          const associatedSousTraitant = contextSousTraitants?.find(st => st.id === planifActivity.sousTraitantID);
+          
+          if (associatedSousTraitant) {
+            updatedSousTraitants[index] = { 
+              ...updatedSousTraitants[index], 
+              activiteID: activityId,
+              id: associatedSousTraitant.id,
+              nom: associatedSousTraitant.nom
+            };
+            console.log(`Sous-traitant associé à l'activité: ID=${associatedSousTraitant.id}, Nom=${associatedSousTraitant.nom}`);
+            return updatedSousTraitants;
+          }
         }
       }
       
@@ -99,9 +168,21 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
     setSousTraitantToDelete(null);
   };
 
+  // Filtrer les activités disponibles en fonction des activités planifiées
   const filteredActivites = activites?.filter(activite => 
     planifActivites.some(planifAct => planifAct.activiteID === activite.id)
   ) || [];
+
+  // Obtenir le sous-traitant associé à une activité spécifique
+  const getSousTraitantForActivity = (activiteId: number | null) => {
+    if (!activiteId) return null;
+    
+    const planifActivity = planifActivites.find(act => act.activiteID === activiteId);
+    if (planifActivity && planifActivity.sousTraitantID) {
+      return contextSousTraitants?.find(st => st.id === planifActivity.sousTraitantID) || null;
+    }
+    return null;
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
@@ -153,15 +234,30 @@ const SousTraitantSection: React.FC<SousTraitantSectionProps> = ({
                 </label>
                 <select
                   value={sousTraitant.activiteID || ""}
-                  onChange={(e) => handleChange(index, "activiteID", e.target.value ? Number(e.target.value) : null)}
+                  onChange={(e) => {
+                    const activityId = e.target.value ? Number(e.target.value) : null;
+                    handleChange(index, "activiteID", activityId);
+                    
+                    // Vérifier si l'activité a un sous-traitant associé
+                    if (activityId) {
+                      const associatedSousTraitant = getSousTraitantForActivity(activityId);
+                      if (associatedSousTraitant && (!sousTraitant.nom || sousTraitant.id < 0)) {
+                        handleChange(index, "nom", associatedSousTraitant.nom);
+                        handleChange(index, "id", associatedSousTraitant.id);
+                      }
+                    }
+                  }}
                   className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                 >
                   <option value="">Sélectionner une activité</option>
-                  {filteredActivites.map((activite) => (
-                    <option key={activite.id} value={activite.id}>
-                      {activite.nom}
-                    </option>
-                  ))}
+                  {filteredActivites.map((activite) => {
+                    const associatedSousTraitant = getSousTraitantForActivity(activite.id);
+                    return (
+                      <option key={activite.id} value={activite.id}>
+                        {activite.nom}{associatedSousTraitant ? ` (${associatedSousTraitant.nom})` : ''}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 

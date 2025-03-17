@@ -9,7 +9,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { parseISO } from "date-fns";
 import "./CalendarPage.scss";
-import { getPlanifChantierByProjet, getPlanifActivites } from "../../services/JournalService";
+import { getPlanifChantierByProjet, getPlanifActivites, createOrUpdatePlanifChantier } from "../../services/JournalService";
 import { Planif, PlanifActivite } from "../../models/JournalFormModel";
 import { Sun, Moon, Building2, MapPin, AlertTriangle, Clock, Calendar, Users, Info, CheckCircle, Circle, X, Beaker } from "lucide-react";
 import { Badge } from "../ui/badge";
@@ -46,6 +46,8 @@ const CalendarPage: React.FC = () => {
   );
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [planifications, setPlanifications] = useState<Planif[]>([]);
+  const [modifiedPlanifs, setModifiedPlanifs] = useState<Map<number, Date>>(new Map());
+  const [showSaveButton, setShowSaveButton] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -89,6 +91,8 @@ const CalendarPage: React.FC = () => {
       const planifData = await getPlanifChantierByProjet(projectId);
       
       if (planifData && Array.isArray(planifData)) {
+        console.log("Données brutes des planifications:", planifData);
+        
         // Convertir les données au nouveau format Planif
         const formattedPlanifs = planifData.map(planif => {
           // Créer les PlanifActivites à partir des activités reçues
@@ -102,9 +106,38 @@ const CalendarPage: React.FC = () => {
               lieuId: a.lieuID || 0,
               qteLab: a.qteLab || 0,
               activiteId: a.activiteID || 0,
-              sousTraitantId: a.sousTraitantID || planif.defaultEntrepriseId || 0,
+              sousTraitantId: a.sousTraitantID || planif.defaultEntrepriseId || planif.defaultEntreprise || 0,
               isComplete: a.isComplete || false
             })) : [];
+          
+          // Vérifier toutes les propriétés possibles pour defaultEntreprise
+          let defaultEntreprise = 0;
+          
+          // Si c'est un objet avec un ID, extraire l'ID
+          if (planif.defaultEntreprise && typeof planif.defaultEntreprise === 'object' && planif.defaultEntreprise.id) {
+            defaultEntreprise = planif.defaultEntreprise.id;
+          } 
+          // Si c'est un objet avec un ID (autre casse)
+          else if (planif.defaultEntreprise && typeof planif.defaultEntreprise === 'object' && planif.defaultEntreprise.ID) {
+            defaultEntreprise = planif.defaultEntreprise.ID;
+          }
+          // Sinon, essayer de récupérer directement l'ID
+          else if (planif.defaultEntrepriseId !== undefined) {
+            defaultEntreprise = planif.defaultEntrepriseId;
+          }
+          else if (planif.DefaultEntrepriseId !== undefined) {
+            defaultEntreprise = planif.DefaultEntrepriseId;
+          }
+          else if (typeof planif.defaultEntreprise === 'number') {
+            defaultEntreprise = planif.defaultEntreprise;
+          }
+          
+          console.log(`Planif ID ${planif.id}: defaultEntreprise = ${defaultEntreprise} (source: ${
+            planif.defaultEntreprise && typeof planif.defaultEntreprise === 'object' ? 'objet defaultEntreprise' : 
+            planif.defaultEntrepriseId !== undefined ? 'defaultEntrepriseId' : 
+            planif.DefaultEntrepriseId !== undefined ? 'DefaultEntrepriseId' : 
+            typeof planif.defaultEntreprise === 'number' ? 'defaultEntreprise (nombre)' : 'default'
+          })`);
           
           // Créer l'objet Planif avec les propriétés correctes
           return {
@@ -112,8 +145,8 @@ const CalendarPage: React.FC = () => {
             ProjetID: planif.projetID || projectId,
             HrsDebut: planif.hrsDebut || "08:00",
             HrsFin: planif.hrsFin || "17:00",
-            defaultEntreprise: planif.defaultEntrepriseId || 0,
-            note: planif.note || '',
+            DefaultEntrepriseId: defaultEntreprise,
+            Note: planif.Note || '',
             Date: planif.date || new Date().toISOString().split('T')[0],
             PlanifActivites: planifActivites
           } as Planif;
@@ -176,7 +209,7 @@ const CalendarPage: React.FC = () => {
         return l.id === (firstActivite ? firstActivite.lieuId : 0);
       })?.nom || "Inconnu";
       
-      const entrepriseName = sousTraitants?.find((st) => st.id === planif.defaultEntreprise)?.nom || "Inconnu";
+      const entrepriseName = sousTraitants?.find((st) => st.id === planif.DefaultEntrepriseId)?.nom || "Inconnu";
       
       // Créer un titre qui inclut l'ID de la planification
       const title = `Planif #${planif.ID}`;
@@ -283,15 +316,24 @@ const CalendarPage: React.FC = () => {
     const TimeIcon = extendedProps.isNightShift ? Moon : Sun;
     const timeIconColor = extendedProps.isNightShift ? "text-indigo-500" : "text-amber-500";
     const bgColor = extendedProps.isNightShift ? "bg-indigo-100" : "bg-amber-50";
+    
+    // Vérifier si cette planification a été modifiée
+    const isModified = modifiedPlanifs.has(parseInt(eventInfo.event.id));
+    const modifiedBorder = isModified ? "border-2 border-green-500" : "";
 
     return (
-      <div className={`event-content p-1 rounded ${bgColor} hover:shadow-md transition-all duration-200`}>
+      <div className={`event-content p-1 rounded ${bgColor} ${modifiedBorder} hover:shadow-md transition-all duration-200`}>
         <div className="event-title flex items-center font-medium">
           <TimeIcon className={`mr-2 ${timeIconColor}`} size={18} />
           <span>{eventInfo.event.title}</span>
           <Badge className="ml-2 text-xs" variant="outline">
             {extendedProps.activites.length} activité{extendedProps.activites.length > 1 ? 's' : ''}
           </Badge>
+          {isModified && (
+            <Badge className="ml-2 text-xs bg-green-100 text-green-800 border-green-300">
+              Modifiée
+            </Badge>
+          )}
         </div>
         <div className="event-details flex items-center text-gray-700 mt-1">
           <Clock className="mr-1 text-blue-500" size={16} />
@@ -319,6 +361,95 @@ const CalendarPage: React.FC = () => {
   // Fonction pour obtenir le nom du sous-traitant à partir de son ID
   const getSousTraitantName = (sousTraitantId: number) => {
     return sousTraitants?.find(st => st.id === sousTraitantId)?.nom || "Entreprise inconnue";
+  };
+
+  // Fonction pour sauvegarder les modifications de dates des planifications
+  const handleSaveDateChanges = async () => {
+    // Demander confirmation avant de sauvegarder
+    const confirmSave = window.confirm(`Voulez-vous sauvegarder les modifications de dates pour ${modifiedPlanifs.size} planification(s) ?`);
+    
+    if (!confirmSave) {
+      return;
+    }
+    
+    try {
+      // Convertir la Map en array pour faciliter l'itération
+      const modifiedPlanifsArray = Array.from(modifiedPlanifs.entries());
+      
+      // Afficher un message de chargement
+      const savingPromises = modifiedPlanifsArray.map(async ([planifId, newDate]) => {
+        // Trouver la planification correspondante
+        const planif = planifications.find(p => p.ID === planifId);
+        
+        if (planif) {
+          // Formater la date au format YYYY-MM-DD
+          const formattedDate = newDate.toISOString().split('T')[0];
+          
+          // Extraire l'ID de l'entreprise par défaut si c'est un objet
+          let defaultEntreprise = planif.DefaultEntrepriseId;
+          if (defaultEntreprise && typeof defaultEntreprise === 'object') {
+            const entrepriseObj = defaultEntreprise as any;
+            defaultEntreprise = entrepriseObj.id || entrepriseObj.ID || 0;
+          }
+          
+          // Créer une copie exacte de la planification et ne modifier que la date
+          // Cela garantit que toutes les propriétés sont préservées
+          const updatedPlanif: Planif = {
+            ID: planif.ID,
+            ProjetID: planif.ProjetID,
+            HrsDebut: planif.HrsDebut,
+            HrsFin: planif.HrsFin,
+            DefaultEntrepriseId: defaultEntreprise,
+            Note: planif.Note,
+            Date: formattedDate,
+            PlanifActivites: [...planif.PlanifActivites]
+          };
+          
+          // Afficher les détails pour le débogage
+          console.log("Planification originale:", planif);
+          console.log("Planification mise à jour:", updatedPlanif);
+          
+          // Appeler l'API pour mettre à jour la planification
+          console.log(`Mise à jour de la planification ${planifId} avec la nouvelle date: ${formattedDate}`);
+          await createOrUpdatePlanifChantier(updatedPlanif);
+        }
+      });
+      
+      // Attendre que toutes les mises à jour soient terminées
+      await Promise.all(savingPromises);
+      
+      // Rafraîchir les données
+      if (localSelectedProject) {
+        await loadPlanifications(localSelectedProject);
+      }
+      
+      // Réinitialiser l'état
+      setModifiedPlanifs(new Map());
+      setShowSaveButton(false);
+      
+      // Afficher un message de succès
+      alert("Les modifications de dates ont été enregistrées avec succès!");
+    } catch (error) {
+      console.error("Erreur lors de la sauvegarde des modifications de dates:", error);
+      alert("Une erreur s'est produite lors de la sauvegarde des modifications de dates.");
+    }
+  };
+
+  // Fonction pour annuler les modifications de dates
+  const handleCancelChanges = () => {
+    // Demander confirmation avant d'annuler
+    const confirmCancel = window.confirm(`Voulez-vous annuler les modifications de dates pour ${modifiedPlanifs.size} planification(s) ?`);
+    
+    if (confirmCancel) {
+      // Réinitialiser l'état
+      setModifiedPlanifs(new Map());
+      setShowSaveButton(false);
+      
+      // Recharger les planifications pour restaurer l'état initial
+      if (localSelectedProject) {
+        loadPlanifications(localSelectedProject);
+      }
+    }
   };
 
   return (
@@ -366,8 +497,8 @@ const CalendarPage: React.FC = () => {
           eventClick={handleEventClick}
           eventMouseEnter={handleEventMouseEnter}
           eventMouseLeave={handleEventMouseLeave}
-          editable={false}
-          selectable={false}
+          editable={true}
+          selectable={true}
           eventColor="#f0f9ff" // Couleur de fond très légère
           eventBorderColor="#3b82f6" // Bordure bleue
           displayEventTime={false}
@@ -385,6 +516,30 @@ const CalendarPage: React.FC = () => {
             week: "Semaine",
             day: "Jour",
             list: "Liste"
+          }}
+          eventDrop={(info) => {
+            const planifId = parseInt(info.event.id);
+            const newDate = info.event.start;
+            if (newDate) {  // Vérifier que la date n'est pas null
+              setModifiedPlanifs((prevModifiedPlanifs) => {
+                const newModifiedPlanifs = new Map(prevModifiedPlanifs);
+                newModifiedPlanifs.set(planifId, newDate);
+                return newModifiedPlanifs;
+              });
+              setShowSaveButton(true);
+            }
+          }}
+          dragRevertDuration={200}
+          eventDragMinDistance={10}
+          eventDragStart={(info) => {
+            // Ajouter une classe pour indiquer que l'événement est en cours de déplacement
+            const el = info.el;
+            el.classList.add('dragging');
+          }}
+          eventDragStop={(info) => {
+            // Retirer la classe une fois le déplacement terminé
+            const el = info.el;
+            el.classList.remove('dragging');
           }}
         />
       </div>
@@ -415,13 +570,13 @@ const CalendarPage: React.FC = () => {
           </div>
           
           {/* Commentaire global */}
-          {selectedEvent.event.extendedProps.planif.note && (
+          {selectedEvent.event.extendedProps.planif.Note && (
             <div className="p-4 bg-yellow-50 border-y border-yellow-200">
               <div className="flex items-start mb-2">
                 <Info className="mr-2 text-yellow-600 mt-1" size={18} />
                 <h4 className="text-lg font-medium text-yellow-800">Commentaire global</h4>
               </div>
-              <p className="text-gray-700 text-left">{selectedEvent.event.extendedProps.planif.note}</p>
+              <p className="text-gray-700 text-left">{selectedEvent.event.extendedProps.planif.Note}</p>
             </div>
           )}
           
@@ -481,6 +636,29 @@ const CalendarPage: React.FC = () => {
               );
             })}
           </div>
+        </div>
+      )}
+      
+      {showSaveButton && (
+        <div className="fixed bottom-4 right-4 z-50 flex gap-2">
+          <button
+            onClick={handleCancelChanges}
+            className="px-4 py-2 bg-gray-600 text-white rounded-md shadow-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors duration-200 flex items-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+            Annuler
+          </button>
+          <button
+            onClick={handleSaveDateChanges}
+            className="px-4 py-2 bg-green-600 text-white rounded-md shadow-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors duration-200 flex items-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
+            Sauvegarder ({modifiedPlanifs.size})
+          </button>
         </div>
       )}
     </div>

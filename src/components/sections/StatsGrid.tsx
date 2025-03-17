@@ -1,14 +1,7 @@
 import React from "react";
 import { FaUser, FaClock, FaHourglassHalf } from "react-icons/fa";
 
-interface StatsGridProps {
-  users: {
-    id: number;
-    nom: string;
-  }[];
-  activiteCount: number;
-  nextStep: boolean;
-  setUserStats: (newUserStats: any) => void;
+interface JournalUserStats {
   userStats: {
     id: number;
     nom: string;
@@ -16,6 +9,23 @@ interface StatsGridProps {
     ts: number;
     td: number;
   }[];
+  totals: {
+    act: number[];
+    ts: number;
+    td: number;
+  };
+}
+
+interface StatsGridProps {
+  users: {
+    id: number;
+    nom: string;
+    prenom?: string;
+  }[];
+  activiteCount: number;
+  nextStep: boolean;
+  setUserStats: (stats: JournalUserStats) => void;
+  userStats: JournalUserStats;
 }
 
 const StatsGrid: React.FC<StatsGridProps> = ({
@@ -26,86 +36,127 @@ const StatsGrid: React.FC<StatsGridProps> = ({
   userStats,
 }) => {
   const handleActChange = (userId: number, index: number, value: number) => {
-    const updatedUserStats = userStats.map((userStat) => {
+    const updatedUserStats = userStats.userStats.map((userStat) => {
       if (userStat.id === userId) {
         const updatedAct = [...userStat.act];
-        const actualIndex = nextStep ? index + 5 : index;
-        updatedAct[actualIndex] = value;
+        const actIndex = index + (nextStep ? 5 : 0);
+        updatedAct[actIndex] = value;
         
-        // Calculer le total des heures pour le groupe d'activités actuel uniquement
-        const startIndex = nextStep ? 5 : 0;
-        const endIndex = nextStep ? 10 : 5;
-        const groupTotal = updatedAct
-          .slice(startIndex, endIndex)
-          .reduce((acc, curr) => acc + curr, 0);
+        // Calculer le total des heures pour cet utilisateur
+        const totalHours = updatedAct.reduce((sum, val) => sum + (val || 0), 0);
         
-        return { 
-          ...userStat, 
-          act: updatedAct, 
-          ts: groupTotal - userStat.td 
+        return {
+          ...userStat,
+          act: updatedAct,
+          ts: totalHours // Mettre à jour le total des heures
         };
       }
       return userStat;
     });
     
+    // Recalculer les totaux
+    const totals = updatedUserStats.reduce(
+      (acc: { act: number[], ts: number, td: number }, stat: any) => {
+        for (let i = 0; i < 10; i++) {
+          acc.act[i] = (acc.act[i] || 0) + (stat.act[i] || 0);
+        }
+        acc.ts += stat.ts || 0;
+        acc.td += stat.td || 0;
+        return acc;
+      },
+      { act: Array(10).fill(0), ts: 0, td: 0 }
+    );
+    
     setUserStats({
       userStats: updatedUserStats,
-      totals: calculateTotals(updatedUserStats),
+      totals
     });
   };
 
   const handleTdChange = (userId: number, value: number) => {
-    const updatedUserStats = userStats.map((userStat) => {
+    const updatedUserStats = userStats.userStats.map((userStat) => {
       if (userStat.id === userId) {
-        // Calculer le total des heures pour le groupe d'activités actuel uniquement
-        const startIndex = nextStep ? 5 : 0;
-        const endIndex = nextStep ? 10 : 5;
-        const groupTotal = userStat.act
-          .slice(startIndex, endIndex)
-          .reduce((acc, curr) => acc + curr, 0);
-          
         return {
           ...userStat,
-          td: value,
-          ts: groupTotal - value,
+          td: value
         };
       }
       return userStat;
     });
     
+    // Recalculer les totaux
+    const totals = updatedUserStats.reduce(
+      (acc: { act: number[], ts: number, td: number }, stat: any) => {
+        for (let i = 0; i < 10; i++) {
+          acc.act[i] = (acc.act[i] || 0) + (stat.act[i] || 0);
+        }
+        acc.ts += stat.ts || 0;
+        acc.td += stat.td || 0;
+        return acc;
+      },
+      { act: Array(10).fill(0), ts: 0, td: 0 }
+    );
+    
     setUserStats({
       userStats: updatedUserStats,
-      totals: calculateTotals(updatedUserStats),
+      totals
     });
   };
 
-  const calculateTotals = (stats: typeof userStats) => {
+  const handleTsChange = (userId: number, value: number) => {
+    const updatedUserStats = userStats.userStats.map((userStat) => {
+      if (userStat.id === userId) {
+        return {
+          ...userStat,
+          ts: value,
+        };
+      }
+      return userStat;
+    });
+    
+    // Recalculer les totaux
+    const totals = updatedUserStats.reduce(
+      (acc: { act: number[], ts: number, td: number }, stat: any) => {
+        for (let i = 0; i < 10; i++) {
+          acc.act[i] = (acc.act[i] || 0) + (stat.act[i] || 0);
+        }
+        acc.ts += stat.ts;
+        acc.td += stat.td;
+        return acc;
+      },
+      { act: Array(10).fill(0), ts: 0, td: 0 }
+    );
+    
+    setUserStats({
+      userStats: updatedUserStats,
+      totals
+    });
+  };
+
+  const calculateTotals = (stats: typeof userStats.userStats) => {
     const startIndex = nextStep ? 5 : 0;
     const endIndex = nextStep ? 10 : 5;
     
     return stats.reduce(
-      (acc, userStat) => {
+      (acc: { act: number[], ts: number, td: number }, userStat: any) => {
         // Calculer les totaux uniquement pour le groupe d'activités actuel
         for (let i = startIndex; i < endIndex; i++) {
           const displayIndex = i - startIndex;
-          acc.act[displayIndex] = (acc.act[displayIndex] || 0) + userStat.act[i];
+          acc.act[displayIndex] = (acc.act[displayIndex] || 0) + (userStat.act[i] || 0);
         }
-        
-        // Ajouter uniquement les heures TS et TD du groupe actuel
-        const groupTotal = userStat.act
-          .slice(startIndex, endIndex)
-          .reduce((acc, curr) => acc + curr, 0);
-        const groupTs = groupTotal - userStat.td;
-        
-        acc.ts += groupTs;
-        acc.td += userStat.td;
+        acc.ts += userStat.ts || 0;
+        acc.td += userStat.td || 0;
         return acc;
       },
-      { act: Array(5).fill(0), ts: 0, td: 0 }
+      {
+        act: Array(5).fill(0),
+        ts: 0,
+        td: 0,
+      }
     );
   };
 
-  const totals = calculateTotals(userStats);
+  const totals = calculateTotals(userStats.userStats);
   const actIndexOffset = nextStep ? 5 : 0;
 
   return (
@@ -155,62 +206,73 @@ const StatsGrid: React.FC<StatsGridProps> = ({
           </tr>
         </thead>
         <tbody>
-          {userStats
-            .filter(userStat => userStat.nom && userStat.nom.trim() !== "")
-            .map((userStat) => (
-            <tr key={userStat.id} className="hover:bg-gray-50 transition-colors duration-150">
-              <td className="py-2 px-4 border-b">{userStat.nom}</td>
-              {userStat.act.slice(nextStep ? 5 : 0, nextStep ? 10 : 5).map((value, index) => (
-                <td key={index} className="py-2 px-4 border-b">
-                  <input
-                    type="number"
-                    step="0.25"
-                    min="0"
-                    max="24"
-                    value={value}
-                    onChange={(e) =>
-                      handleActChange(
-                        userStat.id,
-                        index,
-                        parseFloat(e.target.value) || 0
-                      )
-                    }
-                    className={`w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ${
-                      index >= activiteCount ? "text-gray-300 bg-gray-50" : "text-gray-700"
-                    }`}
-                    disabled={index >= activiteCount}
-                  />
-                </td>
-              ))}
-              <td className="py-2 px-4 border-b">
-                <input
-                  type="number"
-                  step="0.25"
-                  min="0"
-                  max="24"
-                  value={userStat.ts}
-                  readOnly
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
-                />
-              </td>
-              <td className="py-2 px-4 border-b">
-                <input
-                  type="number"
-                  step="0.25"
-                  min="0"
-                  max="24"
-                  value={userStat.td}
-                  onChange={(e) =>
-                    handleTdChange(
-                      userStat.id,
-                      parseFloat(e.target.value) || 0
-                    )
-                  }
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-700"
-                />
-              </td>
-            </tr>
-          ))}
+          {userStats.userStats
+            .filter((userStat) => {
+              // Vérifier si l'utilisateur existe toujours dans la liste des utilisateurs
+              // et qu'il a un nom non vide
+              const user = users.find((u) => u.id === userStat.id);
+              return user && (user.nom || user.prenom) && userStat.nom.trim() !== "";
+            })
+            .map((userStat) => {
+              // Utiliser directement le nom stocké dans userStat.nom qui contient maintenant le nom complet
+              const displayName = userStat.nom.trim();
+              
+              // Ne pas afficher les lignes sans nom
+              if (!displayName) {
+                return null;
+              }
+              
+              return (
+                <tr key={userStat.id}>
+                  <td className="text-left py-2 px-4 border-b font-medium">{displayName}</td>
+                  {Array.from({ length: 5 }).map((_, i) => {
+                    const actIndex = i + actIndexOffset;
+                    return (
+                      <td key={i} className="py-2 px-4 border-b">
+                        <input
+                          type="number"
+                          min="0"
+                          max="24"
+                          value={userStat.act[actIndex] || 0}
+                          onChange={(e) =>
+                            handleActChange(
+                              userStat.id,
+                              i,
+                              Number(e.target.value)
+                            )
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                        />
+                      </td>
+                    );
+                  })}
+                  <td className="py-2 px-4 border-b">
+                    <input
+                      type="number"
+                      min="0"
+                      max="24"
+                      value={userStat.ts || 0}
+                      onChange={(e) =>
+                        handleTsChange(userStat.id, Number(e.target.value))
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                    />
+                  </td>
+                  <td className="py-2 px-4 border-b">
+                    <input
+                      type="number"
+                      min="0"
+                      max="24"
+                      value={userStat.td || 0}
+                      onChange={(e) =>
+                        handleTdChange(userStat.id, Number(e.target.value))
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                    />
+                  </td>
+                </tr>
+              );
+            })}
           <tr className="bg-gray-50 font-semibold text-gray-700">
             <td className="py-3 px-4 border-t">Totaux</td>
             {totals.act.map((total, index) => (

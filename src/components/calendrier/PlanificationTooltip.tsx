@@ -64,10 +64,10 @@ const PlanificationTooltip: React.FC<PlanificationTooltipProps> = ({
             </div>
           </div>
         </div>
-        {planif.note && (
+        {planif.Note && (
           <div className="tooltip-note flex items-start">
             <FaStickyNote className="text-amber-500 mr-1" />
-            <span className="text-sm text-gray-700 italic">{planif.note}</span>
+            <span className="text-sm text-gray-700 italic">{planif.Note}</span>
           </div>
         )}
       </div>

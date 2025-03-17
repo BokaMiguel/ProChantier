@@ -13,7 +13,7 @@ import { styles } from '../styles/PDFStyles';
 import {
   Employe,
   PlanifChantier,
-  PlanifActivites,
+  PlanifActiviteJournal,
   Localisation,
   SignatureData,
   Activite,
@@ -48,7 +48,7 @@ interface PDFData {
   journalMeteoId?: number;
   journalUsers: Employe[];
   planifChantier: PlanifChantier;
-  planifActivites: PlanifActivites[];
+  planifActivites: PlanifActiviteJournal[];
   journalMateriaux: any[];
   journalSousTraitants: JournalSousTraitant[];
   userStats: {
@@ -77,7 +77,7 @@ interface PDFDocumentProps {
     journalMeteoId?: number;
     journalUsers: Employe[];
     planifChantier: PlanifChantier;
-    planifActivites: PlanifActivites[];
+    planifActivites: PlanifActiviteJournal[];
     journalMateriaux: any[];
     journalSousTraitants: JournalSousTraitant[];
     userStats: { id: number; nom: string; act: number[]; ts: number; td: number }[];
@@ -92,7 +92,7 @@ interface PDFDocumentProps {
   journalPlanifId: number;
 }
 
-interface EnrichedPlanifActivite extends PlanifActivites {
+interface EnrichedPlanifActivite extends PlanifActiviteJournal {
   activiteNom?: string;
   lieuNom?: string;
 }
@@ -201,7 +201,7 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
   );
 
   const renderActivitesTable = () => {
-    const renderBases = (activite: PlanifActivites) => {
+    const renderBases = (activite: PlanifActiviteJournal) => {
       if (!activite.bases || activite.bases.length === 0) return null;
       
       return (
@@ -220,7 +220,7 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
       );
     };
 
-    const renderLiaisons = (activite: PlanifActivites) => {
+    const renderLiaisons = (activite: PlanifActiviteJournal) => {
       if (!activite.liaisons || activite.liaisons.length === 0) return null;
 
       // Calculer la distance totale
@@ -250,7 +250,7 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
       );
     };
 
-    const renderCommentaire = (activite: PlanifActivites) => {
+    const renderCommentaire = (activite: PlanifActiviteJournal) => {
       if (!activite.notes || activite.notes.trim() === '') return null;
 
       return (

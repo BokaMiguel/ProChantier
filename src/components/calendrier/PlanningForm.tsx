@@ -131,8 +131,8 @@ const PlanningForm: React.FC = () => {
             ProjetID: planif.projetID || projectId,
             HrsDebut: planif.hrsDebut || "08:00",
             HrsFin: planif.hrsFin || "17:00",
-            defaultEntreprise: planif.defaultEntrepriseId || 0,
-            note: planif.note || '',
+            DefaultEntrepriseId: planif.defaultEntrepriseId || 0,
+            Note: planif.Note || '',
             Date: planif.date || new Date().toISOString().split('T')[0],
             PlanifActivites: planifActivites
           } as Planif;
@@ -263,8 +263,8 @@ const PlanningForm: React.FC = () => {
             ProjetID: planif.ProjetID,
             HrsDebut: planif.HrsDebut,
             HrsFin: planif.HrsFin,
-            defaultEntreprise: planif.defaultEntreprise,
-            note: planif.note,
+            DefaultEntrepriseId: planif.DefaultEntrepriseId,
+            Note: planif.Note,
             Date: planif.Date,
             PlanifActivites: planif.PlanifActivites
           });
@@ -667,77 +667,67 @@ const PlanningForm: React.FC = () => {
         for (const planif of activitiesForDay) {
           console.log(`Sauvegarde de la planification pour ${day}:`, planif);
           
-          // Vérifier que la date est bien au format ISO
-          let planifDate = planif.Date;
-          if (!planifDate || !planifDate.includes('-')) {
-            // Si la date n'est pas au bon format, la recalculer
-            const dayIndex = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'].indexOf(day);
-            if (dayIndex !== -1) {
-              const calculatedDate = addDays(startOfWeek(currentDate, { weekStartsOn: 0 }), dayIndex);
-              planifDate = format(calculatedDate, 'yyyy-MM-dd');
-              console.log(`Date recalculée pour ${day}:`, planifDate);
-            }
+          // Extraire l'ID de l'entreprise par défaut si c'est un objet
+          let defaultEntrepriseValue = planif.DefaultEntrepriseId;
+          if (defaultEntrepriseValue && typeof defaultEntrepriseValue === 'object') {
+            // Utiliser une assertion de type pour accéder aux propriétés
+            const entrepriseObj = defaultEntrepriseValue as any;
+            defaultEntrepriseValue = entrepriseObj.id || entrepriseObj.ID || 0;
+            console.log("Extraction de l'ID de l'entreprise par défaut:", defaultEntrepriseValue);
           }
+
+          const planifData: Planif = {
+            ID: planif.ID,
+            ProjetID: planif.ProjetID,
+            Date: planif.Date,
+            HrsDebut: planif.HrsDebut,
+            HrsFin: planif.HrsFin,
+            DefaultEntrepriseId: defaultEntrepriseValue || 0,
+            Note: planif.Note || "",
+            PlanifActivites: []
+          };
   
-          try {
-            // Préparer les données de la planification
-            const planifData = {
-              ID: planif.ID > 0 ? planif.ID : 0, // Si ID négatif, c'est une nouvelle planification
-              ProjetID: selectedProject.ID,
-              HrsDebut: planif.HrsDebut,
-              HrsFin: planif.HrsFin,
-              Note: planif.note || "",
-              Date: planifDate
-            };
+          console.log("Données de planification à sauvegarder:", planifData);
   
-            console.log("Données de planification à sauvegarder:", planifData);
-  
-            // Vérifier si nous avons des activités à sauvegarder
-            if (planif.PlanifActivites && planif.PlanifActivites.length > 0) {
-              console.log(`Sauvegarde de ${planif.PlanifActivites.length} activités pour la planification`);
-              
-              // Préparer les activités avec les noms de propriétés du backend
-              const activitiesToSave = planif.PlanifActivites.map(act => {
-                // Destructurer pour extraire isComplete et conserver le reste
-                const { isComplete, ...actData } = act;
-                
-                return {
-                  id: actData.ID || 0,
-                  activiteId: actData.activiteId,
-                  hrsDebut: actData.debut || planif.HrsDebut,
-                  hrsFin: actData.fin || planif.HrsFin,
-                  sousTraitantId: actData.sousTraitantId || planif.defaultEntreprise,
-                  lieuId: actData.lieuId,
-                  signalisationId: actData.signalisation,
-                  qteLab: actData.qteLab
-                };
-              });
-              
-              // Utiliser la nouvelle fonction pour créer la planification et ses activités en une seule opération
-              console.log("Utilisation de createPlanifWithActivities pour sauvegarder la planification et ses activités");
-              const result = await createPlanifWithActivities(planifData, activitiesToSave);
-              
-              console.log("Résultat de la sauvegarde:", result);
-              
-              if (!result || !result.planification) {
-                throw new Error(`Échec de la sauvegarde de la planification pour ${day}`);
-              }
-              
-              console.log(`Planification ${result.planification.id} et ${result.activities.length} activités sauvegardées avec succès`);
-            } else {
-              // Si pas d'activités, sauvegarder uniquement la planification
-              console.log("Aucune activité à sauvegarder, sauvegarde de la planification uniquement");
-              const savedPlanif = await createOrUpdatePlanifChantier(planifData);
-              
-              if (!savedPlanif) {
-                throw new Error(`Échec de la sauvegarde de la planification pour ${day}`);
-              }
-              
-              console.log("Planification sauvegardée:", savedPlanif);
+          // Vérifier si nous avons des activités à sauvegarder
+          if (planif.PlanifActivites && planif.PlanifActivites.length > 0) {
+            console.log(`Sauvegarde de ${planif.PlanifActivites.length} activités pour la planification`);
+            
+            // Préparer les activités avec les noms de propriétés du backend
+            const activitiesToSave: PlanifActivite[] = planif.PlanifActivites.map(act => ({
+              ID: act.ID || 0,
+              PlanifID: planif.ID,
+              activiteId: act.activiteId,
+              debut: act.debut || planif.HrsDebut,
+              fin: act.fin || planif.HrsFin,
+              sousTraitantId: act.sousTraitantId,
+              lieuId: act.lieuId,
+              signalisation: act.signalisation,
+              qteLab: act.qteLab,
+              isComplete: act.isComplete
+            }));
+            
+            // Utiliser la nouvelle fonction pour créer la planification et ses activités en une seule opération
+            console.log("Utilisation de createPlanifWithActivities pour sauvegarder la planification et ses activités");
+            const result = await createPlanifWithActivities(planifData, activitiesToSave);
+            
+            console.log("Résultat de la sauvegarde:", result);
+            
+            if (!result || !result.planification) {
+              throw new Error(`Échec de la sauvegarde de la planification pour ${day}`);
             }
-          } catch (error) {
-            console.error("Erreur lors de la sauvegarde d'une planification:", error);
-            throw error;
+            
+            console.log(`Planification ${result.planification.id} et ${result.activities.length} activités sauvegardées avec succès`);
+          } else {
+            // Si pas d'activités, sauvegarder uniquement la planification
+            console.log("Aucune activité à sauvegarder, sauvegarde de la planification uniquement");
+            const savedPlanif = await createOrUpdatePlanifChantier(planifData);
+            
+            if (!savedPlanif) {
+              throw new Error(`Échec de la sauvegarde de la planification pour ${day}`);
+            }
+            
+            console.log("Planification sauvegardée:", savedPlanif);
           }
         }
       }
@@ -778,15 +768,24 @@ const PlanningForm: React.FC = () => {
       for (const planif of allPlanifs) {
         console.log("Sauvegarde de la planification:", planif);
         
-        // Préparer l'objet à envoyer au serveur pour la planification principale
-        const planifData = {
-          id: planif.ID,
-          projetId: planif.ProjetID,
-          date: planif.Date,
-          hrsDebut: planif.HrsDebut,
-          hrsFin: planif.HrsFin,
-          defaultEntrepriseId: planif.defaultEntreprise,
-          note: planif.note || "",
+        // Extraire l'ID de l'entreprise par défaut si c'est un objet
+        let defaultEntrepriseValue = planif.DefaultEntrepriseId;
+        if (defaultEntrepriseValue && typeof defaultEntrepriseValue === 'object') {
+          // Utiliser une assertion de type pour accéder aux propriétés
+          const entrepriseObj = defaultEntrepriseValue as any;
+          defaultEntrepriseValue = entrepriseObj.id || entrepriseObj.ID || 0;
+          console.log("Extraction de l'ID de l'entreprise par défaut:", defaultEntrepriseValue);
+        }
+
+        const planifData: Planif = {
+          ID: planif.ID,
+          ProjetID: planif.ProjetID,
+          Date: planif.Date,
+          HrsDebut: planif.HrsDebut,
+          HrsFin: planif.HrsFin,
+          DefaultEntrepriseId: defaultEntrepriseValue || 0,
+          Note: planif.Note || "",
+          PlanifActivites: []
         };
         
         // Vérifier si nous avons des activités à sauvegarder
@@ -794,14 +793,15 @@ const PlanningForm: React.FC = () => {
           console.log(`Sauvegarde de ${planif.PlanifActivites.length} activités pour la planification`);
           
           // Préparer les activités avec les noms de propriétés du backend
-          const activitiesToSave = planif.PlanifActivites.map(act => ({
-            id: act.ID || 0,
+          const activitiesToSave: PlanifActivite[] = planif.PlanifActivites.map(act => ({
+            ID: act.ID || 0,
+            PlanifID: planif.ID,
             activiteId: act.activiteId,
-            hrsDebut: act.debut || planif.HrsDebut,
-            hrsFin: act.fin || planif.HrsFin,
-            sousTraitantId: act.sousTraitantId || planif.defaultEntreprise,
+            debut: act.debut || planif.HrsDebut,
+            fin: act.fin || planif.HrsFin,
+            sousTraitantId: act.sousTraitantId,
             lieuId: act.lieuId,
-            signalisationId: act.signalisation,
+            signalisation: act.signalisation,
             qteLab: act.qteLab
           }));
           
@@ -1019,10 +1019,10 @@ const PlanningForm: React.FC = () => {
       ProjetID: selectedProject.ID,
       HrsDebut: "08:00",
       HrsFin: "16:00",
-      note: "",
+      Note: "",
       Date: format(dayDate, 'yyyy-MM-dd'),
       PlanifActivites: [],
-      defaultEntreprise: 0
+      DefaultEntrepriseId: 0
     };
     
     console.log("Planification créée:", newPlanif);
@@ -1060,8 +1060,8 @@ const PlanningForm: React.FC = () => {
       ProjetID: selectedProject.ID,
       HrsDebut: "08:00",
       HrsFin: "17:00",
-      defaultEntreprise: sousTraitants && sousTraitants.length > 0 ? sousTraitants[0].id : 0,
-      note: "Test planification",
+      DefaultEntrepriseId: sousTraitants && sousTraitants.length > 0 ? sousTraitants[0].id : 0,
+      Note: "Test planification",
       Date: format(new Date(), 'yyyy-MM-dd'),
       PlanifActivites: []
     };
@@ -1122,8 +1122,8 @@ const PlanningForm: React.FC = () => {
       ProjetID: selectedProject.ID,
       HrsDebut: "08:00",
       HrsFin: "17:00",
-      defaultEntreprise: sousTraitants && sousTraitants.length > 0 ? sousTraitants[0].id : 0,
-      note: "",
+      DefaultEntrepriseId: sousTraitants && sousTraitants.length > 0 ? sousTraitants[0].id : 0,
+      Note: "",
       Date: planifDate,
       PlanifActivites: []
     };
@@ -1324,19 +1324,19 @@ const PlanningForm: React.FC = () => {
                                           </div>
                                           <div className="flex flex-col">
                                             <span className="text-sm text-white/80">Entreprise</span>
-                                            <span className="font-medium">{sousTraitants?.find(st => st.id === planif.defaultEntreprise)?.nom || 'Inconnue'}</span>
+                                            <span className="font-medium">{sousTraitants?.find(st => st.id === planif.DefaultEntrepriseId)?.nom || 'Inconnue'}</span>
                                           </div>
                                         </div>
                                       </CardHeader>
                                       
-                                      {planif.note && planif.note.trim() !== "" && (
+                                      {planif.Note && planif.Note.trim() !== "" && (
                                         <div className="bg-amber-50 p-4 border-b border-amber-100">
                                           <div className="flex items-start gap-3">
                                             <MessageSquare className="h-5 w-5 text-amber-500 mt-0.5" />
                                             <div className="flex-1">
                                               <h3 className="text-sm font-medium text-amber-800 mb-1 text-left">Commentaire global</h3>
                                               <p className="text-sm text-amber-700 text-left">
-                                                {planif.note}
+                                                {planif.Note}
                                               </p>
                                             </div>
                                           </div>
@@ -1404,7 +1404,7 @@ const PlanningForm: React.FC = () => {
                                                 // Utiliser le sous-traitant spécifique à l'activité s'il est défini, sinon utiliser celui par défaut de la planification
                                                 const entrepriseInfo = activite.sousTraitantId 
                                                   ? sousTraitants?.find(st => st.id === activite.sousTraitantId)
-                                                  : sousTraitants?.find(st => st.id === planif.defaultEntreprise);
+                                                  : sousTraitants?.find(st => st.id === planif.DefaultEntrepriseId);
 
                                                 return (
                                                   <TableRow key={index} className="border-b hover:bg-gray-50/50 transition-colors">

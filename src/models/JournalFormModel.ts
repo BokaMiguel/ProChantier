@@ -258,7 +258,7 @@ export interface JournalActivite {
   activiteID: number | null;
   lieuID: number | null;
   quantite: number;
-  notes?: string;
+  notes: string;
   date: string;
   hrsDebut: string;
   hrsFin: string;
@@ -266,6 +266,10 @@ export interface JournalActivite {
   signalisationId: number | null;
   bases: Localisation[];
   liaisons: LocalisationDistance[];
+  planifID?: number;
+  signalisation?: number;
+  qteLab?: number | null;
+  isComplete?: boolean;
 }
 
 // Types pour le journal
@@ -582,8 +586,8 @@ export interface Planif {
   ProjetID: number;
   HrsDebut: string;
   HrsFin: string;
-  defaultEntreprise: number;
-  note: string;
+  DefaultEntrepriseId: number;
+  Note: string;
   Date: string;
   PlanifActivites: PlanifActivite[];
 }
@@ -600,6 +604,59 @@ export interface PlanifActivite {
   isComplete?: boolean;
   sousTraitantId?: number; // Champ ajouté pour le sous-traitant spécifique à l'activité
 }
+
+// Interface de transition pour assurer la compatibilité entre les deux modèles
+export interface PlanifActiviteJournal extends PlanifActivite {
+  // Propriétés spécifiques au journal
+  id?: number; // Pour compatibilité avec l'ancien format
+  activiteID?: number | null; // Pour compatibilité avec l'ancien format
+  lieuID?: number | null; // Pour compatibilité avec l'ancien format
+  planifID?: number; // Pour compatibilité avec l'ancien format
+  quantite: number;
+  notes: string;
+  bases?: Localisation[];
+  liaisons?: LocalisationDistance[];
+  activiteNom?: string;
+  lieuNom?: string;
+  
+  // Propriétés supplémentaires de l'ancienne interface PlanifActivites
+  hrsDebut?: string;
+  hrsFin?: string;
+  defaultEntrepriseId?: number;
+  signalisationId?: number;
+  note?: string;
+  isLab?: boolean;
+  labQuantity?: number | null;
+  date?: string;
+  activiteIDs?: number[];
+  nomActivite?: string;
+  activitesDetails?: Array<{
+    activiteId: number;
+    hrsDebut?: string;
+    hrsFin?: string;
+    isComplete?: boolean;
+  }>;
+}
+
+// Constante pour initialiser une nouvelle activité de journal
+export const initialPlanifActiviteJournal: PlanifActiviteJournal = {
+  ID: 0,
+  PlanifID: 0,
+  debut: "",
+  fin: "",
+  signalisation: 0,
+  lieuId: 0,
+  qteLab: null,
+  activiteId: 0,
+  isComplete: false,
+  sousTraitantId: undefined,
+  quantite: 0,
+  notes: "",
+  id: 0,
+  activiteID: null,
+  lieuID: null,
+  planifID: 0
+};
 
 export const initialPlanifActivite: PlanifActivite = {
   ID: 0,
@@ -619,8 +676,8 @@ export const initialPlanif: Planif = {
   ProjetID: 0,
   HrsDebut: "",
   HrsFin: "",
-  defaultEntreprise: 0,
-  note: "",
+  DefaultEntrepriseId: 0,
+  Note: "",
   Date: new Date().toISOString().split('T')[0],
   PlanifActivites: [],
 };

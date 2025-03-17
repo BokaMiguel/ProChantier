@@ -13,22 +13,19 @@ import { useAuth } from "../../context/AuthContext";
 import {
   Employe,
   PlanifChantier,
-  PlanifActivites,
   initialPlanifChantier,
   LocalisationDistance,
-  Localisation,
   JournalUserStats,
-  SignatureData,
   Activite,
   Lieu,
   JournalActivite,
   TabPlanifChantier,
   UserStat,
-  SousTraitant,
-  Journal,
   SousTraitantFormData,
   JournalSousTraitant,
-  JournalChantier
+  JournalChantier,
+  PlanifActiviteJournal,
+  initialPlanifActiviteJournal
 } from "../../models/JournalFormModel";
 import { PDFDocument } from "../../helper/PDFGenerator";
 import {
@@ -63,11 +60,10 @@ type PDFData = {
   journalWeather: string;
   journalUsers: Employe[];
   planifChantier: PlanifChantier;
-  planifActivites: PlanifActivites[];
+  planifActivites: PlanifActiviteJournal[];
   journalMateriaux: any[];
   journalSousTraitants: JournalSousTraitant[];
-  userStats: { id: number; nom: string; act: number[]; ts: number; td: number }[];
-  totals: { act: number[]; ts: number; td: number };
+  userStats: UserStat[];
   notes: string;
   projetId: string;
   signatureData: { signature: string; signataire: string; date: Date } | null;
@@ -96,7 +92,7 @@ export default function Form() {
   const [journalNotes, setJournalNotes] = useState("");
   const [journalUsers, setJournalUsers] = useState<Employe[]>([]);
   const [planifChantier, setPlanifChantier] = useState<PlanifChantier | null>(null);
-  const [planifActivites, setPlanifActivites] = useState<PlanifActivites[]>([]);
+  const [planifActivites, setPlanifActivites] = useState<PlanifActiviteJournal[]>([]);
   const [journalUserStats, setJournalUserStats] = useState<JournalUserStats>({
     userStats: [],
     totals: {
@@ -175,27 +171,64 @@ export default function Form() {
             
             // Récupérer les activités associées
             const activitesData = await getPlanifActivites(Number(idPlanif));
+            console.log("Planification reçue initialement:", activitesData);
             if (activitesData && activitesData.length > 0) {
+              console.log("Premier élément de la planification:", activitesData[0]);
+              const planifData = activitesData[0];
               // Transformer les données pour inclure les informations nécessaires
-              const formattedActivites = activitesData.map((act: PlanifActivites) => ({
+              const formattedActivites = activitesData.map((act: any) => ({
+                // Propriétés obligatoires de PlanifActivite
                 id: act.id,
-                activiteID: act.activiteID,
-                lieuID: act.lieuID || planifData.lieuID, // Garder le lieu existant ou utiliser celui de la planif par défaut
-                quantite: 0,
-                notes: '',
-                planifID: Number(idPlanif)
+                planifID: Number(idPlanif),
+                PlanifID: Number(idPlanif),
+                activiteID: act.activiteID || act.activiteId || null,
+                activiteId: act.activiteID || act.activiteId || null,
+                lieuID: act.lieuID || act.lieuId || planifData.lieuID, // Utiliser le lieu spécifique de l'activité, sinon celui de la planif
+                lieuId: act.lieuID || act.lieuId || planifData.lieuID, // Utiliser le lieu spécifique de l'activité, sinon celui de la planif
+                debut: act.hrsDebut || planifData.hrsDebut || "08:00",
+                fin: act.hrsFin || planifData.hrsFin || "17:00",
+                hrsDebut: act.hrsDebut || planifData.hrsDebut || "08:00",
+                hrsFin: act.hrsFin || planifData.hrsFin || "17:00",
+                signalisation: act.signalisationID || 0,
+                signalisationId: act.signalisationID || 0,
+                qteLab: act.qteLab || null,
+                isComplete: act.isComplete || false,
+                sousTraitantID: act.sousTraitantID || 0,
+                defaultEntrepriseId: act.sousTraitantID || planifData.defaultEntrepriseId || 0,
+                
+                // Propriétés supplémentaires
+                quantite: act.quantite || 0,
+                notes: act.notes || '',
               }));
               setPlanifActivites(formattedActivites);
             } else {
               // Si pas d'activités, créer une activité vide par défaut
-              setPlanifActivites([{
-                id: Date.now(),
-                activiteID: null,
-                lieuID: null, // Ne pas forcer le lieu par défaut
+              const emptyActivity: PlanifActiviteJournal = {
+                // Propriétés obligatoires de PlanifActivite
+                ID: 0,
+                PlanifID: Number(idPlanif),
+                debut: planifData.hrsDebut || "08:00",
+                fin: planifData.hrsFin || "17:00",
+                signalisation: planifData.signalisationID || 0,
+                signalisationId: planifData.signalisationID || 0,
+                lieuId: 0,
+                qteLab: null,
+                activiteId: 0,
+                isComplete: false,
+                sousTraitantId: 0,
+                
+                // Propriétés supplémentaires
                 quantite: 0,
                 notes: '',
-                planifID: 0
-              }]);
+                hrsDebut: planifData.hrsDebut || "08:00",
+                hrsFin: planifData.hrsFin || "17:00",
+                defaultEntrepriseId: planifData.defaultEntrepriseId || 0,
+                date: planifData.date,
+                activiteIDs: [],
+                bases: [],
+                liaisons: []
+              };
+              setPlanifActivites([emptyActivity]);
             }
 
             // Si un lieu est défini, récupérer les distances
@@ -205,58 +238,67 @@ export default function Form() {
           }
         } catch (error) {
           console.error("Erreur lors de la récupération des données de planification:", error);
-          // En cas d'erreur, créer une activité vide
-          setPlanifActivites([{
-            id: Date.now(),
-            activiteID: null,
-            lieuID: null, // Ne pas forcer le lieu par défaut
+          // En cas d'erreur, créer une activité vide par défaut
+          const emptyActivity: PlanifActiviteJournal = {
+            // Propriétés obligatoires de PlanifActivite
+            ID: 0,
+            PlanifID: 0,
+            debut: "08:00",
+            fin: "17:00",
+            signalisation: 0,
+            signalisationId: 0,
+            lieuId: 0,
+            qteLab: null,
+            activiteId: 0,
+            isComplete: false,
+            sousTraitantId: 0,
+            
+            // Propriétés supplémentaires
             quantite: 0,
             notes: '',
-            planifID: 0
-          }]);
+            hrsDebut: "08:00",
+            hrsFin: "17:00",
+            defaultEntrepriseId: 0,
+            date: new Date().toISOString().split('T')[0],
+            activiteIDs: [],
+            bases: [],
+            liaisons: []
+          };
+          setPlanifActivites([emptyActivity]);
         }
       };
-
+      
       fetchPlanifData();
     } else {
-      // Si pas de planification sélectionnée, créer une activité vide
-      setPlanifActivites([{
-        id: Date.now(),
-        activiteID: null,
-        lieuID: null, // Ne pas forcer le lieu par défaut
+      // Si pas de planification sélectionnée, créer une activité vide par défaut
+      const emptyActivity: PlanifActiviteJournal = {
+        // Propriétés obligatoires de PlanifActivite
+        ID: 0,
+        PlanifID: 0,
+        debut: "08:00",
+        fin: "17:00",
+        signalisation: 0,
+        signalisationId: 0,
+        lieuId: 0,
+        qteLab: null,
+        activiteId: 0,
+        isComplete: false,
+        sousTraitantId: 0,
+        
+        // Propriétés supplémentaires
         quantite: 0,
         notes: '',
-        planifID: 0
-      }]);
+        hrsDebut: "08:00",
+        hrsFin: "17:00",
+        defaultEntrepriseId: 0,
+        date: new Date().toISOString().split('T')[0],
+        activiteIDs: [],
+        bases: [],
+        liaisons: []
+      };
+      setPlanifActivites([emptyActivity]);
     }
   }, [idPlanif]);
-
-  useEffect(() => {
-    // Synchroniser userStats avec journalUsers
-    const updatedStats = journalUsers.map(user => {
-      // Chercher les stats existantes pour cet utilisateur
-      const existingStat = journalUserStats.userStats.find(stat => stat.id === user.id);
-      if (existingStat) {
-        return {
-          ...existingStat,
-          nom: user.nom && user.prenom ? `${user.prenom} ${user.nom}` : existingStat.nom
-        };
-      }
-      // Créer de nouvelles stats pour un nouvel utilisateur
-      return {
-        id: user.id,
-        nom: user.nom && user.prenom ? `${user.prenom} ${user.nom}` : "",
-        act: Array(10).fill(0),
-        ts: 0,
-        td: 0
-      };
-    });
-
-    setJournalUserStats(prev => ({
-      ...prev,
-      userStats: updatedStats
-    }));
-  }, [journalUsers]);
 
   useEffect(() => {
     if (idPlanif) {
@@ -299,47 +341,84 @@ export default function Form() {
     });
   };
 
-  const convertToJournalActivite = (planif: PlanifActivites): JournalActivite => {
-    if (!planifChantier) throw new Error("planifChantier is undefined");
+  const convertToJournalActivite = (planif: PlanifActiviteJournal): JournalActivite => {
+    // Préserver l'ID original pour maintenir la cohérence
+    const originalId = planif.id || planif.ID;
+    
+    console.log(`Conversion de PlanifActivite vers JournalActivite: ID=${originalId}, isComplete=${planif.isComplete}`);
     
     return {
-      id: planif.id,
-      activiteID: planif.activiteID,
-      lieuID: planif.lieuID || planifChantier.lieuID, // Utiliser le lieu spécifique de l'activité, sinon celui de la planif
+      id: originalId, // Assurer que l'ID est préservé
+      activiteID: planif.activiteID || planif.activiteId,
+      planifID: planif.PlanifID,
+      lieuID: planif.lieuID || planif.lieuId,
       quantite: planif.quantite || 0,
-      date: planifChantier.date,
-      hrsDebut: planifChantier.hrsDebut,
-      hrsFin: planifChantier.hrsFin,
-      defaultEntrepriseId: planifChantier.defaultEntrepriseId,
-      signalisationId: planifChantier.signalisationId,
       notes: planif.notes || '',
+      date: planif.date || '',
+      hrsDebut: planif.hrsDebut || planif.debut || planifChantier?.hrsDebut || "08:00",
+      hrsFin: planif.hrsFin || planif.fin || planifChantier?.hrsFin || "17:00",
+      defaultEntrepriseId: planif.defaultEntrepriseId || planif.sousTraitantId || 0,
+      signalisationId: planif.signalisationId || planif.signalisation || 0,
       bases: planif.bases || [],
-      liaisons: planif.liaisons || []
+      liaisons: planif.liaisons || [],
+      isComplete: planif.isComplete || false, // Préserver la valeur isComplete
+      qteLab: planif.qteLab || null // Ajouter le champ qteLab
     };
   };
 
-  const convertToPlanifActivites = (journal: JournalActivite): PlanifActivites => {
+  const convertToPlanifActivites = (journal: JournalActivite): PlanifActiviteJournal => {
     if (journal.activiteID === null) {
       throw new Error("activiteID cannot be null");
     }
     
+    // Préserver l'ID original pour maintenir la cohérence
+    const originalId = journal.id;
+    
     return {
-      id: journal.id,
-      planifID: Number(idPlanif),
-      activiteID: journal.activiteID,
-      lieuID: journal.lieuID, // Garder le lieu spécifique de l'activité
+      // Propriétés obligatoires de PlanifActivite
+      id: originalId, // Assurer que l'ID est préservé
+      ID: originalId, // Assurer que l'ID est préservé
+      PlanifID: Number(idPlanif),
+      debut: journal.hrsDebut || planifChantier?.hrsDebut || "08:00",
+      fin: journal.hrsFin || planifChantier?.hrsFin || "17:00",
+      signalisation: journal.signalisation || 0,
+      signalisationId: journal.signalisationId || 0,
+      lieuId: journal.lieuID || 0,
+      lieuID: journal.lieuID || 0, // Ajouter pour cohérence
+      qteLab: journal.qteLab || null,
+      activiteId: journal.activiteID,
+      activiteID: journal.activiteID, // Ajouter pour cohérence
+      isComplete: journal.isComplete || false, // Préserver la valeur isComplete
+      sousTraitantId: journal.defaultEntrepriseId || 0,
+      
+      // Propriétés supplémentaires
       quantite: journal.quantite,
       notes: journal.notes || '',
-      bases: journal.bases,
-      liaisons: journal.liaisons
+      hrsDebut: journal.hrsDebut || planifChantier?.hrsDebut || "08:00",
+      hrsFin: journal.hrsFin || planifChantier?.hrsFin || "17:00",
+      defaultEntrepriseId: journal.defaultEntrepriseId || 0,
+      date: journal.date,
+      activiteIDs: [],
+      bases: journal.bases || [],
+      liaisons: journal.liaisons || []
     };
   };
 
   const handlePlanifActivitesUpdate = (updatedActivites: JournalActivite[]) => {
     try {
-      console.log("Updating activities:", updatedActivites);
-      const convertedActivites = updatedActivites.map(convertToPlanifActivites);
-      console.log("Converted activities:", convertedActivites);
+      console.log("Mise à jour des activités dans Form.tsx:", updatedActivites);
+      console.log("Détail des activités à mettre à jour:");
+      updatedActivites.forEach((act, index) => {
+        console.log(`Activité ${index + 1}: ID=${act.id}, activiteID=${act.activiteID}, isComplete=${act.isComplete}`);
+      });
+      
+      const convertedActivites = updatedActivites.map(journal => {
+        const converted = convertToPlanifActivites(journal);
+        console.log(`Conversion: ID=${journal.id}, isComplete avant=${journal.isComplete}, isComplete après=${converted.isComplete}`);
+        return converted;
+      });
+      
+      console.log("Activités converties:", convertedActivites);
       setPlanifActivites(convertedActivites);
     } catch (error) {
       console.error("Error updating planif activites:", error);
@@ -526,7 +605,7 @@ export default function Form() {
             activites: []
           } as TabPlanifChantier}
           planifActivites={journalActivites}
-          userStats={journalUserStats.userStats}
+          userStats={journalUserStats}
           setUserStats={(newStats: JournalUserStats) => setJournalUserStats(newStats)}
           setPlanifActivites={handlePlanifActivitesUpdate}
           onPlanifActivitesChange={handlePlanifActivitesUpdate}
@@ -551,12 +630,12 @@ export default function Form() {
       projetID: planifChantier.projetID || 0,
       defaultEntrepriseId: planifChantier.defaultEntrepriseId || 0,
       isLab: planifChantier.isLab || false,
+      signalisation: planifChantier.signalisation,
       signalisationId: planifChantier.signalisationId || 0,
       note: planifChantier.note || '',
       lieu: planifChantier.lieu,
       projet: planifChantier.projet,
-      defaultEntreprise: planifChantier.defaultEntreprise,
-      signalisation: planifChantier.signalisation
+      defaultEntreprise: planifChantier.defaultEntreprise
     };
 
     return (
@@ -670,6 +749,27 @@ export default function Form() {
     );
   };
 
+  const formatPlanifToJournal = (planif: any): JournalActivite => {
+    return {
+      id: planif.id || planif.ID || 0,
+      activiteID: planif.activiteID || planif.activiteId || 0,
+      lieuID: planif.lieuID || planif.lieuId || 0,
+      quantite: planif.quantite || 0,
+      notes: planif.notes || planif.note || '',
+      date: planif.date || planif.Date || new Date().toISOString().split('T')[0],
+      hrsDebut: planif.hrsDebut || planif.debut || planifChantier?.hrsDebut || "08:00",
+      hrsFin: planif.hrsFin || planif.fin || planifChantier?.hrsFin || "17:00",
+      defaultEntrepriseId: planif.defaultEntrepriseId || planif.sousTraitantId || planifChantier?.defaultEntrepriseId || 0,
+      signalisation: planif.signalisation || 0,
+      signalisationId: planif.signalisationId || 0,
+      bases: planif.bases || [],
+      liaisons: planif.liaisons || [],
+      planifID: planif.planifID || planif.PlanifID || planifChantier?.id || 0,
+      qteLab: planif.qteLab || null,
+      isComplete: planif.isComplete || false,
+    };
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center py-4">
       {!showPDF ? (
@@ -721,7 +821,7 @@ export default function Form() {
                 <InfoEmployes
                   users={journalUsers}
                   setUsers={setJournalUsers}
-                  userStats={journalUserStats.userStats}
+                  userStats={journalUserStats}
                   setUserStats={setJournalUserStats}
                 />
               )}
@@ -772,19 +872,17 @@ export default function Form() {
                 onToggle={toggleSection}
               />
               {sections.sousTraitants.open && (
-                <SousTraitantSection
-                  sousTraitants={journalSousTraitants}
-                  setSousTraitants={setJournalSousTraitants}
-                  defaultEntrepriseId={planifChantier?.defaultEntrepriseId}
-                  planifActivites={planifActivites.map(planif => {
-                    try {
-                      return convertToJournalActivite(planif);
-                    } catch (error) {
-                      console.error("Error converting planif to journal activite:", error);
-                      return null;
-                    }
-                  }).filter((activite): activite is JournalActivite => activite !== null)}
-                />
+                <>
+                  {console.log("Données envoyées à SousTraitantSection:", {
+                    planifActivites: planifActivites,
+                    journalSousTraitants: journalSousTraitants
+                  })}
+                  <SousTraitantSection
+                    sousTraitants={journalSousTraitants}
+                    setSousTraitants={setJournalSousTraitants}
+                    planifActivites={planifActivites}
+                  />
+                </>
               )}
             </section>
           )}
