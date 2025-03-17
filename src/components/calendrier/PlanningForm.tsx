@@ -1480,25 +1480,6 @@ const PlanningForm: React.FC = () => {
           </div>
         </DragDropContext>
       </div>
-
-      {hasUnsavedChanges && !showDeleteConfirmation && (
-        <div 
-          className="sticky bottom-0 bg-white p-4 border-t border-gray-200 shadow-lg" 
-          style={{ zIndex: 900 }}
-        >
-          <div className="flex justify-end">
-            <button
-              onClick={handleSaveAllChanges}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200"
-            >
-              <div className="flex items-center">
-                <FaSave className="mr-2" />
-                <span>Sauvegarder les modifications</span>
-              </div>
-            </button>
-          </div>
-        </div>
-      )}
       {showModal && (
         <CreatePlanifModal
           isOpen={showModal}

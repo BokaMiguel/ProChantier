@@ -423,6 +423,12 @@ export interface JournalActivites {
   journalId: number;
   activiteId: number;
   comment?: string;
+  hrsDebut: string;
+  hrsFin: string;
+  lieuId: number;
+  signalisationId: number;
+  qteLab?: number | null;
+  sousTraitantId?: number | null;
   localisationJournals?: LocalisationJournal[];
   localisationDistanceJournals?: LocalisationDistanceJournal[];
   sousTraitantJournals?: SousTraitantJournal[];

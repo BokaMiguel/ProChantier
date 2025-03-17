@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { FaUser, FaClock, FaHourglassHalf } from "react-icons/fa";
 
 interface JournalUserStats {
@@ -36,6 +36,8 @@ const StatsGrid: React.FC<StatsGridProps> = ({
   userStats,
 }) => {
   const handleActChange = (userId: number, index: number, value: number) => {
+    console.log(`StatsGrid - Modification de l'activité pour l'utilisateur ${userId}, index ${index}, valeur ${value}`);
+    
     const updatedUserStats = userStats.userStats.map((userStat) => {
       if (userStat.id === userId) {
         const updatedAct = [...userStat.act];
@@ -73,12 +75,14 @@ const StatsGrid: React.FC<StatsGridProps> = ({
     });
   };
 
-  const handleTdChange = (userId: number, value: number) => {
+  const handleTsChange = (userId: number, value: number) => {
+    console.log(`StatsGrid - Modification du TS pour l'utilisateur ${userId}, valeur ${value}`);
+    
     const updatedUserStats = userStats.userStats.map((userStat) => {
       if (userStat.id === userId) {
         return {
           ...userStat,
-          td: value
+          ts: value,
         };
       }
       return userStat;
@@ -103,12 +107,14 @@ const StatsGrid: React.FC<StatsGridProps> = ({
     });
   };
 
-  const handleTsChange = (userId: number, value: number) => {
+  const handleTdChange = (userId: number, value: number) => {
+    console.log(`StatsGrid - Modification du TD pour l'utilisateur ${userId}, valeur ${value}`);
+    
     const updatedUserStats = userStats.userStats.map((userStat) => {
       if (userStat.id === userId) {
         return {
           ...userStat,
-          ts: value,
+          td: value,
         };
       }
       return userStat;
@@ -120,8 +126,8 @@ const StatsGrid: React.FC<StatsGridProps> = ({
         for (let i = 0; i < 10; i++) {
           acc.act[i] = (acc.act[i] || 0) + (stat.act[i] || 0);
         }
-        acc.ts += stat.ts;
-        acc.td += stat.td;
+        acc.ts += stat.ts || 0;
+        acc.td += stat.td || 0;
         return acc;
       },
       { act: Array(10).fill(0), ts: 0, td: 0 }
@@ -158,6 +164,28 @@ const StatsGrid: React.FC<StatsGridProps> = ({
 
   const totals = calculateTotals(userStats.userStats);
   const actIndexOffset = nextStep ? 5 : 0;
+
+  useEffect(() => {
+    console.log("StatsGrid - users:", users);
+    console.log("StatsGrid - userStats:", userStats);
+    
+    // Vérifier la correspondance entre users et userStats
+    const usersWithoutStats = users.filter(
+      user => !userStats.userStats.some(stat => stat.id === user.id)
+    );
+    
+    const statsWithoutUsers = userStats.userStats.filter(
+      stat => !users.some(user => user.id === stat.id)
+    );
+    
+    if (usersWithoutStats.length > 0) {
+      console.warn("Utilisateurs sans statistiques:", usersWithoutStats);
+    }
+    
+    if (statsWithoutUsers.length > 0) {
+      console.warn("Statistiques sans utilisateurs correspondants:", statsWithoutUsers);
+    }
+  }, [users, userStats]);
 
   return (
     <div className="bg-white rounded-lg shadow-lg overflow-hidden">
@@ -208,14 +236,51 @@ const StatsGrid: React.FC<StatsGridProps> = ({
         <tbody>
           {userStats.userStats
             .filter((userStat) => {
-              // Vérifier si l'utilisateur existe toujours dans la liste des utilisateurs
-              // et qu'il a un nom non vide
-              const user = users.find((u) => u.id === userStat.id);
-              return user && (user.nom || user.prenom) && userStat.nom.trim() !== "";
+              // Ne montrer que les utilisateurs qui ont un nom valide ou qui correspondent à un utilisateur sélectionné
+              const user = users.find(u => u.id === userStat.id);
+              const hasValidName = user && user.nom && user.nom.trim() !== "";
+              
+              // Utilisateur vide/temporaire - ne pas montrer les employés sans noms
+              const isEmptyUser = userStat.nom.includes("Employé") || userStat.nom.trim() === "";
+              
+              // Logs pour débogage
+              console.log(`StatsGrid - Filtrage de l'utilisateur ID=${userStat.id}:`, { 
+                nom: userStat.nom,
+                hasValidName,
+                isEmptyUser,
+                shouldShow: hasValidName && !isEmptyUser
+              });
+              
+              return hasValidName && !isEmptyUser;
             })
             .map((userStat) => {
-              // Utiliser directement le nom stocké dans userStat.nom qui contient maintenant le nom complet
-              const displayName = userStat.nom.trim();
+              // Chercher l'utilisateur correspondant
+              const user = users.find((u) => u.id === userStat.id);
+              
+              // Initialiser le nom à afficher avec celui dans userStat
+              let displayName = userStat.nom.trim();
+              
+              // Si l'utilisateur est trouvé et a un nom/prénom, utiliser celui-ci
+              if (user) {
+                // Si l'utilisateur a un nom ou prénom, l'utiliser
+                if (user.nom || user.prenom) {
+                  displayName = `${user.prenom || ''} ${user.nom || ''}`.trim();
+                  
+                  // Si le nom est différent de celui dans les stats, mettre à jour les logs
+                  if (displayName !== userStat.nom) {
+                    console.log(`StatsGrid - Mise à jour du nom:`, {
+                      id: userStat.id,
+                      ancienNom: userStat.nom,
+                      nouveauNom: displayName
+                    });
+                  }
+                }
+              }
+              
+              // Assurer que le nom n'est jamais vide
+              if (!displayName) {
+                displayName = `Employé ${userStat.id}`;
+              }
               
               // Ne pas afficher les lignes sans nom
               if (!displayName) {

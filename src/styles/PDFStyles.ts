@@ -470,4 +470,31 @@ export const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1e3a8a',
   },
+  detailsSupplementairesSection: {
+    padding: 5,
+    backgroundColor: '#f0f8ff',
+    borderRadius: 3,
+    marginTop: 5,
+    marginBottom: 5,
+  },
+  detailsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  detailItem: {
+    minWidth: '22%',
+    marginVertical: 2,
+    padding: 2,
+  },
+  detailLabel: {
+    fontSize: 8,
+    fontWeight: 'bold',
+    color: '#555',
+  },
+  detailValue: {
+    fontSize: 9,
+    marginTop: 2,
+  },
 });

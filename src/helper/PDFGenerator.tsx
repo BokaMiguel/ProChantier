@@ -19,6 +19,7 @@ import {
   Activite,
   Lieu,
   JournalSousTraitant,
+  SignalisationProjet, // Ajout de l'importation de SignalisationProjet
 } from "../models/JournalFormModel";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -90,6 +91,7 @@ interface PDFDocumentProps {
   lieux: Lieu[] | null;
   bases: Localisation[] | null;
   journalPlanifId: number;
+  signalisations: SignalisationProjet[]; // Modification du type pour utiliser SignalisationProjet
 }
 
 interface EnrichedPlanifActivite extends PlanifActiviteJournal {
@@ -194,7 +196,8 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
   activites,
   lieux,
   bases,
-  journalPlanifId
+  journalPlanifId,
+  signalisations, // Modification du type pour utiliser SignalisationProjet
 }) => {
   const validUsers = data.journalUsers.filter(
     (user) => user.prenom !== "" || user.nom !== ""
@@ -263,6 +266,69 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
       );
     };
 
+    // Nouvelle fonction pour afficher les détails supplémentaires
+    const renderDetailsSupplementaires = (activite: PlanifActiviteJournal) => {
+      // Récupérer le nom de la signalisation si disponible
+      let signalisationNom = 'Non spécifiée';
+      
+      if (activite.signalisationId) {
+        // Vérifier d'abord si on a l'objet signalisation complet
+        if (data.planifChantier.signalisation?.nom) {
+          signalisationNom = data.planifChantier.signalisation.nom;
+        } else {
+          // Sinon, chercher dans les signalisations du contexte
+          const signalisation = signalisations?.find(s => s.id === activite.signalisationId);
+          signalisationNom = signalisation ? signalisation.nom : `Signalisation ${activite.signalisationId}`;
+        }
+      }
+
+      // Déterminer si c'est une activité de jour ou de nuit
+      const estDeNuit = activite.hrsFin && parseInt(activite.hrsFin.split(':')[0]) >= 17;
+      const horaireIcon = estDeNuit ? '🌙' : '☀️';
+
+      return (
+        <View style={[styles.subSection, { backgroundColor: '#f8f9fa', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }]}>
+          <View style={styles.tableRow}>
+            {/* Horaires */}
+            <View style={[styles.tableCell, { width: '25%' }]}>
+              <Text style={[styles.subTitle, { fontSize: 10 }]}>Horaire {horaireIcon}</Text>
+              <Text style={[styles.text, { fontSize: 10, fontWeight: estDeNuit ? 'bold' : 'normal' }]}>
+                {activite.hrsDebut || 'N/A'} - {activite.hrsFin || 'N/A'}
+              </Text>
+            </View>
+
+            {/* Signalisation */}
+            <View style={[styles.tableCell, { width: '25%' }]}>
+              <Text style={[styles.subTitle, { fontSize: 10 }]}>Signalisation</Text>
+              <Text style={[styles.text, { fontSize: 10 }]}>{signalisationNom}</Text>
+            </View>
+
+            {/* Laboratoire */}
+            <View style={[styles.tableCell, { width: '25%' }]}>
+              {(activite.labQuantity || activite.qteLab) && (
+                <>
+                  <Text style={[styles.subTitle, { fontSize: 10 }]}>Laboratoire</Text>
+                  <Text style={[styles.text, { fontSize: 10 }]}>
+                    Qté: {activite.labQuantity || activite.qteLab}
+                  </Text>
+                </>
+              )}
+            </View>
+
+            {/* Statut de complétion */}
+            {activite.isComplete !== undefined && (
+              <View style={[styles.tableCell, { width: '25%' }]}>
+                <Text style={[styles.subTitle, { fontSize: 10 }]}>Statut</Text>
+                <Text style={[styles.text, { fontSize: 10, color: activite.isComplete ? '#22c55e' : '#f59e0b' }]}>
+                  {activite.isComplete ? '✅ Complétée' : '🔄 En cours'}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+      );
+    };
+
     return (
       <View style={styles.activitiesContainer}>
         {data.planifActivites.map((activite, index) => {
@@ -285,6 +351,9 @@ export const PDFDocument: React.FC<PDFDocumentProps> = ({
                 </Text>
               </View>
 
+              {/* Afficher les détails supplémentaires */}
+              {renderDetailsSupplementaires(activite)}
+              
               {renderBases(activite)}
               {renderLiaisons(activite)}
               {renderCommentaire(activite)}

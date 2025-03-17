@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { FaUser, FaBriefcase, FaToolbox, FaTimes, FaPlusCircle } from "react-icons/fa";
 import { Employe, Fonction, Equipement, UserStat, JournalUserStats } from "../../models/JournalFormModel";
 import { useAuth } from "../../context/AuthContext";
@@ -16,6 +16,7 @@ const InfoEmployes: React.FC<{
 
   const handleAddUser = () => {
     if (employees && users.length < employees.length) {
+      // Trouver le plus grand ID existant et ajouter 1
       const maxId = users.reduce((max, user) => Math.max(max, user.id), 0);
       const newUser: Employe = {
         id: maxId + 1,
@@ -30,6 +31,8 @@ const InfoEmployes: React.FC<{
           nom: "",
         },
       };
+      
+      console.log("Ajout d'un nouvel employé:", newUser);
       setUsers((prevUsers: Employe[]) => [...prevUsers, newUser]);
 
       // Vérifier si cet utilisateur a déjà des statistiques
@@ -45,8 +48,9 @@ const InfoEmployes: React.FC<{
           td: 0
         };
 
+        console.log("Création d'une nouvelle stat pour l'utilisateur ID:", newUser.id);
         const updatedUserStats = [...userStats.userStats, newUserStat];
-
+        
         // Recalculer les totaux
         const totals = updatedUserStats.reduce(
           (acc: { act: number[], ts: number, td: number }, stat: UserStat) => {
@@ -64,18 +68,319 @@ const InfoEmployes: React.FC<{
           userStats: updatedUserStats,
           totals
         });
+      } else {
+        console.log("Statistiques existantes trouvées pour l'ID:", newUser.id);
       }
     }
   };
 
-  const handleDeleteUser = (userIdToDelete: number) => {
-    if (userIdToDelete) {
-      setUsers((prevUsers: Employe[]) => prevUsers.filter((user) => user.id !== userIdToDelete));
+  const handleDeleteUser = (id: number) => {
+    setShowConfirm(true);
+    setUserIdToDelete(id);
+  };
 
-      // Supprimer également les statistiques de l'utilisateur
+  const confirmDeleteUser = () => {
+    if (userIdToDelete !== null) {
+      // Filtrer l'utilisateur au lieu de le vider
+      const updatedUsers = users.filter((user) => user.id !== userIdToDelete);
+      setUsers(updatedUsers);
+
+      // Supprimer également les stats de l'utilisateur
       const updatedUserStats = userStats.userStats.filter(stat => stat.id !== userIdToDelete);
-
+      
       // Recalculer les totaux
+      const totals = updatedUserStats.reduce(
+        (acc: { act: number[], ts: number, td: number }, stat: UserStat) => {
+          for (let i = 0; i < 10; i++) {
+            acc.act[i] = (acc.act[i] || 0) + (stat.act[i] || 0);
+          }
+          acc.ts += stat.ts || 0;
+          acc.td += stat.td || 0;
+          return acc;
+        },
+        { act: Array(10).fill(0), ts: 0, td: 0 }
+      );
+      
+      setUserStats({
+        userStats: updatedUserStats,
+        totals
+      });
+      
+      setShowConfirm(false);
+      setUserIdToDelete(null);
+    }
+  };
+
+  const handleChange = (
+    id: number,
+    field: keyof Employe | "fonction" | "equipement",
+    value: any
+  ) => {
+    console.log(`InfoEmployes - handleChange - ID: ${id}, Field: ${field}, Value:`, value);
+    
+    if (field === "nom") {
+      const fullName = value;
+      const selectedEmployee = employees?.find(
+        emp => `${emp.prenom} ${emp.nom}`.trim() === fullName
+      );
+      
+      if (selectedEmployee) {
+        console.log("Employé trouvé:", selectedEmployee);
+        
+        // 1. Mise à jour de l'employé avec l'ID et les infos correctes
+        setUsers(prevUsers => {
+          const updatedUsers = prevUsers.map(user => {
+            if (user.id === id) {
+              return {
+                ...user,
+                id: selectedEmployee.id,
+                prenom: selectedEmployee.prenom,
+                nom: selectedEmployee.nom,
+                fonction: selectedEmployee.fonction || user.fonction,
+                equipement: selectedEmployee.equipement || user.equipement
+              };
+            }
+            return user;
+          });
+          return updatedUsers;
+        });
+        
+        // 2. Mise à jour des stats utilisateur
+        const statExists = userStats.userStats.some(
+          (stat: UserStat) => stat.id === selectedEmployee.id
+        );
+        
+        console.log("Statistiques existantes pour ID", selectedEmployee.id, ":", statExists);
+        
+        // Filtrer les anciennes stats pour cet ID temporaire
+        let filteredStats = userStats.userStats.filter(
+          (stat: UserStat) => stat.id !== id
+        );
+        
+        let newUserStats: UserStat[];
+        
+        if (statExists) {
+          // Mise à jour des stats existantes
+          newUserStats = filteredStats.map((stat: UserStat) => {
+            if (stat.id === selectedEmployee.id) {
+              return {
+                ...stat,
+                nom: `${selectedEmployee.prenom} ${selectedEmployee.nom}`.trim()
+              };
+            }
+            return stat;
+          });
+          console.log("Mise à jour des statistiques pour employé existant:", selectedEmployee.id);
+        } else {
+          // Création d'une nouvelle stat
+          const newStat: UserStat = {
+            id: selectedEmployee.id,
+            nom: `${selectedEmployee.prenom} ${selectedEmployee.nom}`.trim(),
+            act: Array(10).fill(0),
+            ts: 0,
+            td: 0
+          };
+          newUserStats = [...filteredStats, newStat];
+          console.log("Création d'une nouvelle statistique pour:", newStat.nom, "(ID:", newStat.id, ")");
+        }
+        
+        // Recalcul des totaux
+        const totals = newUserStats.reduce(
+          (acc: { act: number[], ts: number, td: number }, stat: UserStat) => {
+            for (let i = 0; i < 10; i++) {
+              acc.act[i] = (acc.act[i] || 0) + (stat.act[i] || 0);
+            }
+            acc.ts += stat.ts || 0;
+            acc.td += stat.td || 0;
+            return acc;
+          },
+          { act: Array(10).fill(0), ts: 0, td: 0 }
+        );
+        
+        // Mettre à jour directement avec le nouvel objet
+        setUserStats({
+          userStats: newUserStats,
+          totals
+        });
+        
+        // Afficher l'état des statistiques après mise à jour
+        console.log("État des statistiques après mise à jour:", {
+          userStats: newUserStats,
+          totals
+        });
+      } else {
+        // Si l'employé n'est pas trouvé, mettre à jour uniquement le nom
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            user.id === id ? { ...user, nom: value } : user
+          )
+        );
+      }
+    } else if (field === "prenom") {
+      // Mise à jour du prénom
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === id ? { ...user, prenom: value } : user
+        )
+      );
+      
+      // Mise à jour des statistiques
+      const user = users.find(u => u.id === id);
+      if (user) {
+        const fullName = `${value} ${user.nom || ''}`.trim();
+        
+        // Créer une copie des stats actuelles puis les mettre à jour
+        const updatedUserStats = userStats.userStats.map((stat: UserStat) => {
+          if (stat.id === id) {
+            return { ...stat, nom: fullName };
+          }
+          return stat;
+        });
+        
+        setUserStats({
+          ...userStats,
+          userStats: updatedUserStats
+        });
+      }
+    } else if (field === "fonction") {
+      if (typeof value === 'string') {
+        const fonction = fonctions?.find(f => f.nom === value);
+        setUsers(prevUsers => 
+          prevUsers.map(user => {
+            if (user.id === id) {
+              return {
+                ...user,
+                fonction: fonction
+                  ? { id: fonction.id, nom: fonction.nom }
+                  : { id: null, nom: value }
+              };
+            }
+            return user;
+          })
+        );
+      } else {
+        setUsers(prevUsers => 
+          prevUsers.map(user => {
+            if (user.id === id) {
+              return {
+                ...user,
+                fonction: value
+                  ? { id: value.id, nom: value.nom }
+                  : { id: null, nom: "" }
+              };
+            }
+            return user;
+          })
+        );
+      }
+    } else if (field === "equipement") {
+      if (typeof value === 'string') {
+        const equipement = equipements?.find(e => e.nom === value);
+        setUsers(prevUsers => 
+          prevUsers.map(user => {
+            if (user.id === id) {
+              return {
+                ...user,
+                equipement: equipement
+                  ? { id: equipement.id, nom: equipement.nom }
+                  : { id: null, nom: value }
+              };
+            }
+            return user;
+          })
+        );
+      } else {
+        setUsers(prevUsers => 
+          prevUsers.map(user => {
+            if (user.id === id) {
+              return {
+                ...user,
+                equipement: value
+                  ? { id: value.id, nom: value.nom }
+                  : { id: null, nom: "" }
+              };
+            }
+            return user;
+          })
+        );
+      }
+    } else {
+      // Pour les autres champs
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === id ? { ...user, [field]: value } : user
+        )
+      );
+    }
+  };
+
+  // Fonction pour vérifier si tous les employés ont des noms valides
+  const allUsersHaveValidNames = useMemo(() => {
+    // Vérifie si chaque utilisateur a au moins un nom ou prénom non vide
+    return users.every(user => 
+      (user.nom && user.nom.trim() !== "") || (user.prenom && user.prenom.trim() !== "")
+    );
+  }, [users]);
+
+  // Fonction pour vérifier s'il y a déjà un employé vide
+  const hasEmptyUser = useMemo(() => {
+    return users.some(user => 
+      (!user.nom || user.nom.trim() === "") && (!user.prenom || user.prenom.trim() === "")
+    );
+  }, [users]);
+
+  // Effet pour auto-ajouter un employé quand nécessaire
+  useEffect(() => {
+    // Seulement si on a sélectionné un employé sur chaque ligne et qu'il n'y a pas de ligne vide
+    if (users.length > 0 && allUsersHaveValidNames && !hasEmptyUser && employees && users.length < employees.length) {
+      console.log("Auto-ajout d'un employé car tous les employés actuels ont des noms valides");
+      handleAddUser();
+    }
+  }, [users, employees, allUsersHaveValidNames, hasEmptyUser]);
+
+  // Effet pour ajouter un utilisateur vide au chargement initial
+  useEffect(() => {
+    // If there are no users, add one empty user
+    if (users.length === 0 && employees && employees.length > 0) {
+      handleAddUser();
+    }
+  }, [users.length, employees]);
+
+  // Effet pour logger la liste des employés quand elle change
+  useEffect(() => {
+    console.log("Liste actuelle des employés:", users);
+    users.forEach((user, index) => {
+      console.log(`Employé ${index + 1}: ID=${user.id}, Nom=${user.nom}, Prénom=${user.prenom}`);
+    });
+  }, [users]);
+
+  // Effet pour mettre à jour les stats utilisateur
+  useEffect(() => {
+    // Ne mettre à jour que si nous avons des utilisateurs avec des noms
+    const validUsers = users.filter(user => (user.nom || user.prenom));
+    
+    if (validUsers.length > 0) {
+      console.log("Mise à jour des stats avec les utilisateurs valides:", validUsers.length);
+      
+      // Ne garder que les utilisateurs valides dans les stats
+      const updatedUserStats = validUsers.map(user => {
+        const stat = userStats.userStats.find(stat => stat.id === user.id);
+        if (stat) {
+          return {
+            ...stat,
+            nom: `${user.prenom || ''} ${user.nom || ''}`.trim()
+          };
+        } else {
+          return {
+            id: user.id,
+            nom: `${user.prenom || ''} ${user.nom || ''}`.trim(),
+            act: Array(10).fill(0),
+            ts: 0,
+            td: 0
+          };
+        }
+      });
+
       const totals = updatedUserStats.reduce(
         (acc: { act: number[], ts: number, td: number }, stat: UserStat) => {
           for (let i = 0; i < 10; i++) {
@@ -92,195 +397,8 @@ const InfoEmployes: React.FC<{
         userStats: updatedUserStats,
         totals
       });
-
-      setShowConfirm(false);
-      setUserIdToDelete(null);
     }
-  };
-
-  const handleEmployeeChange = (id: number, field: keyof Employe, value: any): Employe => {
-    const userToUpdate = users.find(user => user.id === id);
-    if (!userToUpdate) {
-      // Si l'utilisateur n'est pas trouvé, retourner un utilisateur vide
-      return { id: 0, nom: "", prenom: "", fonction: { id: null, nom: "" }, equipement: { id: null, nom: "" } };
-    }
-
-    const updatedUser = { ...userToUpdate, [field]: value };
-
-    // Mettre à jour le nom dans les statistiques utilisateur si le nom ou prénom change
-    if (field === 'nom' || field === 'prenom') {
-      // Construire le nom complet pour les statistiques
-      const fullName = field === 'prenom' 
-        ? `${value} ${updatedUser.nom || ''}`.trim()
-        : `${updatedUser.prenom || ''} ${value}`.trim();
-
-      // Vérifier si l'utilisateur a déjà des statistiques
-      const existingStat = userStats.userStats.find(stat => stat.id === id);
-
-      if (existingStat) {
-        // Mettre à jour les statistiques existantes
-        const updatedUserStats = userStats.userStats.map(stat => {
-          if (stat.id === id) {
-            return {
-              ...stat,
-              nom: fullName
-            };
-          }
-          return stat;
-        });
-
-        setUserStats({
-          ...userStats,
-          userStats: updatedUserStats
-        });
-      } else {
-        // Créer de nouvelles statistiques si elles n'existent pas
-        const newUserStat: UserStat = {
-          id: id,
-          nom: fullName,
-          act: Array(10).fill(0),
-          ts: 0,
-          td: 0
-        };
-
-        const updatedUserStats = [...userStats.userStats, newUserStat];
-
-        // Recalculer les totaux
-        const totals = updatedUserStats.reduce(
-          (acc: { act: number[], ts: number, td: number }, stat: UserStat) => {
-            for (let i = 0; i < 10; i++) {
-              acc.act[i] = (acc.act[i] || 0) + (stat.act[i] || 0);
-            }
-            acc.ts += stat.ts || 0;
-            acc.td += stat.td || 0;
-            return acc;
-          },
-          { act: Array(10).fill(0), ts: 0, td: 0 }
-        );
-
-        setUserStats({
-          userStats: updatedUserStats,
-          totals
-        });
-      }
-    }
-
-    return updatedUser;
-  };
-
-  const handleChange = (
-    id: number,
-    field: keyof Employe | "fonction" | "equipement",
-    value: any
-  ) => {
-    setUsers((prevUsers: Employe[]) => {
-      return prevUsers.map((user) => {
-        if (user.id === id) {
-          if (field === "fonction") {
-            // Si la valeur est une chaîne, chercher la fonction correspondante
-            if (typeof value === 'string') {
-              const fonction = fonctions?.find(f => f.nom === value);
-              return {
-                ...user,
-                fonction: fonction
-                  ? { id: fonction.id, nom: fonction.nom }
-                  : { id: null, nom: value },
-              };
-            } else {
-              // Si c'est déjà un objet fonction
-              return {
-                ...user,
-                fonction: value
-                  ? { id: value.id, nom: value.nom }
-                  : { id: null, nom: "" },
-              };
-            }
-          } else if (field === "equipement") {
-            // Si la valeur est une chaîne, chercher l'équipement correspondant
-            if (typeof value === 'string') {
-              const equipement = equipements?.find(e => e.nom === value);
-              return {
-                ...user,
-                equipement: equipement
-                  ? { id: equipement.id, nom: equipement.nom }
-                  : { id: null, nom: value },
-              };
-            } else {
-              // Si c'est déjà un objet équipement
-              return {
-                ...user,
-                equipement: value
-                  ? { id: value.id, nom: value.nom }
-                  : { id: null, nom: "" },
-              };
-            }
-          } else {
-            // Appeler handleEmployeeChange mais ne pas utiliser sa valeur de retour directement
-            // car nous avons déjà l'utilisateur à jour ici
-            handleEmployeeChange(id, field as keyof Employe, value);
-            return { ...user, [field]: value };
-          }
-        }
-        return user;
-      });
-    });
-  };
-
-  useEffect(() => {
-    if (users.length === 0 && employees && employees.length > 0) {
-      const newUser: Employe = {
-        id: Date.now(), 
-        nom: "",
-        prenom: "",
-        fonction: {
-          id: null,
-          nom: "",
-        },
-        equipement: {
-          id: null,
-          nom: "",
-        },
-      };
-      setUsers([newUser]);
-    }
-  }, [users.length, employees]);
-
-  useEffect(() => {
-    // Vérifier si userStats est défini
-    if (userStats && userStats.userStats) {
-      // Créer un nouvel objet de statistiques utilisateur
-      const updatedUserStats = userStats.userStats.map(stat => {
-        // Trouver l'utilisateur correspondant
-        const user = users.find(u => u.id === stat.id);
-        if (user) {
-          // Construire le nom complet
-          let fullName = "";
-          if (user.prenom && user.nom) {
-            fullName = `${user.prenom} ${user.nom}`;
-          } else if (user.prenom) {
-            fullName = user.prenom;
-          } else if (user.nom) {
-            fullName = user.nom;
-          }
-          
-          // Mettre à jour le nom dans les statistiques
-          return {
-            ...stat,
-            nom: fullName.trim() || stat.nom
-          };
-        }
-        return stat;
-      });
-
-      // Mettre à jour les statistiques utilisateur si elles ont changé
-      if (JSON.stringify(updatedUserStats) !== JSON.stringify(userStats.userStats)) {
-        setUserStats({
-          ...userStats,
-          userStats: updatedUserStats
-        });
-      }
-    }
-  }, [users, userStats, setUserStats]);
+  }, [users.filter(user => (user.nom || user.prenom)).map(user => `${user.id}-${user.nom}-${user.prenom}`).join(',')]);
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
@@ -315,101 +433,7 @@ const InfoEmployes: React.FC<{
               <div className="col-span-4">
                 <select
                   value={`${user.prenom || ''} ${user.nom || ''}`.trim() || ""}
-                  onChange={(e) => {
-                    const fullName = e.target.value;
-                    if (fullName) {
-                      // Trouver l'employé correspondant dans la liste
-                      const selectedEmployee = employees?.find(
-                        emp => `${emp.prenom} ${emp.nom}`.trim() === fullName
-                      );
-                      
-                      if (selectedEmployee) {
-                        // Mettre à jour le prénom et le nom avec les valeurs de l'employé sélectionné
-                        handleChange(user.id, "prenom", selectedEmployee.prenom);
-                        handleChange(user.id, "nom", selectedEmployee.nom);
-                        
-                        // Mettre à jour directement les statistiques utilisateur avec le nom complet
-                        const updatedUserStats = userStats.userStats.map(stat => {
-                          if (stat.id === user.id) {
-                            return {
-                              ...stat,
-                              nom: `${selectedEmployee.prenom} ${selectedEmployee.nom}`.trim()
-                            };
-                          }
-                          return stat;
-                        });
-                        
-                        // Recalculer les totaux
-                        const totals = updatedUserStats.reduce(
-                          (acc: { act: number[], ts: number, td: number }, stat: UserStat) => {
-                            for (let i = 0; i < 10; i++) {
-                              acc.act[i] = (acc.act[i] || 0) + (stat.act[i] || 0);
-                            }
-                            acc.ts += stat.ts || 0;
-                            acc.td += stat.td || 0;
-                            return acc;
-                          },
-                          { act: Array(10).fill(0), ts: 0, td: 0 }
-                        );
-                        
-                        setUserStats({
-                          userStats: updatedUserStats,
-                          totals
-                        });
-                        
-                        // Mettre à jour la fonction et l'équipement si disponibles
-                        if (selectedEmployee.fonction) {
-                          handleChange(user.id, "fonction", selectedEmployee.fonction);
-                        }
-                        if (selectedEmployee.equipement) {
-                          handleChange(user.id, "equipement", selectedEmployee.equipement);
-                        }
-                      } else {
-                        // Si l'employé n'est pas trouvé dans la liste, extraire le prénom et le nom
-                        const nameParts = fullName.split(' ');
-                        const prenom = nameParts[0] || '';
-                        const nom = nameParts.slice(1).join(' ') || '';
-                        
-                        // Mettre à jour à la fois le prénom et le nom
-                        handleChange(user.id, "prenom", prenom);
-                        handleChange(user.id, "nom", nom);
-                        
-                        // Mettre à jour directement les statistiques utilisateur avec le nom complet
-                        const updatedUserStats = userStats.userStats.map(stat => {
-                          if (stat.id === user.id) {
-                            return {
-                              ...stat,
-                              nom: fullName
-                            };
-                          }
-                          return stat;
-                        });
-                        
-                        // Recalculer les totaux
-                        const totals = updatedUserStats.reduce(
-                          (acc: { act: number[], ts: number, td: number }, stat: UserStat) => {
-                            for (let i = 0; i < 10; i++) {
-                              acc.act[i] = (acc.act[i] || 0) + (stat.act[i] || 0);
-                            }
-                            acc.ts += stat.ts || 0;
-                            acc.td += stat.td || 0;
-                            return acc;
-                          },
-                          { act: Array(10).fill(0), ts: 0, td: 0 }
-                        );
-                        
-                        setUserStats({
-                          userStats: updatedUserStats,
-                          totals
-                        });
-                      }
-                      
-                      // Ajouter automatiquement un nouvel utilisateur si c'est le dernier de la liste
-                      if (index === users.length - 1) {
-                        handleAddUser();
-                      }
-                    }
-                  }}
+                  onChange={(e) => handleChange(user.id, "nom", e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                 >
                   <option value="">Sélectionner un employé</option>
@@ -466,7 +490,7 @@ const InfoEmployes: React.FC<{
 
               <div className="col-span-1 flex justify-center">
                 <button
-                  onClick={() => setUserIdToDelete(user.id)}
+                  onClick={() => handleDeleteUser(user.id)}
                   className="text-red-500 hover:text-red-600 p-2 rounded-full hover:bg-red-50 transition-all duration-200"
                 >
                   <FaTimes />
@@ -499,10 +523,10 @@ const InfoEmployes: React.FC<{
                 Annuler
               </button>
               <button
-                className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors duration-200"
-                onClick={() => handleDeleteUser(userIdToDelete!)}
+                onClick={confirmDeleteUser}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200"
               >
-                Confirmer
+                Supprimer
               </button>
             </div>
           </div>

@@ -80,7 +80,8 @@ export default function Form() {
     selectedProject,
     bases,
     unites,
-    fetchBases
+    fetchBases,
+    signalisations
   } = useAuth();
 
   const { type, idPlanif } = useParams<{ type: string; idPlanif: string }>();
@@ -306,6 +307,72 @@ export default function Form() {
     }
   }, [idPlanif, planifChantier]);
 
+  useEffect(() => {
+    if (journalUsers.length > 0) {
+      // Filtrer pour éliminer les utilisateurs sans nom valide
+      const validUsers = journalUsers.filter(user => 
+        (user.nom && user.nom.trim() !== "") || (user.prenom && user.prenom.trim() !== "")
+      );
+      
+      // Si aucun utilisateur valide, ne rien faire
+      if (validUsers.length === 0) {
+        console.log("Aucun utilisateur valide pour la synchronisation des statistiques");
+        return;
+      }
+      
+      // Vérifier quels utilisateurs ont des statistiques existantes
+      const existingUserStats = [...journalUserStats.userStats];
+      const updatedUserStats = [];
+      
+      // Pour chaque utilisateur valide, trouver ou créer des statistiques
+      for (const user of validUsers) {
+        // Chercher des statistiques existantes pour cet utilisateur
+        const existingStat = existingUserStats.find(stat => stat.id === user.id);
+        
+        if (existingStat) {
+          // Mettre à jour le nom si nécessaire
+          updatedUserStats.push({
+            ...existingStat,
+            nom: `${user.prenom || ''} ${user.nom || ''}`.trim()
+          });
+        } else {
+          // Créer de nouvelles statistiques
+          updatedUserStats.push({
+            id: user.id,
+            nom: `${user.prenom || ''} ${user.nom || ''}`.trim(),
+            act: Array(10).fill(0),
+            ts: 0,
+            td: 0
+          });
+        }
+      }
+      
+      // Recalculer les totaux
+      const totals = updatedUserStats.reduce(
+        (acc, stat) => {
+          for (let i = 0; i < 10; i++) {
+            acc.act[i] = (acc.act[i] || 0) + (stat.act[i] || 0);
+          }
+          acc.ts += stat.ts || 0;
+          acc.td += stat.td || 0;
+          return acc;
+        },
+        { act: Array(10).fill(0), ts: 0, td: 0 }
+      );
+      
+      // Mettre à jour les statistiques
+      setJournalUserStats({
+        userStats: updatedUserStats,
+        totals
+      });
+      
+      console.log("Synchronisation des utilisateurs et des statistiques:", { 
+        users: validUsers,
+        stats: updatedUserStats
+      });
+    }
+  }, [journalUsers]);
+
   const fetchDistances = async (lieuId: number) => {
     try {
       const distancesData = await getDistancesForLieu(lieuId);
@@ -458,6 +525,13 @@ export default function Form() {
     setSubmitSuccess(null);
     setSubmitError(null);
 
+    // Log des employés avant soumission
+    console.log('Employés sélectionnés avant soumission:', journalUsers);
+    console.log('Nombre d\'employés:', journalUsers.length);
+    journalUsers.forEach((user, index) => {
+      console.log(`Employé ${index + 1}: ID=${user.id}, Nom=${user.nom}, Prénom=${user.prenom}`);
+    });
+
     const journalChantier: JournalChantier = {
       id: 0,
       date: planifChantier?.date || new Date().toISOString().split('T')[0],
@@ -481,20 +555,32 @@ export default function Form() {
           const relatedSousTraitants = journalSousTraitants
             .filter(st => st.activiteID === activite.activiteID)
             .map(st => {
-              console.log(`Sous-traitant à envoyer - ID: ${st.id}, Nom: ${st.nom}, ActivitéID: ${st.activiteID}`);
+              console.log(`Sous-traitant à envoyer - ID: ${st.id}, Nom: ${st.nom}, ActivitéID: ${st.activiteID}, Quantité: ${st.quantite}, UnitéID: ${st.idUnite}`);
               return {
                 journalActiviteId: 0, // Sera mis à jour après création de l'activité
                 sousTraitantId: st.id, // Utiliser directement l'ID du sous-traitant
                 quantite: st.quantite,
-                uniteId: st.idUnite || 0
+                uniteId: st.idUnite || 1 // Utiliser 1 comme valeur par défaut si idUnite est null
               };
             });
+
+          // Log détaillé de l'activité
+          console.log(`Activité à envoyer - ID: ${activite.activiteID}, Lieu: ${activite.lieuID}, Signalisation: ${activite.signalisationId}, QteLab: ${activite.qteLab}, SousTraitant: ${activite.defaultEntrepriseId}`);
+          console.log(`Horaires - Début: ${activite.hrsDebut}, Fin: ${activite.hrsFin}`);
+          console.log(`Bases: ${activite.bases?.length || 0}, Liaisons: ${activite.liaisons?.length || 0}`);
 
           return {
             id: 0,
             journalId: 0,
             activiteId: activite.activiteID as number,
             comment: activite.notes || '',
+            // Ajouter les nouvelles propriétés requises par le DTO
+            hrsDebut: activite.hrsDebut || planifChantier?.hrsDebut || "08:00",
+            hrsFin: activite.hrsFin || planifChantier?.hrsFin || "17:00",
+            lieuId: activite.lieuID || 0,
+            signalisationId: activite.signalisationId || 0,
+            qteLab: activite.qteLab, // Peut être null
+            sousTraitantId: activite.defaultEntrepriseId, // Peut être null
             localisationJournals: activite.bases?.map(base => ({
               id: 0,
               journalActiviteId: 0,
@@ -509,23 +595,54 @@ export default function Form() {
           };
         }),
       bottinJournals: journalUsers
-        .filter(user => 
-          typeof user.id === 'number' && 
-          user.id.toString().length <= 5 &&
-          (user.nom?.trim() || user.prenom?.trim())
-        )
-        .map(user => ({
-          bottinId: user.id,
-          journalId: 0
-        }))
+        .filter(user => {
+          // Vérifier que l'ID est valide et que l'utilisateur a un nom ou prénom
+          const isValidUser = typeof user.id === 'number' && 
+                             user.id > 0 && 
+                             (user.nom?.trim() || user.prenom?.trim());
+          
+          console.log(`Filtrage BottinJournal - Utilisateur ${user.id}:`, { 
+            id: user.id, 
+            nom: user.nom, 
+            prenom: user.prenom, 
+            isValid: isValidUser 
+          });
+          
+          return isValidUser;
+        })
+        .map(user => {
+          // Vérifier si l'ID est un ID valide d'employé (généralement moins de 1000)
+          // Les IDs temporaires générés par Date.now() sont beaucoup plus grands
+          const isRealEmployeeId = user.id < 10000;
+          
+          console.log(`BottinJournal à envoyer - BottinID: ${user.id}, Nom: ${user.nom}, Prénom: ${user.prenom}, EstIDRéel: ${isRealEmployeeId}`);
+          
+          if (!isRealEmployeeId) {
+            console.warn(`Attention: ID d'employé potentiellement invalide: ${user.id}`);
+          }
+          
+          return {
+            bottinId: user.id,
+            journalId: 0
+          };
+        })
     };
 
-    console.log('Journal Chantier à envoyer:', journalChantier);
+    // Log complet de l'objet à envoyer
+    console.log('Journal Chantier à envoyer (complet):', JSON.stringify(journalChantier, null, 2));
+    
+    // Log du nombre d'éléments dans chaque section
+    console.log('Nombre d\'activités:', journalChantier.journalActivites?.length || 0);
+    console.log('Nombre de matériaux:', journalChantier.materiauxJournals?.length || 0);
+    console.log('Nombre d\'employés (bottinJournals):', journalChantier.bottinJournals?.length || 0);
     
     // Log détaillé des sous-traitants dans le journal
     console.log('Détail des sous-traitants par activité:');
     journalChantier.journalActivites?.forEach((activite, index) => {
       console.log(`Activité ${index + 1} (ID: ${activite.activiteId}):`);
+      console.log(`  Horaires: ${activite.hrsDebut} - ${activite.hrsFin}`);
+      console.log(`  Lieu: ${activite.lieuId}, Signalisation: ${activite.signalisationId}`);
+      console.log(`  QteLab: ${activite.qteLab}, SousTraitantId: ${activite.sousTraitantId}`);
       activite.sousTraitantJournals?.forEach((st, stIndex) => {
         console.log(`  Sous-traitant ${stIndex + 1}: ID=${st.sousTraitantId}, Quantité=${st.quantite}, UnitéID=${st.uniteId}`);
       });
@@ -670,6 +787,7 @@ export default function Form() {
             lieux={lieux}
             bases={bases}
             journalPlanifId={journalId || Number(idPlanif)}
+            signalisations={signalisations || []}
           />
         }>
           {({ blob, url, loading }) => {
